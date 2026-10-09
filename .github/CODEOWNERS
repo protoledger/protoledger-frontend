@@ -1,0 +1,4 @@
+# Инфраструктура — ревью DevOps-пары
+/.github/      @sleepyhead-dev @OddS-Programming
+# Нативная часть десктоп-обёртки (Rust) — ревью бэкенда
+/src-tauri/    @sleepyhead-dev @OddS-Programming

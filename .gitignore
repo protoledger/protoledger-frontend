@@ -1,0 +1,76 @@
+# Белый список: по умолчанию игнорируется всё, разрешённое перечислено явно.
+*
+!*/
+
+!/.gitignore
+!/.gitattributes
+!/.editorconfig
+!/.dockerignore
+!/README.md
+!/LICENSE
+!/Dockerfile
+!/.env.example
+!/docs/**
+!/scripts/**
+!/.github/**
+
+# Nuxt / Node
+!/package.json
+!/pnpm-lock.yaml
+!/pnpm-workspace.yaml
+!/.npmrc
+!/.nvmrc
+!/nuxt.config.ts
+!/app.config.ts
+!/tsconfig.json
+!/eslint.config.mjs
+!/.prettierrc
+!/.prettierignore
+!/vitest.config.ts
+!/playwright.config.ts
+!/app/**
+!/public/**
+!/shared/**
+!/tests/**
+!/src-tauri/**
+
+# Артефакты
+**/node_modules/
+**/.nuxt/
+**/.output/
+**/.data/
+**/dist/
+**/coverage/
+**/test-results/
+**/playwright-report/
+/src-tauri/target/
+/src-tauri/gen/
+
+# Секреты — никогда
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+
+# Следы ИИ-инструментов — никогда
+CLAUDE.md
+CLAUDE.local.md
+AGENTS.md
+.claude/
+.cursor/
+.aider*
+.copilot*
+.windsurf*
+.codex/
+
+# Мусор ОС и редакторов
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

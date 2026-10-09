@@ -1,0 +1,57 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  pr-title:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Формат заголовка PR
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          printf '%s' "$TITLE" | grep -qE '^(feat|fix|refactor|perf|test|docs|build|ci|chore|style|revert)(\([a-z0-9._/-]+\))?!?: .+' \
+            || { echo "Заголовок PR: <тип>(<скоуп>): <описание по-русски>"; exit 1; }
+          printf '%s' "$TITLE" | grep -qP '\p{Cyrillic}' || { echo "Описание в заголовке PR — по-русски"; exit 1; }
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Зависимости
+        run: pnpm install --frozen-lockfile
+      - name: Линтер
+        run: pnpm lint
+      - name: Проверка типов
+        run: pnpm typecheck
+      - name: Тесты
+        run: pnpm test --run
+      - name: Сборка SPA
+        run: pnpm generate
+
+  ci:
+    if: always()
+    needs: [pr-title, web]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Итог
+        run: |
+          for r in "${{ needs.pr-title.result }}" "${{ needs.web.result }}"; do
+            case "$r" in success|skipped) ;; *) echo "есть упавшие проверки: $r"; exit 1 ;; esac
+          done
