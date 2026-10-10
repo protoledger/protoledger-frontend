@@ -213,6 +213,7 @@ const hypothesisH4: HypothesisDetail = {
   test: 'field.value == action.params.value',
   scope: 'все записи · порт 5020 · тип set_param',
   basis: 'obs-12 (байты 4–5), прогон run-3: 41 / 41',
+  marked: 'untested',
   counterexamples: [{ where: 'extra-1000.pcap · c0003 · сообщ. 88', expected: '70000', got: '4464 (0x1170)' }],
   note: 'Похоже, поле длиннее 2 байт: значение 70000 = 0x00011170. Длина сообщения при этом 9 вместо 7.',
   history: [
@@ -319,6 +320,10 @@ export function createMockResearchSource(): ResearchSource {
     getInterpretationRevision: async () => (await delay(), interpretation.yaml.map(l => l.text).join('\n')),
     getHypotheses: async () => (await delay(), structuredClone(hypotheses)),
     getHypothesisDetail: async id => (await delay(), id === hypothesisH4.id ? structuredClone(hypothesisH4) : null),
+    getObservations: async () => (await delay(), compare.observations.map(o => ({ id: o.id, text: o.text }))),
+    createHypothesis: async () => null,
+    setHypothesisStatus: async () => false,
+    createQuestion: async () => false,
     getVerification: async () => (await delay(), structuredClone(verification)),
     startRun: async () => null,
     getReport: async () => (await delay(), structuredClone(report)),
