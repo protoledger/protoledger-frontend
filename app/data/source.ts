@@ -4,6 +4,7 @@ import type {
   Connection,
   ConnectionFlag,
   Frame,
+  FramingSpec,
   Job,
   Page,
   Project,
@@ -17,6 +18,7 @@ import type {
   ActionsView,
   CompareView,
   ExchangeView,
+  FramingDetail,
   FramingView,
   HypothesesView,
   HypothesisDetail,
@@ -64,6 +66,9 @@ export interface ResearchSource {
   getProjectExtras(): Promise<ProjectExtras>
   getActionLogs(): Promise<ActionLog[]>
   getFraming(stream: string): Promise<FramingView>
+  getFramingDetail(stream: string, spec: FramingSpec): Promise<FramingDetail>
+  /** Записывает фрейминг в интерпретацию новой ревизией; номер ревизии или null для примера данных. */
+  applyFraming(spec: FramingSpec): Promise<number | null>
   getActions(): Promise<ActionsView>
   getExchange(actionId: string): Promise<ExchangeView | null>
   getCompare(): Promise<CompareView>

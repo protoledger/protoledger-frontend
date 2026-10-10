@@ -3,7 +3,8 @@ import type { components } from '~/api/schema'
 import { base64ToBytes, formatCount, hexByte } from '~/utils/bytes'
 import type { KnowledgeStatus } from '~/utils/status'
 import type { ContractSource, ResearchSource } from './source'
-import type { ExchangeSide, ExchangeView, Hypothesis, InterpretationTreeNode, ResultCategory, VerificationView } from './views'
+import { framingOnlyYaml, replaceFramingBlock } from '~/utils/interpretation-yaml'
+import type { ExchangeSide, ExchangeView, FramingCandidate, Hypothesis, InterpretationTreeNode, ResultCategory, VerificationView } from './views'
 
 type S = components['schemas']
 
@@ -21,6 +22,19 @@ const HYPOTHESIS_STATUS: Record<S['HypothesisStatus'], Hypothesis['status']> = {
   supported: 'supported',
   refuted: 'refuted',
   superseded: 'superseded',
+}
+
+const COUNTER_REASON: Record<S['FramingCounter']['reason'], { status: KnowledgeStatus, note: string }> = {
+  bad_length: { status: 'violation', note: 'значение длины вне допустимого' },
+  overrun: { status: 'gap', note: 'сообщение выходит за конец участка' },
+  short_header: { status: 'gap', note: 'не хватает байтов заголовка' },
+  dissimilar: { status: 'unknown', note: 'начало не похоже на остальные' },
+}
+
+const pct = (permille: number) => `${(permille / 10).toFixed(1).replace('.', ',')}%`
+
+function lengthType(h: S['LengthHint']) {
+  return h.width === 1 ? 'u8' : `u${h.width * 8} ${h.bigEndian ? 'BE' : 'LE'}`
 }
 
 function clock(iso: string) {
@@ -337,8 +351,80 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       return unwrap(await api.POST('/api/runs', { body: {} })).jobId
     },
 
-    // Эндпоинтов поиска границ, сравнения и отчёта в контракте ещё нет.
-    getFraming: stream => sample.getFraming(stream),
+    async getFraming(stream) {
+      const hints = unwrap(await api.POST('/api/analysis/framing', { body: { streams: [stream] } }))
+      const candidates: FramingCandidate[] = hints.length.map((h, i) => ({
+        id: `len-${i}`,
+        offset: h.at,
+        type: lengthType(h),
+        adjust: h.adjust,
+        messages: h.messages,
+        share: pct(h.scorePermille),
+        spec: h.framing,
+        evidence: {
+          hypothesis: `длина = ${lengthType(h)} @${h.at} ${h.adjust >= 0 ? '+' : '−'} ${Math.abs(h.adjust)}`,
+          confirmed: `${formatCount(h.messages)} сообщ., ${formatCount(h.coveredBytes)} из ${formatCount(h.totalBytes)} байт`,
+          scope: `${h.streamsConfirmed} из ${h.streamsTotal} потоков · длины ${h.minLength}–${h.maxLength}`,
+          counterexamples: h.firstCounterexample
+            ? [{
+                message: `участок ${h.firstCounterexample.run}, байт ${h.firstCounterexample.offset}`,
+                status: COUNTER_REASON[h.firstCounterexample.reason].status,
+                note: COUNTER_REASON[h.firstCounterexample.reason].note + (h.firstCounterexample.value != null ? ` (поле = ${h.firstCounterexample.value})` : ''),
+              }]
+            : [],
+          note: [
+            `Начала похожи друг на друга: ${pct(h.startCoherencePermille)}; совпадают с началами сегментов TCP: ${pct(h.segmentAlignmentPermille)}.`,
+            h.equivalent.length ? `Те же границы дают: ${h.equivalent.map(e => `${e.type} @${e.at} +${e.adjust}`).join(', ')}.` : '',
+          ].filter(Boolean).join(' '),
+        },
+      }))
+      return {
+        searchRange: `${formatCount(hints.sampledBytes)} байт · порог ${hints.minMessages} сообщ.`,
+        candidates,
+        signatures: [
+          ...hints.signatures.map(sg => ({ label: sg.bytes.toUpperCase().replace(/(..)(?=.)/g, '$1 '), matched: sg.atStarts, total: sg.startsTotal, ok: sg.atStarts === sg.startsTotal })),
+          ...hints.delimiters.map(d => ({ label: `${d.bytes.toUpperCase()} в конце`, matched: d.atEnds, total: d.endsTotal, ok: false })),
+        ],
+        notes: [
+          hints.incomplete ? 'Поиск прерван по времени — список кандидатов неполон.' : '',
+          hints.truncated ? 'Часть данных не вошла в анализ (предел размера).' : '',
+          !candidates.length ? `Кандидатов поля длины нет: нужно хотя бы ${hints.minMessages} подтверждённых сообщений.` : '',
+        ].filter(Boolean),
+      }
+    },
+
+    async getFramingDetail(stream, spec) {
+      const [preview, variability] = await Promise.all([
+        api.POST('/api/interpretation/preview', { body: { stream, yaml: framingOnlyYaml(spec), limit: 500, offset: 0 } }).then(unwrap),
+        api.POST('/api/analysis/variability', { body: { streams: [stream], framing: spec } }).then(unwrap),
+      ])
+      const columns = variability.columns.slice(0, 16)
+      const constant = variability.regions.filter(r => r.kind === 'constant').map(r => `${r.start}–${r.end - 1}`)
+      const counters = variability.counters.map(c => `счётчик @${c.at}`)
+      return {
+        messageStarts: preview.items.map(m => m.start),
+        variability: columns.map(c => c.entropyMillibits / 1000),
+        variabilityNote: [
+          `Длина ${variability.length}, сообщений ${variability.analysed}.`,
+          constant.length ? `Постоянны: ${constant.join(', ')}.` : 'Постоянных областей нет.',
+          counters.length ? `${counters.join(', ')}.` : '',
+        ].filter(Boolean).join(' '),
+      }
+    },
+
+    async applyFraming(spec) {
+      let yaml: string
+      try {
+        yaml = replaceFramingBlock(unwrap(await api.GET('/api/interpretation')).yaml, spec)
+      }
+      catch (e) {
+        if (!(e instanceof ApiError && e.status === 404)) throw e
+        yaml = framingOnlyYaml(spec)
+      }
+      return unwrap(await api.PUT('/api/interpretation', { body: { yaml } })).rev
+    },
+
+    // Эндпоинтов сравнения и отчёта в контракте ещё нет.
     getCompare: () => sample.getCompare(),
     getReport: () => sample.getReport(),
   }
