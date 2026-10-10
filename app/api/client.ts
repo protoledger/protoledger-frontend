@@ -4,10 +4,23 @@ import type { Problem } from './types'
 
 const TOKEN_PLACEHOLDER = '__PROTOLEDGER_TOKEN__'
 
+let cachedToken: string | null = null
+
+/**
+ * Токен сессии из <meta name="protoledger-token">. Первый найденный запоминается:
+ * тег может смениться после загрузки, а токен на всю сессию один.
+ */
 export function readSessionToken(doc: Document = document): string | null {
+  if (cachedToken) return cachedToken
   const content = doc.querySelector('meta[name="protoledger-token"]')?.getAttribute('content')
   if (!content || content === TOKEN_PLACEHOLDER) return null
+  cachedToken = content
   return content
+}
+
+/** Только для тестов: сбросить запомненный токен. */
+export function resetSessionTokenForTests() {
+  cachedToken = null
 }
 
 export class ApiError extends Error {

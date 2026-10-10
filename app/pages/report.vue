@@ -18,22 +18,22 @@ const h2 = 'mt-6 mb-2 font-display text-[17px] font-semibold text-pl-wine'
         <!-- Предпросмотр — светлая карточка, как экспортированный HTML; статусы в светлой палитре. -->
         <article v-if="view" class="light mx-auto max-w-[760px] border-t-4 border-pl-wine bg-pl-card px-11 py-10 text-sm leading-relaxed text-pl-card-fg">
           <p class="text-pl-muted">{{ view.meta }}</p>
-          <h1 class="mt-1 mb-4 font-display text-2xl font-semibold">{{ view.title }}</h1>
+          <h1 class="mt-1 mb-4 font-display text-2xl font-semibold">{{ safeText(view.title) }}</h1>
           <h2 id="sec-1" :class="h2">1. Итог</h2>
-          <p>{{ view.summary }}</p>
+          <p>{{ safeText(view.summary) }}</p>
           <table class="mt-2.5 w-full border-collapse [&_td]:border-b [&_td]:border-pl-line [&_td]:px-2.5 [&_td]:py-1.5 [&_th]:bg-pl-raise [&_th]:px-2.5 [&_th]:py-1.5 [&_th]:text-left [&_th]:text-[11px] [&_th]:tracking-[0.06em] [&_th]:uppercase">
             <thead><tr><th>Поле</th><th>Тип</th><th>Статус</th><th>Основания</th></tr></thead>
             <tbody>
               <tr v-for="f in view.fields" :key="f.name">
-                <td class="font-mono">{{ f.name }}</td><td>{{ f.type }}</td>
-                <td><CommonStatusBadge :status="f.status" /></td><td>{{ f.basis }}</td>
+                <td class="font-mono">{{ safeText(f.name) }}</td><td>{{ f.type }}</td>
+                <td><CommonStatusBadge :status="f.status" /></td><td>{{ safeText(f.basis) }}</td>
               </tr>
             </tbody>
           </table>
           <h2 id="sec-2" :class="h2">2. Данные и область</h2>
-          <p>{{ view.scope }}</p>
+          <p>{{ safeText(view.scope) }}</p>
           <h2 id="sec-7" :class="h2">7. Открытые вопросы</h2>
-          <ul class="list-disc pl-5"><li v-for="q in view.questions" :key="q">{{ q }}</li></ul>
+          <ul class="list-disc pl-5"><li v-for="q in view.questions" :key="q">{{ safeText(q) }}</li></ul>
         </article>
       </CommonAsyncState>
     </section>

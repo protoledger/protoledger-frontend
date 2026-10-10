@@ -75,7 +75,7 @@ function time(iso: string) {
         <dl class="pl-dl grid-cols-[130px_minmax(0,1fr)]">
           <dt>Смещение</dt><dd>[{{ range.start }}, {{ range.end }})</dd>
           <dt>Кадр</dt><dd>{{ primaryFrame ? `№ ${formatCount(primaryFrame.frameNo)}` : '—' }}</dd>
-          <dt>Запись</dt><dd class="truncate">{{ primaryFrame ? project.sourceName(primaryFrame.source) : '—' }}</dd>
+          <dt>Запись</dt><dd class="truncate">{{ primaryFrame ? safeText(project.sourceName(primaryFrame.source)) : '—' }}</dd>
           <dt>Время захвата</dt><dd>{{ frame ? time(frame.time) : '—' }}</dd>
           <dt>Смещение в кадре</dt><dd>{{ offsetInFrame ?? '—' }}</dd>
         </dl>

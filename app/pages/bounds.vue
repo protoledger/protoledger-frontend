@@ -80,18 +80,18 @@ function share(c: { matched: number, total: number }) {
         <dl class="pl-dl grid-cols-[110px_minmax(0,1fr)]">
           <dt>Гипотеза</dt><dd>{{ view.evidence.hypothesis }}</dd>
           <dt>Подтверждено</dt><dd>{{ view.evidence.confirmed }}</dd>
-          <dt>Область</dt><dd>{{ view.evidence.scope }}</dd>
+          <dt>Область</dt><dd>{{ safeText(view.evidence.scope) }}</dd>
         </dl>
         <h3 :class="cap">Контрпримеры</h3>
         <table class="pl-table">
           <tbody>
             <tr v-for="c in view.evidence.counterexamples" :key="c.message">
-              <td>{{ c.message }}</td>
-              <td><CommonStatusBadge :status="c.status" /> {{ c.note }}</td>
+              <td>{{ safeText(c.message) }}</td>
+              <td><CommonStatusBadge :status="c.status" /> {{ safeText(c.note) }}</td>
             </tr>
           </tbody>
         </table>
-        <p class="px-3 text-pl-muted">{{ view.evidence.note }}</p>
+        <p class="px-3 text-pl-muted">{{ safeText(view.evidence.note) }}</p>
       </div>
       <footer class="border-t border-pl-line px-3 py-2.5">
         <button class="pl-btn pl-btn-primary" type="button" @click="draft('Фрейминг применён')">Применить как фрейминг</button>

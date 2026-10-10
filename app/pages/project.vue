@@ -104,14 +104,14 @@ const CHECKSUM = [['ignore', 'ignore'], ['warn', 'warn'], ['drop', 'drop']] as c
     <ShellSidePanel id="project-tree" title="Структура проекта" :width="270">
       <div class="pl-scroll flex-1">
         <ul v-if="project.project" class="m-0 list-none py-1.5">
-          <li class="flex items-center gap-1.5 py-1 pr-2.5 pl-3.5 whitespace-nowrap"><UIcon name="i-lucide-folder-open" aria-hidden="true" /> {{ project.project.name }}.protoledger</li>
+          <li class="flex items-center gap-1.5 py-1 pr-2.5 pl-3.5 whitespace-nowrap"><UIcon name="i-lucide-folder-open" aria-hidden="true" /> {{ safeText(project.project.name) }}.protoledger</li>
           <li class="flex items-center gap-1.5 py-1 pr-2.5 pl-[30px] whitespace-nowrap"><UIcon name="i-lucide-folder" aria-hidden="true" /> Записи <span class="ml-auto text-[11px] text-pl-muted">{{ project.sources.length }}</span></li>
           <li v-for="s in project.sources" :key="s.sha256" class="flex items-center gap-1.5 py-1 pr-2.5 pl-12 whitespace-nowrap">
-            <UIcon name="i-lucide-file" aria-hidden="true" /> {{ s.name }}
+            <UIcon name="i-lucide-file" aria-hidden="true" /> {{ safeText(s.name) }}
             <span v-if="s.status === 'importing'" class="ml-auto text-[11px] text-pl-muted">{{ percent(s) ?? '…' }}%</span>
           </li>
           <li class="flex items-center gap-1.5 py-1 pr-2.5 pl-[30px] whitespace-nowrap"><UIcon name="i-lucide-folder" aria-hidden="true" /> Журналы <span class="ml-auto text-[11px] text-pl-muted">{{ logs.length }}</span></li>
-          <li v-for="l in logs" :key="l.name" class="flex items-center gap-1.5 py-1 pr-2.5 pl-12 whitespace-nowrap"><UIcon name="i-lucide-file" aria-hidden="true" /> {{ l.name }}</li>
+          <li v-for="l in logs" :key="l.name" class="flex items-center gap-1.5 py-1 pr-2.5 pl-12 whitespace-nowrap"><UIcon name="i-lucide-file" aria-hidden="true" /> {{ safeText(l.name) }}</li>
           <template v-if="project.extras">
             <li class="flex items-center gap-1.5 py-1 pr-2.5 pl-[30px] whitespace-nowrap"><UIcon name="i-lucide-folder" aria-hidden="true" /> Интерпретация <span class="ml-auto text-[11px] text-pl-muted">{{ project.extras.interpretationRevs.length }} rev</span></li>
             <li v-for="r in project.extras.interpretationRevs" :key="r.rev" class="flex items-center gap-1.5 py-1 pr-2.5 pl-12 whitespace-nowrap">
@@ -157,7 +157,7 @@ const CHECKSUM = [['ignore', 'ignore'], ['warn', 'warn'], ['drop', 'drop']] as c
             </thead>
             <tbody>
               <tr v-for="s in project.sources" :key="s.sha256" :aria-selected="s.sha256 === selected?.sha256" @click="selectedSha = s.sha256">
-                <td>{{ s.name }}</td>
+                <td>{{ safeText(s.name) }}</td>
                 <td>{{ s.format.toUpperCase() }}</td>
                 <td class="font-mono" :title="s.sha256">{{ s.status === 'importing' ? '—' : `${s.sha256.slice(0, 4)}…${s.sha256.slice(-4)}` }}</td>
                 <td class="text-right whitespace-nowrap">{{ s.status === 'importing' ? '—' : formatCount(s.frameCount) }}</td>
@@ -183,9 +183,9 @@ const CHECKSUM = [['ignore', 'ignore'], ['warn', 'warn'], ['drop', 'drop']] as c
             <thead><tr><th>Файл</th><th>Колонки</th><th class="text-right">Строк</th><th>Состояние</th></tr></thead>
             <tbody>
               <tr v-for="l in logs" :key="l.name">
-                <td>{{ l.name }}</td>
+                <td>{{ safeText(l.name) }}</td>
                 <td>
-                  <span v-for="(m, i) in l.mapping" :key="m.column">{{ i ? ' · ' : '' }}{{ m.column }} → {{ m.field }}</span>
+                  <span v-for="(m, i) in l.mapping" :key="m.column">{{ i ? ' · ' : '' }}{{ safeText(m.column) }} → {{ m.field }}</span>
                 </td>
                 <td class="text-right whitespace-nowrap">{{ l.rows }}</td>
                 <td><CommonStatusBadge :status="l.status === 'mapped' ? 'rule' : 'hypothesis'" :label="l.status === 'mapped' ? 'сопоставлено' : 'нужно сопоставить'" /></td>
@@ -212,7 +212,7 @@ const CHECKSUM = [['ignore', 'ignore'], ['warn', 'warn'], ['drop', 'drop']] as c
           <ul class="m-0 flex list-none flex-col gap-2 px-3 pb-3">
             <li v-for="d in project.diagnostics[selected.sha256]!.items" :key="d.code">
               <CommonStatusBadge :status="DIAGNOSTIC_STATUS[d.code]?.status ?? 'unknown'" :label="`${DIAGNOSTIC_STATUS[d.code]?.label ?? d.code} · ${formatCount(d.count)}`" />
-              <p class="mt-1 text-pl-muted">{{ d.detail }}</p>
+              <p class="mt-1 text-pl-muted">{{ safeText(d.detail) }}</p>
             </li>
           </ul>
         </template>
