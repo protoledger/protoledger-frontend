@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 @import "./fonts.css";
+/* Тема Nuxt UI лежит в .nuxt/ui, а .gitignore (белый список) скрывает её от сканера Tailwind:
+   его собственный @source "./ui" не срабатывает, явный шаблон файлов — срабатывает. */
+@source "../../../.nuxt/ui/*.ts";
 
 /* Токены ADR 0016. Тёмная тема по умолчанию, светлая — класс .light на <html>. */
 :root,
