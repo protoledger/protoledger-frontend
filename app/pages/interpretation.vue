@@ -16,7 +16,7 @@ watchEffect(() => {
 const lines = computed(() => (view.value?.yaml ?? []).map((l, i) => {
   const text = fixed.value && i + 1 === view.value?.field?.line ? l.text.replace('u16be, status: hypothesis', 'i32be, status: hypothesis') : l.text
   const mark = fixed.value && i + 1 === view.value?.field?.line ? 'hypothesis' : l.mark
-  return { n: i + 1, tokens: tokenizeYamlLine(text), mark }
+  return { n: i + 1, tokens: tokenizeYamlLine(safeText(text)), mark }
 }))
 
 const cap = 'pl-caption m-0 px-3 pt-3.5 pb-2'
@@ -81,7 +81,7 @@ function applyFix() {
         <h3 :class="cap">Предпросмотр · поток {{ view.preview.stream }}</h3>
         <dl class="pl-dl">
           <template v-for="r in view.preview.rows" :key="r.label">
-            <dt>{{ r.label }}</dt><dd>{{ r.value }}</dd>
+            <dt>{{ r.label }}</dt><dd>{{ safeText(r.value) }}</dd>
           </template>
         </dl>
         <template v-if="view.field">
@@ -93,7 +93,7 @@ function applyFix() {
             <CommonStatusBadge v-if="!fixed" status="violation" :label="`${view.field.counterexamples} контрпример`" />
             <CommonStatusBadge v-else status="stale" label="нужна перепроверка" />
           </dd>
-          <dt>Где</dt><dd>{{ view.field.where }}</dd>
+          <dt>Где</dt><dd>{{ safeText(view.field.where) }}</dd>
         </dl>
         </template>
         <template v-if="view.quickFix">

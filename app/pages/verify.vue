@@ -88,8 +88,8 @@ const total = computed(() => view.value?.categories.reduce((n, c) => n + c.count
             <tbody>
               <tr v-for="(p, i) in view.problems" :key="i">
                 <td><CommonStatusBadge :status="p.status" :label="p.label" /></td>
-                <td>{{ p.where }}</td>
-                <td>{{ p.what }}</td>
+                <td>{{ safeText(p.where) }}</td>
+                <td>{{ safeText(p.what) }}</td>
               </tr>
             </tbody>
           </table>
@@ -109,7 +109,7 @@ const total = computed(() => view.value?.categories.reduce((n, c) => n + c.count
         <table class="pl-table">
           <tbody>
             <tr v-for="r in view.runs" :key="r.id" :aria-selected="r.current">
-              <td>{{ r.id }}</td><td>{{ r.label }}</td>
+              <td>{{ r.id }}</td><td>{{ safeText(r.label) }}</td>
               <td><span v-if="r.current">актуален</span><CommonStatusBadge v-else status="stale" /></td>
             </tr>
           </tbody>

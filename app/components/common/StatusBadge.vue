@@ -12,6 +12,6 @@ const meta = computed(() => STATUS[props.status])
     :style="{ '--c': meta.color }"
   >
     <UIcon :name="meta.icon" class="size-3.5 shrink-0" aria-hidden="true" />
-    <span :class="{ 'underline decoration-dotted': meta.decoration === 'dotted', 'line-through': meta.decoration === 'strike' }">{{ label ?? meta.label }}</span>
+    <span :class="{ 'underline decoration-dotted': meta.decoration === 'dotted', 'line-through': meta.decoration === 'strike' }">{{ safeText(label ?? meta.label) }}</span>
   </span>
 </template>

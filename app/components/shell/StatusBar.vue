@@ -26,7 +26,7 @@ const policies = computed(() => project.project?.settings)
     <nav class="flex min-w-0 flex-1 items-center gap-1 overflow-hidden whitespace-nowrap" aria-label="Где вы находитесь">
       <template v-for="(c, i) in crumbs" :key="i">
         <UIcon v-if="i" name="i-lucide-chevron-right" class="size-3 text-pl-muted" aria-hidden="true" />
-        <span>{{ c }}</span>
+        <span>{{ safeText(c) }}</span>
       </template>
     </nav>
     <span v-if="policies" class="whitespace-nowrap text-pl-muted">перекрытия <b class="font-semibold text-pl-fg">{{ policies.overlapPolicy }}</b></span>

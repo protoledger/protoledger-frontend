@@ -24,7 +24,7 @@ const groups = computed(() => [
   {
     id: 'sources',
     label: 'Записи',
-    items: project.sources.map(s => ({ label: s.name, suffix: s.sha256.slice(0, 8), icon: 'i-lucide-file', onSelect: () => go('/project') })),
+    items: project.sources.map(s => ({ label: safeText(s.name, 200), suffix: s.sha256.slice(0, 8), icon: 'i-lucide-file', onSelect: () => go('/project') })),
   },
 ])
 
