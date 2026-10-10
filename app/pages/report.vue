@@ -7,18 +7,13 @@ const h2 = 'mt-6 mb-2 font-display text-[17px] font-semibold text-pl-wine'
 </script>
 
 <template>
-  <div class="grid h-full grid-cols-[230px_minmax(0,1fr)]">
-    <aside class="border-r border-pl-line">
-      <CommonPanelHeader title="Разделы" />
-      <ol v-if="view" class="m-0 list-none py-1.5">
+  <div class="flex h-full">
+    <ShellSidePanel id="report-sections" title="Разделы" :width="230">
+      <ol v-if="view" class="pl-scroll m-0 flex-1 list-none py-1.5">
         <li v-for="(s, i) in view.sections" :key="s"><a :href="`#sec-${i + 1}`" class="block px-6 py-1.5 hover:bg-pl-raise">{{ i + 1 }}. {{ s }}</a></li>
       </ol>
-      <div class="flex flex-col gap-2 border-t border-pl-line p-3">
-        <button class="pl-btn pl-btn-primary justify-center" type="button" @click="draft('Экспорт HTML')">Экспорт HTML</button>
-        <button class="pl-btn justify-center" type="button" @click="draft('Экспорт интерпретации YAML')">Интерпретация YAML</button>
-      </div>
-    </aside>
-    <section class="pl-scroll px-6 py-[18px]">
+    </ShellSidePanel>
+    <section class="pl-scroll min-w-0 flex-1 px-6 py-[18px]">
       <CommonAsyncState :pending="pending" :error="error?.message" :empty="!view" @retry="refresh()">
         <!-- Предпросмотр — светлая карточка, как экспортированный HTML; статусы в светлой палитре. -->
         <article v-if="view" class="light mx-auto max-w-[760px] border-t-4 border-pl-wine bg-pl-card px-11 py-10 text-sm leading-relaxed text-pl-card-fg">
@@ -42,5 +37,14 @@ const h2 = 'mt-6 mb-2 font-display text-[17px] font-semibold text-pl-wine'
         </article>
       </CommonAsyncState>
     </section>
+    <ShellInspectorContent title="Экспорт">
+      <dl v-if="view" class="pl-dl grid-cols-[90px_minmax(0,1fr)]">
+        <dt>Источник</dt><dd>{{ view.meta }}</dd>
+      </dl>
+      <div class="flex flex-col gap-2 border-t border-pl-line p-3">
+        <button class="pl-btn pl-btn-primary justify-center" type="button" @click="draft('Экспорт HTML')">Экспорт HTML</button>
+        <button class="pl-btn justify-center" type="button" @click="draft('Экспорт интерпретации YAML')">Интерпретация YAML</button>
+      </div>
+    </ShellInspectorContent>
   </div>
 </template>

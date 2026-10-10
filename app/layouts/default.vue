@@ -28,6 +28,10 @@ onMounted(async () => {
 
 defineShortcuts({
   meta_k: () => { searchOpen.value = true },
+  alt_0: () => { workspace.inspector.collapsed = !workspace.inspector.collapsed },
+  alt_f12: () => { workspace.bottomOpen = !workspace.bottomOpen },
+  meta_shift_f12: () => { workspace.focus = !workspace.focus },
+  escape: { usingInput: false, handler: () => { workspace.focus = false } },
   ...Object.fromEntries(SCREENS.map((s, i) => [`alt_${i + 1}`, () => navigateTo(s.path)])),
 })
 
@@ -44,21 +48,35 @@ onBeforeUnmount(() => window.removeEventListener('keyup', onKeyup))
 </script>
 
 <template>
-  <div class="grid h-screen min-w-[1280px] grid-cols-[52px_minmax(0,1fr)] grid-rows-[44px_minmax(0,1fr)_26px] overflow-hidden">
-    <ShellTopBar class="col-span-2" @search="searchOpen = true" />
-    <ShellToolStrip />
+  <div
+    class="grid h-screen min-w-[1280px] grid-rows-[44px_minmax(0,1fr)_26px] overflow-hidden"
+    :class="workspace.focus ? 'grid-cols-[minmax(0,1fr)]' : 'grid-cols-[52px_minmax(0,1fr)]'"
+  >
+    <ShellTopBar class="col-span-full" @search="searchOpen = true" />
+    <ShellToolStrip v-if="!workspace.focus" />
     <div class="flex min-h-0 flex-col">
-      <ShellScreenTabs />
-      <main class="min-h-0 flex-1 overflow-hidden">
-        <div v-if="project.error" class="p-4" role="alert">
-          {{ project.error }}
-          <button class="pl-btn ml-3" type="button" @click="project.load()">Повторить</button>
-        </div>
-        <slot v-else />
-      </main>
-      <ShellBottomPanel />
+      <ShellScreenTabs v-if="!workspace.focus" />
+      <div class="flex min-h-0 flex-1">
+        <main class="min-h-0 min-w-0 flex-1 overflow-hidden">
+          <div v-if="project.error" class="p-4" role="alert">
+            {{ project.error }}
+            <button class="pl-btn ml-3" type="button" @click="project.load()">Повторить</button>
+          </div>
+          <slot v-else />
+        </main>
+        <ShellInspector />
+      </div>
+      <ShellBottomPanel v-if="!workspace.focus" />
     </div>
-    <ShellStatusBar class="col-span-2" />
+    <ShellStatusBar class="col-span-full" />
     <ShellSearchPalette v-model:open="searchOpen" />
+    <button
+      v-if="workspace.focus"
+      class="fixed right-4 bottom-10 z-20 flex items-center gap-2 rounded border border-pl-line bg-pl-chrome px-3 py-1.5 text-pl-muted shadow-lg hover:text-pl-fg"
+      type="button"
+      @click="workspace.focus = false"
+    >
+      <UIcon name="i-lucide-minimize-2" class="size-4" aria-hidden="true" /> Режим фокуса · Esc — выйти
+    </button>
   </div>
 </template>

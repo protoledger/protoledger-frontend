@@ -11,8 +11,8 @@ const hot = 'bg-pl-st-hypothesis/18 text-pl-st-hypothesis'
 </script>
 
 <template>
-  <div class="grid h-full grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)] [&>*]:min-h-0 [&>*]:min-w-0">
-    <section class="pl-scroll border-r border-pl-line">
+  <div class="flex h-full">
+    <section class="pl-scroll min-w-0 flex-1">
       <CommonPanelHeader title="Сообщения рядом" subtitle="выровнены по началу">
         <template v-if="view">
           <span v-for="chip in view.chips" :key="chip" class="rounded border border-pl-wine-text bg-pl-wine-soft px-2 py-0.5 text-pl-fg-strong">{{ chip }}</span>
@@ -54,10 +54,9 @@ const hot = 'bg-pl-st-hypothesis/18 text-pl-st-hypothesis'
       </CommonAsyncState>
     </section>
 
-    <section v-if="view" class="flex flex-col">
-      <CommonPanelHeader title="Наблюдения" :subtitle="String(view.observationTotal)" />
-      <div class="pl-scroll flex-1">
-        <div v-for="o in view.observations" :key="o.id" class="grid grid-cols-[90px_minmax(0,1fr)] gap-2.5 border-b border-pl-line px-3 py-2.5">
+    <ShellInspectorContent :title="view ? `Наблюдения · ${view.observationTotal}` : 'Наблюдения'">
+      <div v-if="view" class="pl-scroll flex-1">
+        <div v-for="o in view.observations" :key="o.id" class="grid grid-cols-[64px_minmax(0,1fr)] gap-2.5 border-b border-pl-line px-3 py-2.5">
           <span class="text-pl-fg-strong">{{ o.id }}</span>
           <div>
             <div>{{ o.text }}</div>
@@ -71,6 +70,6 @@ const hot = 'bg-pl-st-hypothesis/18 text-pl-st-hypothesis'
       <footer class="border-t border-pl-line px-3 py-2.5">
         <button class="pl-btn pl-btn-primary" type="button" @click="draft('Наблюдение создано')">Выделение → наблюдение</button>
       </footer>
-    </section>
+    </ShellInspectorContent>
   </div>
 </template>

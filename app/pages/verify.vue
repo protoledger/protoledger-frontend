@@ -22,8 +22,8 @@ const total = computed(() => view.value?.categories.reduce((n, c) => n + c.count
 </script>
 
 <template>
-  <div class="grid h-full grid-cols-[minmax(0,1fr)_520px] [&>*]:min-h-0 [&>*]:min-w-0">
-    <section class="pl-scroll border-r border-pl-line">
+  <div class="flex h-full">
+    <section class="pl-scroll min-w-0 flex-1">
       <CommonPanelHeader v-if="view" :title="`Прогон ${view.run.id}`" :subtitle="`rev ${view.run.rev} · ${view.run.scope} · ${view.run.time}`">
         <button class="pl-btn pl-btn-primary h-7" type="button" @click="draft('Прогон проверки запущен')">
           <UIcon name="i-lucide-circle-check-big" class="size-4" aria-hidden="true" /> Запустить
@@ -76,28 +76,28 @@ const total = computed(() => view.value?.categories.reduce((n, c) => n + c.count
       </CommonAsyncState>
     </section>
 
-    <section v-if="view" class="flex flex-col">
-      <CommonPanelHeader title="Сравнение с run-3" />
-      <dl class="pl-dl">
-        <template v-for="d in view.diff" :key="d.label">
-          <dt>{{ d.label }}</dt>
-          <dd :class="{ 'text-pl-st-rule': d.tone === 'good', 'text-pl-st-violation': d.tone === 'bad' }">{{ d.value }}</dd>
-        </template>
-      </dl>
-      <h3 class="pl-caption m-0 px-3 pt-3.5 pb-2">Прогоны</h3>
-      <table class="pl-table">
-        <tbody>
-          <tr v-for="r in view.runs" :key="r.id" :aria-selected="r.current">
-            <td>{{ r.id }}</td><td>{{ r.label }}</td>
-            <td><span v-if="r.current">актуален</span><CommonStatusBadge v-else status="stale" /></td>
-          </tr>
-        </tbody>
-      </table>
-      <p class="mt-2 px-3 text-pl-muted">{{ view.runsNote }}</p>
-      <div class="flex-1" />
+    <ShellInspectorContent title="Сравнение с run-3">
+      <div v-if="view" class="pl-scroll flex-1">
+        <dl class="pl-dl">
+          <template v-for="d in view.diff" :key="d.label">
+            <dt>{{ d.label }}</dt>
+            <dd :class="{ 'text-pl-st-rule': d.tone === 'good', 'text-pl-st-violation': d.tone === 'bad' }">{{ d.value }}</dd>
+          </template>
+        </dl>
+        <h3 class="pl-caption m-0 px-3 pt-3.5 pb-2">Прогоны</h3>
+        <table class="pl-table">
+          <tbody>
+            <tr v-for="r in view.runs" :key="r.id" :aria-selected="r.current">
+              <td>{{ r.id }}</td><td>{{ r.label }}</td>
+              <td><span v-if="r.current">актуален</span><CommonStatusBadge v-else status="stale" /></td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="mt-2 px-3 text-pl-muted">{{ view.runsNote }}</p>
+      </div>
       <footer class="border-t border-pl-line p-3">
         <NuxtLink to="/report" class="pl-btn">В отчёт</NuxtLink>
       </footer>
-    </section>
+    </ShellInspectorContent>
   </div>
 </template>
