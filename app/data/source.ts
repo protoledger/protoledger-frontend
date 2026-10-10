@@ -91,6 +91,10 @@ export interface ResearchSource {
   /** Запускает прогон на корпусе; id задачи или null, если запуск недоступен (пример данных). */
   startRun(corpus?: CorpusFilter): Promise<string | null>
   getReport(): Promise<ReportView>
+  /** Отчёт движка по прогону (без runId — последний); null — пример данных. */
+  generateReport(format: 'md' | 'html', runId?: string): Promise<{ fileName: string, content: string } | null>
+  /** Прогоны для выбора, новые первыми. */
+  listRuns(): Promise<{ id: string, label: string, stale: boolean }[]>
 }
 
 export type DataSourceKind = 'mock' | 'live'

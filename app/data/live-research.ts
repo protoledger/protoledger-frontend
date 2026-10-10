@@ -584,7 +584,17 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       return true
     },
 
-    // Эндпоинта отчёта в контракте ещё нет.
+    // Структурный вид отчёта — только в примере данных; в live экран показывает отчёт движка.
     getReport: () => sample.getReport(),
+
+    async generateReport(format, runId) {
+      const r = unwrap(await api.POST('/api/reports', { body: { format, ...(runId ? { runId } : {}) } }))
+      return { fileName: r.fileName, content: r.content }
+    },
+
+    async listRuns() {
+      const runs = unwrap(await api.GET('/api/runs', { params: { query: { limit: 50 } } }))
+      return runs.items.map(r => ({ id: r.id, label: `rev ${r.revision ?? '—'} · ${r.sources.length} зап.`, stale: r.stale }))
+    },
   }
 }
