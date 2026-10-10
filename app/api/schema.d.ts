@@ -570,6 +570,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Сформировать отчёт по проекту
+         * @description Отчёт — основания выводов, область применимости (записи, их sha256, диагностика), результат прогона,
+         *     контрпримеры, гипотезы со статусом и результатом теста, наблюдения и открытые вопросы. Без `runId` берётся
+         *     последний сохранённый прогон. Устаревший прогон помечается в тексте. Текст приходит строкой в JSON, чтобы
+         *     браузер не показывал HTML как страницу: фронт сохраняет его файлом (`fileName`) или показывает как текст.
+         *     HTML отчёта самодостаточен: всё экранировано, скриптов и внешних ресурсов нет, CSP в `<meta>`.
+         *     Совпадает с командой `protoledger report`.
+         */
+        post: operations["createReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/jobs": {
         parameters: {
             query?: never;
@@ -1118,6 +1143,20 @@ export interface components {
         QuestionList: {
             items: components["schemas"]["Question"][];
         };
+        ReportRequest: {
+            /** @enum {string} */
+            format: "md" | "html";
+            /** @description Прогон (run-0001); без значения — последний */
+            runId?: string;
+        };
+        Report: {
+            /** @enum {string} */
+            format: "md" | "html";
+            /** @description Имя файла при сохранении */
+            fileName: string;
+            /** @description Текст отчёта */
+            content: string;
+        };
         NewQuestion: {
             text: string;
         };
@@ -1264,6 +1303,14 @@ export interface components {
              */
             close: "fin" | "rst" | "open";
             flags: components["schemas"]["ConnectionFlag"][];
+            /**
+             * @description Сколько раз встретился каждый признак из `flags` (для значков с числом): повторных кадров,
+             *     участков-дыр, неоднозначных участков, сегментов с неверной суммой или усечённых. У `no_syn`
+             *     и `reused_ports` — 1. Ключи совпадают с `flags`.
+             */
+            flagCounts?: {
+                [key: string]: number;
+            };
             /** @description Два направленных потока */
             streams: components["schemas"]["StreamSummary"][];
         };
@@ -3458,6 +3505,9 @@ export interface operations {
                      *           "flags": [
                      *             "retransmissions"
                      *           ],
+                     *           "flagCounts": {
+                     *             "retransmissions": 14
+                     *           },
                      *           "streams": [
                      *             {
                      *               "id": "3f5a1c0d:c0001:ab",
@@ -3631,6 +3681,50 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["NoProject"];
+        };
+    };
+    createReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "format": "md",
+                 *       "runId": "run-0002"
+                 *     }
+                 */
+                "application/json": components["schemas"]["ReportRequest"];
+            };
+        };
+        responses: {
+            /** @description Отчёт */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "format": "md",
+                     *       "fileName": "report.md",
+                     *       "content": "# Отчёт по проекту «demo»\n\nВерсия движка 0.1.0. ..."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Report"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
         };
     };
     listJobs: {

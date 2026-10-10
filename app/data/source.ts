@@ -1,4 +1,6 @@
 import type {
+  ActionLogMapping,
+  ActionLogRecord,
   Connection,
   ConnectionFlag,
   Frame,
@@ -36,10 +38,14 @@ export interface ConnectionQuery {
 /** Операции, которые уже есть в контракте API (openapi.yaml). */
 export interface ContractSource {
   getProject(): Promise<Project | null>
+  /** Создаёт или открывает папку проекта; относительный путь — от каталога проектов движка. */
+  openProject(path: string, mode: 'create' | 'open'): Promise<Project>
   /** Меняет политики сборки; записи собираются заново фоновыми задачами. */
   updateSettings(patch: Partial<ProjectSettings>): Promise<Project>
   listSources(): Promise<Page<Source>>
   importSource(file: File): Promise<string>
+  /** Импорт журнала действий: колонки CSV сопоставляются явно, формат журнала заранее неизвестен. */
+  importActionLog(file: File, mapping: ActionLogMapping): Promise<ActionLogRecord>
   getDiagnostics(sha256: string): Promise<SourceDiagnostics>
   listConnections(query: ConnectionQuery): Promise<Page<Connection>>
   getStreamBytes(stream: string, from: number, len: number): Promise<StreamBytes>

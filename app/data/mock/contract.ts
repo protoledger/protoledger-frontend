@@ -49,6 +49,11 @@ export function createMockContractSource(): ContractSource {
       await delay()
       return { ...stand.project, settings: { ...settings }, sourceCount: sources.length }
     },
+    async openProject(path) {
+      await delay()
+      const name = path.split('/').filter(Boolean).pop()?.replace(/\.protoledger$/, '') || stand.project.name
+      return { ...stand.project, name, path, settings: { ...settings }, sourceCount: sources.length }
+    },
     async updateSettings(patch) {
       await delay()
       Object.assign(settings, patch)
@@ -72,6 +77,21 @@ export function createMockContractSource(): ContractSource {
       }
       sources.push(source)
       return startImport(source, Math.max(1000, Math.round(file.size / 180)))
+    },
+    async importActionLog(file, mapping) {
+      await delay()
+      const rows = Math.max(0, (await file.text()).split(/\r?\n/).filter(Boolean).length - 1)
+      return {
+        id: 'log-0002',
+        sha256: '0'.repeat(64),
+        name: file.name,
+        rows,
+        skipped: 0,
+        errors: [],
+        mapping: { ...mapping },
+        firstTime: null,
+        lastTime: null,
+      }
     },
     async getDiagnostics(sha256) {
       await delay()

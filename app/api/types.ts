@@ -22,6 +22,8 @@ export type Frame = S['Frame']
 export type Job = S['Job']
 export type JobState = S['JobState']
 export type JobProgress = S['JobProgress']
+export type ActionLogMapping = S['ActionLogMapping']
+export type ActionLogRecord = S['ActionLog']
 
 export interface Page<T> {
   items: T[]

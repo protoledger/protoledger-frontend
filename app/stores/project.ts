@@ -17,8 +17,17 @@ export const useProjectStore = defineStore('project', () => {
     loading.value = true
     error.value = null
     try {
-      const [p, x, s] = await Promise.all([data.getProject(), data.getProjectExtras(), data.listSources()])
+      // Без открытого проекта остальные эндпоинты отвечают 409 — спрашиваем их только после проекта.
+      const p = await data.getProject()
       project.value = p
+      if (!p) {
+        extras.value = null
+        sources.value = []
+        diagnostics.value = {}
+        loaded.value = true
+        return
+      }
+      const [x, s] = await Promise.all([data.getProjectExtras(), data.listSources()])
       extras.value = x
       sources.value = s.items
       const ready = s.items.filter(src => src.status === 'ready')
@@ -34,6 +43,11 @@ export const useProjectStore = defineStore('project', () => {
     }
   }
 
+  async function open(path: string, mode: 'create' | 'open') {
+    await data.openProject(path, mode)
+    await load()
+  }
+
   async function refreshSources() {
     sources.value = (await data.listSources()).items
   }
@@ -42,5 +56,5 @@ export const useProjectStore = defineStore('project', () => {
     return sources.value.find(s => s.sha256 === sha256)?.name ?? `${sha256.slice(0, 8)}…`
   }
 
-  return { project, extras, sources, diagnostics, loading, error, loaded, load, refreshSources, sourceName }
+  return { project, extras, sources, diagnostics, loading, error, loaded, load, open, refreshSources, sourceName }
 })
