@@ -45,6 +45,420 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/project/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Изменить настройки сборки потоков
+         * @description Меняет политики сборки TCP: `overlapPolicy` (что делать с перекрытием с различающимися байтами:
+         *     `first` — брать более ранний сегмент, `last` — более поздний, `flag` — не выбирать, участок
+         *     остаётся неоднозначным без принятых байтов) и `checksumPolicy` (`ignore`, `warn`, `drop`).
+         *     Передайте только изменяемые поля. Если настройки изменились, записи проекта заново собираются
+         *     фоновой задачей; они появляются в `GET /api/sources` по мере готовности. Пока идут задачи — `409`.
+         */
+        patch: operations["updateProjectSettings"];
+        trace?: never;
+    };
+    "/api/interpretation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Текущая интерпретация проекта
+         * @description Последняя сохранённая ревизия. Пока интерпретацию не сохраняли — `404`.
+         */
+        get: operations["getInterpretation"];
+        /**
+         * Сохранить интерпретацию новой ревизией
+         * @description Текст проверяется по схеме `protoledger/interpretation@1`: ошибка — `422` с описанием места и причины,
+         *     ревизия не создаётся. Если каноническая форма (digest) не отличается от последней ревизии, новая ревизия
+         *     не создаётся (`created: false`). Старые ревизии не изменяются.
+         */
+        put: operations["saveInterpretation"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/interpretation/revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ревизии интерпретации */
+        get: operations["listInterpretationRevisions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/interpretation/revisions/{rev}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ревизия интерпретации по номеру */
+        get: operations["getInterpretationRevision"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/interpretation/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Применить интерпретацию к потоку (предпросмотр)
+         * @description Применяет интерпретацию к направленному потоку и возвращает сообщения с полями, статусами знания,
+         *     нарушениями и категориями результата. Ничего не сохраняет. Без `yaml` берётся последняя сохранённая
+         *     ревизия; с `yaml` — переданный текст (для редактора). Сообщения постранично, фильтр по `category`.
+         *     Целые числа за пределами \`±2^53\` отдаются десятичной строкой (`valueType: int`).
+         */
+        post: operations["previewInterpretation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Прогоны проверки, новые первыми */
+        get: operations["listRuns"];
+        put?: never;
+        /**
+         * Запустить прогон (задача)
+         * @description Применяет интерпретацию к потокам корпуса. Без `revision` берётся последняя ревизия, без `corpus` — все
+         *     потоки всех записей проекта. Фильтры корпуса сохраняются в прогоне и видны рядом со сводкой. Прогон —
+         *     задача (`202`, SSE прогресса, отмена); результат задачи — `{runId}`. Без открытого проекта, без
+         *     интерпретации и без записей — `409`.
+         */
+        post: operations["startRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Сравнить два прогона
+         * @description Сообщения сопоставляются по потоку и началу. `fixed` — стало лучше (нарушенное или не охваченное теперь
+         *     совпало), `regressed` — хуже, `changed` — категория другого рода, `added` и `removed` — сообщения
+         *     есть только во втором или только в первом прогоне. Устаревший прогон помечен (`staleA`, `staleB`).
+         */
+        get: operations["diffRuns"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Прогон: сводка, потоки и контрпримеры */
+        get: operations["getRun"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/{id}/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Сообщения прогона с категориями
+         * @description Таблица всех сообщений корпуса с фильтрами; `messageId=?` — сообщения без определённого типа.
+         */
+        get: operations["listRunItems"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/action-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Журналы действий проекта */
+        get: operations["listActionLogs"];
+        put?: never;
+        /**
+         * Импортировать журнал действий
+         * @description JSON `{path, mapping}` (файл на диске) или `multipart/form-data` с полями `file` и `mapping` (JSON).
+         *     Формат журнала заранее неизвестен, поэтому колонки сопоставляются явно: `time`, `action`, необязательные
+         *     `params` и `result`; время — `rfc3339` (без пояса — по `utcOffsetMinutes`) или Unix в секундах,
+         *     миллисекундах, микросекундах, наносекундах; `clockOffsetMs` — поправка на сдвиг часов клиента относительно
+         *     часов записи; параметры — `ключ=значение;…` или JSON. Строки, которые не разобрались, перечислены в
+         *     `errors` (до 100), а не теряются молча; если разобрана меньше половины — `422`. Файл копируется в проект
+         *     и хранится неизменным; повторный импорт — новая запись списка.
+         */
+        post: operations["importActionLog"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/action-logs/{id}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Действия журнала */
+        get: operations["listActions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/action-logs/{id}/actions/{line}/exchange": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Найти обмен для действия
+         * @description Кадры и сообщения всех записей проекта во временном окне вокруг действия: от `before` мс до и до `after` мс
+         *     после (по умолчанию 500 и 5000, не больше 600000). Всегда возвращает кадры с данными потоков; если сохранена
+         *     интерпретация — ещё и сообщения (с категориями), чьи кадры попали в окно. Запрос и ответ различаются по
+         *     направлению потока (`ab`, `ba`). Время действия — по журналу с учётом поправки на часы.
+         */
+        get: operations["findExchange"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/observations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Наблюдения */
+        get: operations["listObservations"];
+        put?: never;
+        /**
+         * Создать наблюдение на байтах потока
+         * @description Наблюдение — якорь на конкретные байты направленного потока плюс комментарий. Диапазон проверяется,
+         *     sha256 байтов фиксируется на момент создания (если в диапазоне нет дыры).
+         */
+        post: operations["createObservation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/observations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Наблюдение
+         * @description `anchorState`: `ok` — байты те же; `broken` — изменились (другая политика сборки), наблюдение не переезжает молча; `unavailable` — запись не загружена или в диапазоне дыра.
+         */
+        get: operations["getObservation"];
+        /** Изменить комментарий наблюдения */
+        put: operations["updateObservation"];
+        post?: never;
+        /**
+         * Удалить наблюдение
+         * @description Наблюдение, на которое ссылается гипотеза, не удаляется (`409`): основания нельзя терять молча.
+         */
+        delete: operations["deleteObservation"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/hypotheses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Гипотезы */
+        get: operations["listHypotheses"];
+        put?: never;
+        /**
+         * Создать гипотезу
+         * @description Утверждение, основания (наблюдения), тест-выражение и статус. Статусы: `proposed` — предложена,
+         *     `supported` — поддержана на примерах (**не доказана**), `refuted` — опровергнута, `superseded` — заменена
+         *     другой (`supersededBy`). Основания должны существовать; тест проверяется на синтаксис.
+         */
+        post: operations["createHypothesis"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/hypotheses/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Гипотеза */
+        get: operations["getHypothesis"];
+        /**
+         * Изменить гипотезу
+         * @description Передайте только изменяемые поля. Статус меняет исследователь; проверка теста сама статус не меняет.
+         */
+        put: operations["updateHypothesis"];
+        post?: never;
+        /**
+         * Удалить гипотезу
+         * @description Гипотеза, которую заменяет другая (`supersededBy`), не удаляется (`409`).
+         */
+        delete: operations["deleteHypothesis"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/hypotheses/{id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Проверить тест гипотезы на записях проекта
+         * @description Применяет тест-выражение гипотезы к сообщениям всех записей проекта по сохранённой интерпретации.
+         *     В выражении доступны поля сообщения (`value`), поля парного ответа (`response.value`), параметры и результат
+         *     действия из журнала (`action.params.value`, `action.result.applied`, `action.result`, `action.name`),
+         *     `message.len`. Сообщение, для которого нужных данных нет, к тесту не применяется (`notApplicable`) — это не успех
+         *     и не неудача. Итог: `no_counterexample` — контрпримеров нет (**не доказательство**), `refuted` — есть
+         *     контрпример (приведён с якорем), `untested` — применимых сообщений нет. Статус гипотезы не меняется.
+         *     Тело обязательно, достаточно `{}`.
+         */
+        post: operations["testHypothesis"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/questions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Открытые вопросы исследователя */
+        get: operations["listQuestions"];
+        put?: never;
+        /** Добавить вопрос */
+        post: operations["createQuestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/questions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Изменить вопрос или закрыть его */
+        put: operations["updateQuestion"];
+        post?: never;
+        /** Удалить вопрос */
+        delete: operations["deleteQuestion"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sources": {
         parameters: {
             query?: never;
@@ -262,6 +676,463 @@ export interface components {
              * @enum {string}
              */
             checksumPolicy: "ignore" | "warn" | "drop";
+        };
+        InterpretationDoc: {
+            rev: number;
+            digest: components["schemas"]["Sha256"];
+            /** @description Текст интерпретации, формат protoledger/interpretation@1 */
+            yaml: string;
+        };
+        InterpretationRevision: {
+            rev: number;
+            digest: components["schemas"]["Sha256"];
+        };
+        InterpretationRevisionList: {
+            items: components["schemas"]["InterpretationRevision"][];
+        };
+        SaveInterpretationRequest: {
+            yaml: string;
+        };
+        SaveInterpretationResult: {
+            rev: number;
+            digest: components["schemas"]["Sha256"];
+            /** @description false — каноническая форма не изменилась, новой ревизии нет */
+            created: boolean;
+        };
+        /**
+         * @description `matched` — сообщение выделено, тип найден, поля разобраны, проверки прошли; `violated` — нарушено правило
+         *     или ожидание; `incomplete` — задевает дыру или обрывается в конце потока; `ambiguous` — задевает
+         *     неоднозначный участок; `unmatched` — ни одно описание не подошло; `limit_exceeded` — ограничение
+         *     реализации (заявленная длина больше предела).
+         * @enum {string}
+         */
+        ResultCategory: "matched" | "violated" | "incomplete" | "ambiguous" | "unmatched" | "limit_exceeded";
+        PreviewRequest: {
+            /** @description Идентификатор направленного потока */
+            stream: string;
+            /** @description Текст интерпретации; без него — последняя сохранённая ревизия */
+            yaml?: string;
+            category?: components["schemas"]["ResultCategory"];
+            /** @default 100 */
+            limit: number;
+            /** @default 0 */
+            offset: number;
+        };
+        PreviewField: {
+            name: string;
+            /** @description Смещение поля в потоке */
+            at: number;
+            len: number;
+            /** @enum {string} */
+            status: "rule" | "hypothesis" | "unknown";
+            hypothesis: string | null;
+            /** @enum {string} */
+            state: "decoded" | "unknown" | "gap" | "ambiguous" | "out_of_message";
+            /** @enum {string|null} */
+            valueType: "int" | "bool" | "string" | "bytes" | null;
+            /** @description Число, логическое, строка; байты — hex-строка; null, если поле не прочитано */
+            value: number | boolean | string | null;
+        };
+        PreviewViolation: {
+            /** @enum {string} */
+            kind: "framing" | "expect" | "check" | "field_range";
+            /** @description Поле или проверка */
+            id: string;
+            detail: string;
+            /** @enum {string} */
+            status: "rule" | "hypothesis" | "unknown";
+        };
+        PreviewMessage: {
+            start: number;
+            end: number;
+            category: components["schemas"]["ResultCategory"];
+            messageId: string | null;
+            unknownBytes: number;
+            fields: components["schemas"]["PreviewField"][];
+            violations: components["schemas"]["PreviewViolation"][];
+        };
+        PreviewPage: {
+            /** @description Номер ревизии, если применялась сохранённая */
+            rev: number | null;
+            digest: components["schemas"]["Sha256"];
+            /** @description Поток вне области применимости, сообщения не разбирались */
+            outOfScope: boolean;
+            /** @description Число сообщений по категориям (до фильтра) */
+            counts: {
+                [key: string]: number;
+            };
+            unknownBytes: number;
+            items: components["schemas"]["PreviewMessage"][];
+            /** @description Сообщений с учётом фильтра */
+            total: number;
+            limit: number;
+            offset: number;
+        };
+        /** @description Что именно проверялось; пусто — все потоки всех записей */
+        CorpusFilter: {
+            sources?: components["schemas"]["Sha256"][] | null;
+            /** @enum {string|null} */
+            direction?: "a_to_b" | "b_to_a" | null;
+            /** @description Порт любой из сторон */
+            port?: number | null;
+        };
+        StartRunRequest: {
+            corpus?: components["schemas"]["CorpusFilter"];
+            /** @description Ревизия интерпретации; без значения — последняя */
+            revision?: number | null;
+        };
+        /**
+         * @description Почему прогон устарел — интерпретацию или настройки сборки изменили, записи пропали из проекта
+         * @enum {string}
+         */
+        StaleReason: "interpretation" | "settings" | "sources";
+        RunSummary: {
+            streams: number;
+            outOfScopeStreams: number;
+            messages: number;
+            messageBytes: number;
+            /** @description Байты вне описанных полей и в зонах unknown */
+            unknownBytes: number;
+            counts: {
+                [key: string]: number;
+            };
+            /** @description Разбивка по типам сообщений; `?` — тип не определён */
+            byMessage: {
+                [key: string]: {
+                    [key: string]: number;
+                };
+            };
+            counterexamples: number;
+            /** @description В списке не все контрпримеры (хранится до 1000) */
+            counterexamplesTruncated: boolean;
+        };
+        RunHead: {
+            id: string;
+            revision: number | null;
+            interpretationDigest: components["schemas"]["Sha256"];
+            settingsDigest: components["schemas"]["Sha256"];
+            corpus: components["schemas"]["CorpusFilter"];
+            sources: components["schemas"]["Sha256"][];
+            engineVersion: string;
+            summary: components["schemas"]["RunSummary"];
+            stale: boolean;
+            staleReasons: components["schemas"]["StaleReason"][];
+        };
+        RunPage: {
+            items: components["schemas"]["RunHead"][];
+            total: number;
+            limit: number;
+            offset: number;
+        };
+        /** @description Стабильная ссылка на байты записи */
+        Anchor: {
+            source: components["schemas"]["Sha256"];
+            stream: string;
+            start: number;
+            end: number;
+            /** @description sha256 байтов; null, если в них есть дыра или неоднозначность */
+            sha256: string | null;
+        };
+        Counterexample: {
+            anchor: components["schemas"]["Anchor"];
+            category: components["schemas"]["ResultCategory"];
+            messageId: string | null;
+            violations: components["schemas"]["PreviewViolation"][];
+        };
+        RunStream: {
+            id: string;
+            source: components["schemas"]["Sha256"];
+            outOfScope: boolean;
+            counts: {
+                [key: string]: number;
+            };
+            unknownBytes: number;
+            messageBytes: number;
+            messages: number;
+        };
+        RunDetail: components["schemas"]["RunHead"] & {
+            streams: components["schemas"]["RunStream"][];
+            counterexamples: components["schemas"]["Counterexample"][];
+        };
+        RunItem: {
+            stream: string;
+            start: number;
+            end: number;
+            category: components["schemas"]["ResultCategory"];
+            messageId: string | null;
+        };
+        RunItemPage: {
+            items: components["schemas"]["RunItem"][];
+            total: number;
+            limit: number;
+            offset: number;
+        };
+        /** @enum {string} */
+        ChangeKind: "fixed" | "regressed" | "changed" | "added" | "removed";
+        RunChange: {
+            stream: string;
+            start: number;
+            end: number;
+            kind: components["schemas"]["ChangeKind"];
+            from: components["schemas"]["ResultCategory"] | null;
+            to: components["schemas"]["ResultCategory"] | null;
+            messageId: string | null;
+        };
+        RunDiffPage: {
+            a: string;
+            b: string;
+            staleA: boolean;
+            staleB: boolean;
+            totals: {
+                fixed: number;
+                regressed: number;
+                changed: number;
+                added: number;
+                removed: number;
+                unchanged: number;
+            };
+            countsA: {
+                [key: string]: number;
+            };
+            countsB: {
+                [key: string]: number;
+            };
+            items: components["schemas"]["RunChange"][];
+            total: number;
+            limit: number;
+            offset: number;
+        };
+        ActionLogMapping: {
+            /** @description Колонка со временем */
+            time: string;
+            /** @description Колонка с названием действия */
+            action: string;
+            /** @description Колонка с параметрами */
+            params?: string | null;
+            /** @description Колонка с результатом */
+            result?: string | null;
+            /**
+             * @default rfc3339
+             * @enum {string}
+             */
+            timeFormat: "rfc3339" | "unix_seconds" | "unix_millis" | "unix_micros" | "unix_nanos";
+            /**
+             * @default kv
+             * @enum {string}
+             */
+            paramsFormat: "kv" | "json";
+            /**
+             * @default kv
+             * @enum {string}
+             */
+            resultFormat: "kv" | "json";
+            /** @description Разделитель, по умолчанию запятая; tab — табуляция */
+            delimiter?: string | null;
+            /**
+             * @description Пояс для времени без указания пояса
+             * @default 0
+             */
+            utcOffsetMinutes: number;
+            /**
+             * @description Поправка на сдвиг часов клиента, мс
+             * @default 0
+             */
+            clockOffsetMs: number;
+        };
+        ImportActionLogRequest: {
+            /** @description Путь к файлу журнала на диске */
+            path: string;
+            mapping: components["schemas"]["ActionLogMapping"];
+        };
+        ActionLogRowError: {
+            line: number;
+            why: string;
+        };
+        ActionLog: {
+            id: string;
+            sha256: components["schemas"]["Sha256"];
+            name: string;
+            /** @description Разобрано действий */
+            rows: number;
+            /** @description Строк не разобрано */
+            skipped: number;
+            errors: components["schemas"]["ActionLogRowError"][];
+            mapping: components["schemas"]["ActionLogMapping"];
+            /** Format: date-time */
+            firstTime: string | null;
+            /** Format: date-time */
+            lastTime: string | null;
+        };
+        ActionLogList: {
+            items: components["schemas"]["ActionLog"][];
+        };
+        Action: {
+            /** @description Номер строки файла журнала (идентичность действия вместе с журналом) */
+            line: number;
+            /** Format: date-time */
+            time: string;
+            action: string;
+            params: {
+                [key: string]: number | string;
+            };
+            /** @description Пары из колонки результата; слово без значения — status */
+            result: {
+                [key: string]: number | string;
+            };
+            resultRaw: string;
+        };
+        ActionPage: {
+            items: components["schemas"]["Action"][];
+            total: number;
+            limit: number;
+            offset: number;
+        };
+        ExchangeFrame: {
+            source: components["schemas"]["Sha256"];
+            stream: string;
+            frameNo: number;
+            /** Format: date-time */
+            time: string;
+            start: number;
+            end: number;
+            duplicate: boolean;
+        };
+        ExchangeMessage: {
+            source: components["schemas"]["Sha256"];
+            stream: string;
+            start: number;
+            end: number;
+            category: components["schemas"]["ResultCategory"];
+            messageId: string | null;
+            /** Format: date-time */
+            firstTime: string;
+            /** Format: date-time */
+            lastTime: string;
+        };
+        Exchange: {
+            action: components["schemas"]["Action"];
+            window: {
+                /** Format: date-time */
+                from: string;
+                /** Format: date-time */
+                to: string;
+            };
+            interpretationApplied: boolean;
+            frames: components["schemas"]["ExchangeFrame"][];
+            messages: components["schemas"]["ExchangeMessage"][];
+        };
+        AnchorInput: {
+            source: components["schemas"]["Sha256"];
+            stream: string;
+            start: number;
+            end: number;
+        };
+        ObservationAnchor: components["schemas"]["Anchor"];
+        Observation: {
+            /** @example obs-1 */
+            id: string;
+            anchor: components["schemas"]["ObservationAnchor"];
+            comment: string;
+            /** @enum {string} */
+            anchorState: "ok" | "broken" | "unavailable";
+        };
+        ObservationList: {
+            items: components["schemas"]["Observation"][];
+        };
+        NewObservation: {
+            anchor: components["schemas"]["AnchorInput"];
+            comment: string;
+        };
+        EditObservation: {
+            comment: string;
+        };
+        /** @enum {string} */
+        HypothesisStatus: "proposed" | "supported" | "refuted" | "superseded";
+        Hypothesis: {
+            /** @example H2 */
+            id: string;
+            statement: string;
+            basis: string[];
+            test: string | null;
+            status: components["schemas"]["HypothesisStatus"];
+            supersededBy: string | null;
+            note: string | null;
+        };
+        HypothesisList: {
+            items: components["schemas"]["Hypothesis"][];
+        };
+        HypothesisInput: {
+            statement?: string;
+            basis?: string[];
+            /** @description Выражение; пустая строка убирает тест */
+            test?: string;
+            status?: components["schemas"]["HypothesisStatus"];
+            supersededBy?: string;
+            note?: string;
+        };
+        TestRequest: {
+            /** @description Журнал действий; без значения — все */
+            logId?: string | null;
+            /** @description Окно между действием и сообщением, по умолчанию 2000 */
+            windowMs?: number | null;
+        };
+        TestCounterexample: {
+            anchor: components["schemas"]["ObservationAnchor"];
+            messageId: string | null;
+            /** @description Значения имён из выражения на этом сообщении */
+            values: {
+                [key: string]: string;
+            };
+            actionLine: number | null;
+        };
+        TestIssue: {
+            anchor: components["schemas"]["ObservationAnchor"];
+            detail: string;
+        };
+        HypothesisTest: {
+            hypothesis: string;
+            statement: string;
+            status: components["schemas"]["HypothesisStatus"];
+            test: string;
+            /** @enum {string} */
+            verdict: "untested" | "no_counterexample" | "refuted";
+            /** @description Сообщений, к которым тест применим */
+            applicable: number;
+            /** @description Из них выполнилось */
+            held: number;
+            notApplicable: number;
+            counterexamplesTotal: number;
+            counterexamples: components["schemas"]["TestCounterexample"][];
+            errorsTotal: number;
+            errors: components["schemas"]["TestIssue"][];
+            logs: string[];
+        };
+        Question: {
+            /** @example q-1 */
+            id: string;
+            text: string;
+            /** @enum {string} */
+            status: "open" | "closed";
+            answer: string | null;
+        };
+        QuestionList: {
+            items: components["schemas"]["Question"][];
+        };
+        NewQuestion: {
+            text: string;
+        };
+        EditQuestion: {
+            text?: string;
+            /** @enum {string} */
+            status?: "open" | "closed";
+            answer?: string;
+        };
+        /** @description Частичное изменение настроек; неизвестные поля — `400` */
+        ProjectSettingsPatch: {
+            /** @enum {string} */
+            overlapPolicy?: "first" | "last" | "flag";
+            /** @enum {string} */
+            checksumPolicy?: "ignore" | "warn" | "drop";
         };
         Project: {
             name: string;
@@ -500,21 +1371,25 @@ export interface components {
             }[];
         };
         /** @enum {string} */
-        JobKind: "import";
+        JobKind: "import" | "verify";
         /** @enum {string} */
         JobState: "queued" | "running" | "cancelling" | "succeeded" | "failed" | "cancelled";
         JobProgress: {
             /** @enum {string} */
-            stage: "reading" | "reassembling" | "saving" | "done";
+            stage: "reading" | "reassembling" | "verifying" | "saving" | "done";
             done: number;
             /** @description 0, если ещё неизвестно */
             total: number;
             /** @enum {string} */
-            unit: "frames" | "bytes";
+            unit: "frames" | "bytes" | "streams";
         };
         ImportResult: {
             sourceSha256: components["schemas"]["Sha256"];
             importId: string;
+        };
+        RunResult: {
+            /** @example run-0001 */
+            runId: string;
         };
         Job: {
             /** @example job-0001 */
@@ -523,7 +1398,7 @@ export interface components {
             state: components["schemas"]["JobState"];
             progress: components["schemas"]["JobProgress"];
             /** @description Только для `succeeded` */
-            result?: components["schemas"]["ImportResult"] | null;
+            result?: components["schemas"]["ImportResult"] | components["schemas"]["RunResult"] | null;
             /** @description Только для `failed` */
             error?: components["schemas"]["Problem"] | null;
         };
@@ -721,6 +1596,10 @@ export interface components {
         Offset: number;
         /** @description sha256 записи */
         SourceSha: components["schemas"]["Sha256"];
+        /** @description Идентификатор прогона */
+        RunId: string;
+        /** @description Идентификатор журнала */
+        ActionLogId: string;
         /** @description Идентификатор задачи */
         JobId: string;
     };
@@ -841,6 +1720,1532 @@ export interface operations {
             409: components["responses"]["Conflict"];
             413: components["responses"]["TooLarge"];
             422: components["responses"]["Unprocessable"];
+        };
+    };
+    updateProjectSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "overlapPolicy": "flag"
+                 *     }
+                 */
+                "application/json": components["schemas"]["ProjectSettingsPatch"];
+            };
+        };
+        responses: {
+            /** @description Проект с новыми настройками */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "name": "demo",
+                     *       "path": "/workspace/demo.protoledger",
+                     *       "formatVersion": 1,
+                     *       "engineVersion": "0.1.0",
+                     *       "settings": {
+                     *         "overlapPolicy": "flag",
+                     *         "checksumPolicy": "warn"
+                     *       },
+                     *       "sourceCount": 2
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Project"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["NoProject"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
+        };
+    };
+    getInterpretation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Последняя ревизия с текстом */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "rev": 2,
+                     *       "digest": "7d2c1e9b0a4f3d6c8b5a1e0f9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a39281706",
+                     *       "yaml": "format: protoledger/interpretation@1\nframing: { kind: length_prefixed, length: { at: 4, type: u16le, adjust: 7 } }\n"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["InterpretationDoc"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+        };
+    };
+    saveInterpretation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "yaml": "format: protoledger/interpretation@1\nframing: { kind: fixed, size: 8 }\n"
+                 *     }
+                 */
+                "application/json": components["schemas"]["SaveInterpretationRequest"];
+            };
+        };
+        responses: {
+            /** @description Ревизия сохранена или найдена такая же */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "rev": 3,
+                     *       "digest": "7d2c1e9b0a4f3d6c8b5a1e0f9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a39281706",
+                     *       "created": true
+                     *     }
+                     */
+                    "application/json": components["schemas"]["SaveInterpretationResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["NoProject"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
+            422: components["responses"]["Unprocessable"];
+        };
+    };
+    listInterpretationRevisions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ревизии по порядку, с первой */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "rev": 1,
+                     *           "digest": "5b1a0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a10"
+                     *         },
+                     *         {
+                     *           "rev": 2,
+                     *           "digest": "7d2c1e9b0a4f3d6c8b5a1e0f9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a39281706"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["InterpretationRevisionList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["NoProject"];
+        };
+    };
+    getInterpretationRevision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rev: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ревизия с текстом */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "rev": 2,
+                     *       "digest": "7d2c1e9b0a4f3d6c8b5a1e0f9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a39281706",
+                     *       "yaml": "format: protoledger/interpretation@1\nframing: { kind: length_prefixed, length: { at: 4, type: u16le, adjust: 7 } }\n"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["InterpretationDoc"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+        };
+    };
+    previewInterpretation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "stream": "d05c6bf0:c0001:ab",
+                 *       "limit": 50
+                 *     }
+                 */
+                "application/json": components["schemas"]["PreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Результат применения */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "rev": 2,
+                     *       "digest": "7d2c1e9b0a4f3d6c8b5a1e0f9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a39281706",
+                     *       "outOfScope": false,
+                     *       "counts": {
+                     *         "matched": 1
+                     *       },
+                     *       "unknownBytes": 0,
+                     *       "items": [
+                     *         {
+                     *           "start": 0,
+                     *           "end": 12,
+                     *           "category": "matched",
+                     *           "messageId": "set_param_req",
+                     *           "unknownBytes": 0,
+                     *           "fields": [
+                     *             {
+                     *               "name": "type",
+                     *               "at": 2,
+                     *               "len": 1,
+                     *               "status": "rule",
+                     *               "hypothesis": null,
+                     *               "state": "decoded",
+                     *               "valueType": "int",
+                     *               "value": 2
+                     *             },
+                     *             {
+                     *               "name": "value",
+                     *               "at": 7,
+                     *               "len": 4,
+                     *               "status": "hypothesis",
+                     *               "hypothesis": "H2",
+                     *               "state": "decoded",
+                     *               "valueType": "int",
+                     *               "value": 21
+                     *             }
+                     *           ],
+                     *           "violations": []
+                     *         }
+                     *       ],
+                     *       "total": 1,
+                     *       "limit": 50,
+                     *       "offset": 0
+                     *     }
+                     */
+                    "application/json": components["schemas"]["PreviewPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
+            422: components["responses"]["Unprocessable"];
+        };
+    };
+    listRuns: {
+        parameters: {
+            query?: {
+                /** @description Размер страницы */
+                limit?: components["parameters"]["Limit"];
+                /** @description Сколько элементов пропустить */
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Страница прогонов со сводкой и признаком устаревания */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "id": "run-0002",
+                     *           "revision": 2,
+                     *           "interpretationDigest": "7d2c1e9b0a4f3d6c8b5a1e0f9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a39281706",
+                     *           "settingsDigest": "7d2c1e9b0a4f3d6c8b5a1e0f9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a39281706",
+                     *           "corpus": {},
+                     *           "sources": [
+                     *             "3f5a1c0d9e8b7a6f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a0f9e8d"
+                     *           ],
+                     *           "engineVersion": "0.1.0",
+                     *           "summary": {
+                     *             "streams": 2,
+                     *             "outOfScopeStreams": 0,
+                     *             "messages": 32,
+                     *             "messageBytes": 61586,
+                     *             "unknownBytes": 0,
+                     *             "counts": {
+                     *               "matched": 31,
+                     *               "violated": 1
+                     *             },
+                     *             "byMessage": {
+                     *               "set_param_req": {
+                     *                 "matched": 6
+                     *               },
+                     *               "measure_resp": {
+                     *                 "matched": 5,
+                     *                 "violated": 1
+                     *               }
+                     *             },
+                     *             "counterexamples": 1,
+                     *             "counterexamplesTruncated": false
+                     *           },
+                     *           "stale": false,
+                     *           "staleReasons": []
+                     *         }
+                     *       ],
+                     *       "total": 1,
+                     *       "limit": 50,
+                     *       "offset": 0
+                     *     }
+                     */
+                    "application/json": components["schemas"]["RunPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["NoProject"];
+        };
+    };
+    startRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                /**
+                 * @example {
+                 *       "revision": 2,
+                 *       "corpus": {
+                 *         "port": 4710
+                 *       }
+                 *     }
+                 */
+                "application/json": components["schemas"]["StartRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Прогон принят, создана задача */
+            202: {
+                headers: {
+                    /** @description Адрес задачи */
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "jobId": "job-0003"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["JobAccepted"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
+            422: components["responses"]["Unprocessable"];
+            429: components["responses"]["TooManyJobs"];
+        };
+    };
+    diffRuns: {
+        parameters: {
+            query: {
+                /** @description Первый прогон */
+                a: string;
+                /** @description Второй прогон */
+                b: string;
+                /** @description Только изменения этого вида */
+                kind?: components["schemas"]["ChangeKind"];
+                /** @description Размер страницы */
+                limit?: components["parameters"]["Limit"];
+                /** @description Сколько элементов пропустить */
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Итог сравнения и страница изменений */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "a": "run-0001",
+                     *       "b": "run-0002",
+                     *       "staleA": true,
+                     *       "staleB": false,
+                     *       "totals": {
+                     *         "fixed": 1,
+                     *         "regressed": 0,
+                     *         "changed": 0,
+                     *         "added": 0,
+                     *         "removed": 0,
+                     *         "unchanged": 31
+                     *       },
+                     *       "countsA": {
+                     *         "matched": 31,
+                     *         "violated": 1
+                     *       },
+                     *       "countsB": {
+                     *         "matched": 32
+                     *       },
+                     *       "items": [
+                     *         {
+                     *           "stream": "d05c6bf0:c0001:ba",
+                     *           "start": 1210,
+                     *           "end": 61210,
+                     *           "kind": "fixed",
+                     *           "from": "violated",
+                     *           "to": "matched",
+                     *           "messageId": "measure_resp"
+                     *         }
+                     *       ],
+                     *       "total": 1,
+                     *       "limit": 100,
+                     *       "offset": 0
+                     *     }
+                     */
+                    "application/json": components["schemas"]["RunDiffPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+        };
+    };
+    getRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Идентификатор прогона */
+                id: components["parameters"]["RunId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Прогон */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "run-0002",
+                     *       "revision": 2,
+                     *       "interpretationDigest": "7d2c1e9b0a4f3d6c8b5a1e0f9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a39281706",
+                     *       "settingsDigest": "7d2c1e9b0a4f3d6c8b5a1e0f9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a39281706",
+                     *       "corpus": {},
+                     *       "sources": [
+                     *         "3f5a1c0d9e8b7a6f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a0f9e8d"
+                     *       ],
+                     *       "engineVersion": "0.1.0",
+                     *       "summary": {
+                     *         "streams": 2,
+                     *         "outOfScopeStreams": 0,
+                     *         "messages": 32,
+                     *         "messageBytes": 61586,
+                     *         "unknownBytes": 0,
+                     *         "counts": {
+                     *           "matched": 31,
+                     *           "violated": 1
+                     *         },
+                     *         "byMessage": {
+                     *           "set_param_req": {
+                     *             "matched": 6
+                     *           },
+                     *           "measure_resp": {
+                     *             "matched": 5,
+                     *             "violated": 1
+                     *           }
+                     *         },
+                     *         "counterexamples": 1,
+                     *         "counterexamplesTruncated": false
+                     *       },
+                     *       "stale": false,
+                     *       "staleReasons": [],
+                     *       "streams": [
+                     *         {
+                     *           "id": "d05c6bf0:c0001:ab",
+                     *           "source": "3f5a1c0d9e8b7a6f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a0f9e8d",
+                     *           "outOfScope": false,
+                     *           "counts": {
+                     *             "matched": 16
+                     *           },
+                     *           "unknownBytes": 0,
+                     *           "messageBytes": 152,
+                     *           "messages": 16
+                     *         }
+                     *       ],
+                     *       "counterexamples": [
+                     *         {
+                     *           "anchor": {
+                     *             "source": "3f5a1c0d9e8b7a6f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a0f9e8d",
+                     *             "stream": "d05c6bf0:c0001:ba",
+                     *             "start": 1210,
+                     *             "end": 61210,
+                     *             "sha256": "7d2c1e9b0a4f3d6c8b5a1e0f9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a39281706"
+                     *           },
+                     *           "category": "violated",
+                     *           "messageId": "measure_resp",
+                     *           "violations": [
+                     *             {
+                     *               "kind": "check",
+                     *               "id": "C2",
+                     *               "detail": "контрольная сумма не сходится",
+                     *               "status": "rule"
+                     *             }
+                     *           ]
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["RunDetail"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+        };
+    };
+    listRunItems: {
+        parameters: {
+            query?: {
+                /** @description Только этот поток */
+                stream?: string;
+                category?: components["schemas"]["ResultCategory"];
+                messageId?: string;
+                /** @description Размер страницы */
+                limit?: components["parameters"]["Limit"];
+                /** @description Сколько элементов пропустить */
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path: {
+                /** @description Идентификатор прогона */
+                id: components["parameters"]["RunId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Страница сообщений */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "stream": "d05c6bf0:c0001:ab",
+                     *           "start": 0,
+                     *           "end": 8,
+                     *           "category": "matched",
+                     *           "messageId": "read_param_req"
+                     *         }
+                     *       ],
+                     *       "total": 32,
+                     *       "limit": 50,
+                     *       "offset": 0
+                     *     }
+                     */
+                    "application/json": components["schemas"]["RunItemPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+        };
+    };
+    listActionLogs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Журналы в порядке импорта */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "id": "log-0001",
+                     *           "sha256": "3f5a1c0d9e8b7a6f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a0f9e8d",
+                     *           "name": "main.actions.csv",
+                     *           "rows": 16,
+                     *           "skipped": 0,
+                     *           "errors": [],
+                     *           "mapping": {
+                     *             "time": "time",
+                     *             "action": "action",
+                     *             "params": "params",
+                     *             "result": "result",
+                     *             "timeFormat": "rfc3339",
+                     *             "paramsFormat": "kv",
+                     *             "resultFormat": "kv",
+                     *             "utcOffsetMinutes": 0,
+                     *             "clockOffsetMs": 0
+                     *           },
+                     *           "firstTime": "2026-10-01T00:00:00.356179000Z",
+                     *           "lastTime": "2026-10-01T00:00:21.842006000Z"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ActionLogList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["NoProject"];
+        };
+    };
+    importActionLog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "path": "/workspace/main.actions.csv",
+                 *       "mapping": {
+                 *         "time": "time",
+                 *         "action": "action",
+                 *         "params": "params",
+                 *         "result": "result"
+                 *       }
+                 *     }
+                 */
+                "application/json": components["schemas"]["ImportActionLogRequest"];
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description CSV журнала
+                     */
+                    file: string;
+                    /** @description JSON сопоставления колонок */
+                    mapping: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Журнал разобран и сохранён */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "log-0001",
+                     *       "sha256": "3f5a1c0d9e8b7a6f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a0f9e8d",
+                     *       "name": "main.actions.csv",
+                     *       "rows": 16,
+                     *       "skipped": 0,
+                     *       "errors": [],
+                     *       "mapping": {
+                     *         "time": "time",
+                     *         "action": "action",
+                     *         "params": "params",
+                     *         "result": "result",
+                     *         "timeFormat": "rfc3339",
+                     *         "paramsFormat": "kv",
+                     *         "resultFormat": "kv",
+                     *         "utcOffsetMinutes": 0,
+                     *         "clockOffsetMs": 0
+                     *       },
+                     *       "firstTime": "2026-10-01T00:00:00.356179000Z",
+                     *       "lastTime": "2026-10-01T00:00:21.842006000Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ActionLog"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["NoProject"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
+            422: components["responses"]["Unprocessable"];
+        };
+    };
+    listActions: {
+        parameters: {
+            query?: {
+                /** @description Не раньше (RFC 3339) */
+                from?: string;
+                /** @description Не позже (RFC 3339) */
+                to?: string;
+                /** @description Только это действие */
+                action?: string;
+                /** @description Размер страницы */
+                limit?: components["parameters"]["Limit"];
+                /** @description Сколько элементов пропустить */
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path: {
+                /** @description Идентификатор журнала */
+                id: components["parameters"]["ActionLogId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Страница действий */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "line": 5,
+                     *           "time": "2026-10-01T00:00:02.768393000Z",
+                     *           "action": "set_param",
+                     *           "params": {
+                     *             "param": "setpoint",
+                     *             "value": 21
+                     *           },
+                     *           "result": {
+                     *             "status": "ok",
+                     *             "applied": 21
+                     *           },
+                     *           "resultRaw": "ok;applied=21"
+                     *         }
+                     *       ],
+                     *       "total": 16,
+                     *       "limit": 50,
+                     *       "offset": 0
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ActionPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+        };
+    };
+    findExchange: {
+        parameters: {
+            query?: {
+                /** @description Окно до действия, мс */
+                before?: number;
+                /** @description Окно после действия, мс */
+                after?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Идентификатор журнала */
+                id: components["parameters"]["ActionLogId"];
+                /** @description Номер строки действия в файле журнала */
+                line: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Обмен в окне времени */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "action": {
+                     *         "line": 5,
+                     *         "time": "2026-10-01T00:00:02.768393000Z",
+                     *         "action": "set_param",
+                     *         "params": {
+                     *           "param": "setpoint",
+                     *           "value": 21
+                     *         },
+                     *         "result": {
+                     *           "status": "ok",
+                     *           "applied": 21
+                     *         },
+                     *         "resultRaw": "ok;applied=21"
+                     *       },
+                     *       "window": {
+                     *         "from": "2026-10-01T00:00:02.268393000Z",
+                     *         "to": "2026-10-01T00:00:07.768393000Z"
+                     *       },
+                     *       "interpretationApplied": true,
+                     *       "frames": [
+                     *         {
+                     *           "source": "3f5a1c0d9e8b7a6f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a0f9e8d",
+                     *           "stream": "d05c6bf0:c0001:ab",
+                     *           "frameNo": 30,
+                     *           "time": "2026-10-01T00:00:02.768513000Z",
+                     *           "start": 46,
+                     *           "end": 58,
+                     *           "duplicate": false
+                     *         }
+                     *       ],
+                     *       "messages": [
+                     *         {
+                     *           "source": "3f5a1c0d9e8b7a6f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a0f9e8d",
+                     *           "stream": "d05c6bf0:c0001:ab",
+                     *           "start": 46,
+                     *           "end": 58,
+                     *           "category": "matched",
+                     *           "messageId": "set_param_req",
+                     *           "firstTime": "2026-10-01T00:00:02.768513000Z",
+                     *           "lastTime": "2026-10-01T00:00:02.768513000Z"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Exchange"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+        };
+    };
+    listObservations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Все наблюдения проекта */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "id": "obs-1",
+                     *           "anchor": {
+                     *             "source": "3f5a1c0d9e8b7a6f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a0f9e8d",
+                     *             "stream": "d05c6bf0:c0001:ab",
+                     *             "start": 36,
+                     *             "end": 44,
+                     *             "sha256": "7d2c1e9b0a4f3d6c8b5a1e0f9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a39281706"
+                     *           },
+                     *           "comment": "значение 21 после уставки",
+                     *           "anchorState": "ok"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ObservationList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["NoProject"];
+        };
+    };
+    createObservation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "anchor": {
+                 *         "source": "3f5a1c0d9e8b7a6f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a0f9e8d",
+                 *         "stream": "d05c6bf0:c0001:ab",
+                 *         "start": 36,
+                 *         "end": 44
+                 *       },
+                 *       "comment": "значение 21 после уставки"
+                 *     }
+                 */
+                "application/json": components["schemas"]["NewObservation"];
+            };
+        };
+        responses: {
+            /** @description Наблюдение создано */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "obs-1",
+                     *       "anchor": {
+                     *         "source": "3f5a1c0d9e8b7a6f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a0f9e8d",
+                     *         "stream": "d05c6bf0:c0001:ab",
+                     *         "start": 36,
+                     *         "end": 44,
+                     *         "sha256": "7d2c1e9b0a4f3d6c8b5a1e0f9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a39281706"
+                     *       },
+                     *       "comment": "значение 21 после уставки",
+                     *       "anchorState": "ok"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Observation"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["NoProject"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
+        };
+    };
+    getObservation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Идентификатор наблюдения */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Наблюдение */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "obs-1",
+                     *       "anchor": {
+                     *         "source": "3f5a1c0d9e8b7a6f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a0f9e8d",
+                     *         "stream": "d05c6bf0:c0001:ab",
+                     *         "start": 36,
+                     *         "end": 44,
+                     *         "sha256": "7d2c1e9b0a4f3d6c8b5a1e0f9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a39281706"
+                     *       },
+                     *       "comment": "значение 21 после уставки",
+                     *       "anchorState": "ok"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Observation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+        };
+    };
+    updateObservation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Идентификатор наблюдения */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "comment": "значение уставки"
+                 *     }
+                 */
+                "application/json": components["schemas"]["EditObservation"];
+            };
+        };
+        responses: {
+            /** @description Наблюдение обновлено */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "obs-1",
+                     *       "anchor": {
+                     *         "source": "3f5a1c0d9e8b7a6f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a0f9e8d",
+                     *         "stream": "d05c6bf0:c0001:ab",
+                     *         "start": 36,
+                     *         "end": 44,
+                     *         "sha256": "7d2c1e9b0a4f3d6c8b5a1e0f9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a39281706"
+                     *       },
+                     *       "comment": "значение 21 после уставки",
+                     *       "anchorState": "ok"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Observation"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
+        };
+    };
+    deleteObservation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Идентификатор наблюдения */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Удалено */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+        };
+    };
+    listHypotheses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Все гипотезы проекта */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "id": "H2",
+                     *           "statement": "value — устанавливаемое значение",
+                     *           "basis": [
+                     *             "obs-1"
+                     *           ],
+                     *           "test": "value == action.params.value",
+                     *           "status": "proposed",
+                     *           "supersededBy": null,
+                     *           "note": null
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["HypothesisList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["NoProject"];
+        };
+    };
+    createHypothesis: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "statement": "value — устанавливаемое значение",
+                 *       "basis": [
+                 *         "obs-1"
+                 *       ],
+                 *       "test": "value == action.params.value"
+                 *     }
+                 */
+                "application/json": components["schemas"]["HypothesisInput"];
+            };
+        };
+        responses: {
+            /** @description Гипотеза создана */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "H2",
+                     *       "statement": "value — устанавливаемое значение",
+                     *       "basis": [
+                     *         "obs-1"
+                     *       ],
+                     *       "test": "value == action.params.value",
+                     *       "status": "proposed",
+                     *       "supersededBy": null,
+                     *       "note": null
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Hypothesis"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["NoProject"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
+            422: components["responses"]["Unprocessable"];
+        };
+    };
+    getHypothesis: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Идентификатор гипотезы */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Гипотеза */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "H2",
+                     *       "statement": "value — устанавливаемое значение",
+                     *       "basis": [
+                     *         "obs-1"
+                     *       ],
+                     *       "test": "value == action.params.value",
+                     *       "status": "proposed",
+                     *       "supersededBy": null,
+                     *       "note": null
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Hypothesis"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+        };
+    };
+    updateHypothesis: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Идентификатор гипотезы */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "status": "supported",
+                 *       "note": "поддержана на 6 из 6 примеров основной записи"
+                 *     }
+                 */
+                "application/json": components["schemas"]["HypothesisInput"];
+            };
+        };
+        responses: {
+            /** @description Гипотеза обновлена */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "H2",
+                     *       "statement": "value — устанавливаемое значение",
+                     *       "basis": [
+                     *         "obs-1"
+                     *       ],
+                     *       "test": "value == action.params.value",
+                     *       "status": "proposed",
+                     *       "supersededBy": null,
+                     *       "note": null
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Hypothesis"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
+            422: components["responses"]["Unprocessable"];
+        };
+    };
+    deleteHypothesis: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Идентификатор гипотезы */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Удалено */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+        };
+    };
+    testHypothesis: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Идентификатор гипотезы */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "logId": "log-0001"
+                 *     }
+                 */
+                "application/json": components["schemas"]["TestRequest"];
+            };
+        };
+        responses: {
+            /** @description Результат проверки */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "hypothesis": "H2",
+                     *       "statement": "value — устанавливаемое значение",
+                     *       "status": "proposed",
+                     *       "test": "value == action.params.value",
+                     *       "verdict": "no_counterexample",
+                     *       "applicable": 6,
+                     *       "held": 6,
+                     *       "notApplicable": 26,
+                     *       "counterexamplesTotal": 0,
+                     *       "counterexamples": [],
+                     *       "errorsTotal": 0,
+                     *       "errors": [],
+                     *       "logs": [
+                     *         "log-0001"
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["HypothesisTest"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
+            422: components["responses"]["Unprocessable"];
+        };
+    };
+    listQuestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Все вопросы (попадают в отчёт) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "id": "q-1",
+                     *           "text": "Что означает параметр 3?",
+                     *           "status": "open",
+                     *           "answer": null
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["QuestionList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["NoProject"];
+        };
+    };
+    createQuestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "text": "Что означает параметр 3?"
+                 *     }
+                 */
+                "application/json": components["schemas"]["NewQuestion"];
+            };
+        };
+        responses: {
+            /** @description Вопрос создан */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "q-1",
+                     *       "text": "Что означает параметр 3?",
+                     *       "status": "open",
+                     *       "answer": null
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Question"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["NoProject"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
+        };
+    };
+    updateQuestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Идентификатор вопроса */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "status": "closed",
+                 *       "answer": "режим работы"
+                 *     }
+                 */
+                "application/json": components["schemas"]["EditQuestion"];
+            };
+        };
+        responses: {
+            /** @description Вопрос обновлён */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "q-1",
+                     *       "text": "Что означает параметр 3?",
+                     *       "status": "closed",
+                     *       "answer": "режим работы"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Question"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
+        };
+    };
+    deleteQuestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Идентификатор вопроса */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Удалено */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
         };
     };
     listSources: {

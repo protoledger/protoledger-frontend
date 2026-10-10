@@ -1,7 +1,7 @@
-import type { DraftSource } from '../source'
+import type { ResearchSource } from '../source'
 import { base64ToBytes } from '~/utils/bytes'
 import { streamBytes } from './stand'
-import type { ActionLog, ActionsView, CompareView, FramingView, HypothesesView, InterpretationView, ProjectExtras, ReportView, VerificationView } from '../draft'
+import type { ActionLog, ActionsView, CompareView, ExchangeView, FramingView, HypothesesView, HypothesisDetail, InterpretationView, ProjectExtras, ReportView, VerificationView } from '../views'
 
 const delay = (ms = 120) => new Promise(r => setTimeout(r, ms))
 
@@ -74,21 +74,22 @@ const actions: ActionsView = {
     { id: 'a7', time: '14:02:40.010', action: 'reset', params: '—', result: 'ok', exchange: 'none' },
     { id: 'a8', time: '15:12:04.600', action: 'set_param', params: 'value = 70000', result: 'ok', exchange: 'found' },
   ],
-  exchange: {
-    actionId: 'a1',
-    label: 'set_param · value = 21',
-    windowFrom: '14:02:10.700',
-    windowTo: '14:02:11.700',
-    windowLabel: 'окно ± 500 мс',
-    events: [
-      { at: 0.08, kind: 'other' }, { at: 0.2, kind: 'other' }, { at: 0.33, kind: 'other' }, { at: 0.47, kind: 'other' },
-      { at: 0.5, kind: 'action' }, { at: 0.53, kind: 'request' }, { at: 0.58, kind: 'response' },
-      { at: 0.72, kind: 'other' }, { at: 0.85, kind: 'other' },
-    ],
-    request: { title: 'Запрос · кадр 1281 · +12 мс', direction: 'клиент → устройство', bytes: hex('AA 55 03 10 00 15 D3'), highlight: [4, 5] },
-    response: { title: 'Ответ · кадр 1282 · +19 мс', direction: 'устройство → клиент', bytes: hex('AA 55 02 11 00 BC'), highlight: [4] },
-    note: 'Байты 4–5 запроса = 0x0015 = 21, совпадает с параметром действия. Байт 4 ответа = 0 при результате «ok».',
-  },
+}
+
+const exchange: ExchangeView = {
+  actionId: 'a1',
+  label: 'set_param · value = 21',
+  windowFrom: '14:02:10.700',
+  windowTo: '14:02:11.700',
+  windowLabel: 'окно ± 500 мс',
+  events: [
+    { at: 0.08, kind: 'other' }, { at: 0.2, kind: 'other' }, { at: 0.33, kind: 'other' }, { at: 0.47, kind: 'other' },
+    { at: 0.5, kind: 'action' }, { at: 0.53, kind: 'request' }, { at: 0.58, kind: 'response' },
+    { at: 0.72, kind: 'other' }, { at: 0.85, kind: 'other' },
+  ],
+  request: { title: 'Запрос · кадр 1281 · +12 мс', direction: 'клиент → устройство', bytes: hex('AA 55 03 10 00 15 D3'), highlight: [4, 5] },
+  response: { title: 'Ответ · кадр 1282 · +19 мс', direction: 'устройство → клиент', bytes: hex('AA 55 02 11 00 BC'), highlight: [4] },
+  note: 'Байты 4–5 запроса = 0x0015 = 21, совпадает с параметром действия. Байт 4 ответа = 0 при результате «ok».',
 }
 
 const compareRow = (label: string, bytes: string, changedFrom = 4): CompareView['requests'][number] => {
@@ -198,20 +199,23 @@ const hypotheses: HypothesesView = {
     'Почему reset не получает ответа?',
     'Команда 0x40 встречается 1 раз — откуда?',
   ],
-  selected: {
-    id: 'H4',
-    title: 'value помещается в u16',
-    claim: 'Поле value в set_param — целое без знака, 2 байта, порядок BE',
-    test: 'field.value == action.params.value',
-    scope: 'все записи · порт 5020 · тип set_param',
-    basis: 'obs-12 (байты 4–5), прогон run-3: 41 / 41',
-    counterexamples: [{ where: 'extra-1000.pcap · c0003 · сообщ. 88', expected: '70000', got: '4464 (0x1170)' }],
-    note: 'Похоже, поле длиннее 2 байт: значение 70000 = 0x00011170. Длина сообщения при этом 9 вместо 7.',
-    history: [
-      { run: 'run-4', time: '16:40', status: 'refuted', label: 'опровергнута', scope: '3 записи', stale: false },
-      { run: 'run-3', time: '15:02', status: 'supported', label: 'поддержана 41 / 41', scope: '1 запись', stale: true },
-    ],
-  },
+}
+
+const hypothesisH4: HypothesisDetail = {
+  id: 'H4',
+  title: 'value помещается в u16',
+  status: 'refuted',
+  support: '1 контрпример',
+  claim: 'Поле value в set_param — целое без знака, 2 байта, порядок BE',
+  test: 'field.value == action.params.value',
+  scope: 'все записи · порт 5020 · тип set_param',
+  basis: 'obs-12 (байты 4–5), прогон run-3: 41 / 41',
+  counterexamples: [{ where: 'extra-1000.pcap · c0003 · сообщ. 88', expected: '70000', got: '4464 (0x1170)' }],
+  note: 'Похоже, поле длиннее 2 байт: значение 70000 = 0x00011170. Длина сообщения при этом 9 вместо 7.',
+  history: [
+    { run: 'run-4', time: '16:40', status: 'refuted', label: 'опровергнута', scope: '3 записи', stale: false },
+    { run: 'run-3', time: '15:02', status: 'supported', label: 'поддержана 41 / 41', scope: '1 запись', stale: true },
+  ],
 }
 
 const verification: VerificationView = {
@@ -228,10 +232,10 @@ const verification: VerificationView = {
     { key: 'violated', label: 'Нарушено', count: 3 },
     { key: 'incomplete', label: 'Неполное', count: 2 },
     { key: 'ambiguous', label: 'Неоднозначное', count: 1 },
-    { key: 'uncovered', label: 'Не охвачено', count: 4 },
+    { key: 'unmatched', label: 'Не охвачено', count: 4 },
     { key: 'out_of_scope', label: 'Вне области', count: 88 },
     { key: 'unsupported', label: 'Не поддерживается', count: 412 },
-    { key: 'limit', label: 'Превышен предел', count: 0 },
+    { key: 'limit_exceeded', label: 'Превышен предел', count: 0 },
   ],
   categoriesNote: '«Не поддерживается» и «Превышен предел» — ограничения реализации (IPv6, лимиты), а не свойства протокола.',
   problems: [
@@ -241,6 +245,7 @@ const verification: VerificationView = {
     { status: 'ambiguous', label: 'неоднозначно', where: 'base · c0002 · 301', what: 'перекрытие кадров 1294 и 1296' },
     { status: 'unknown', label: 'не охвачено', where: 'extra-1000 · c0001 · 12', what: 'cmd 0x40 — нет типа' },
   ],
+  diffWith: 'run-3',
   diff: [
     { label: 'Исправилось', value: '+2 · crc в c0001', tone: 'good' },
     { label: 'Новое', value: '+1 · H4 опровергнута', tone: 'bad' },
@@ -284,7 +289,7 @@ function messageStarts(stream: string): number[] {
 }
 
 /** Пример данных для экранов, которых ещё нет в контракте API. */
-export function createMockDraftSource(): DraftSource {
+export function createMockResearchSource(): ResearchSource {
   return {
     getProjectExtras: async () => (await delay(), structuredClone(extras)),
     getActionLogs: async () => (await delay(), structuredClone(actionLogs)),
@@ -293,10 +298,14 @@ export function createMockDraftSource(): DraftSource {
       return { ...structuredClone(framing), messageStarts: messageStarts(stream) }
     },
     getActions: async () => (await delay(), structuredClone(actions)),
+    // В примере подробно описан обмен только для первого действия.
+    getExchange: async id => (await delay(), id === exchange.actionId ? structuredClone(exchange) : null),
     getCompare: async () => (await delay(), structuredClone(compare)),
     getInterpretation: async () => (await delay(), structuredClone(interpretation)),
     getHypotheses: async () => (await delay(), structuredClone(hypotheses)),
+    getHypothesisDetail: async id => (await delay(), id === hypothesisH4.id ? structuredClone(hypothesisH4) : null),
     getVerification: async () => (await delay(), structuredClone(verification)),
+    startRun: async () => null,
     getReport: async () => (await delay(), structuredClone(report)),
   }
 }

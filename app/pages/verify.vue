@@ -1,9 +1,28 @@
 <script setup lang="ts">
-import type { ResultCategory } from '~/data/draft'
+import type { ResultCategory } from '~/data/views'
 
 const data = useData()
 const draft = useDraftAction()
+const jobs = useJobsStore()
+const workspace = useWorkspaceStore()
 const { data: view, error, refresh, pending } = await useAsyncData('verification', () => data.getVerification())
+const runError = ref<string | null>(null)
+
+async function startRun() {
+  runError.value = null
+  try {
+    const jobId = await data.startRun()
+    if (!jobId) return draft('Прогон проверки запущен')
+    workspace.log('Прогон проверки: начат')
+    jobs.track(jobId, 'Прогон проверки', (job) => {
+      workspace.log(`Прогон проверки: ${job.state === 'succeeded' ? 'готово' : job.state === 'cancelled' ? 'отменён' : 'ошибка'}`)
+      void refresh()
+    })
+  }
+  catch (e) {
+    runError.value = e instanceof Error ? e.message : 'Не удалось запустить прогон'
+  }
+}
 const filters = ref<boolean[]>([])
 watchEffect(() => { if (view.value && !filters.value.length) filters.value = view.value.filters.map(f => f.active) })
 
@@ -12,10 +31,10 @@ const COLOR: Record<ResultCategory, string> = {
   violated: 'bg-pl-st-violation',
   incomplete: 'bg-pl-st-gap',
   ambiguous: 'bg-pl-st-ambiguous',
-  uncovered: 'bg-pl-muted',
+  unmatched: 'bg-pl-muted',
   out_of_scope: 'bg-pl-line',
   unsupported: 'bg-[#8a6a52]',
-  limit: 'bg-pl-focus',
+  limit_exceeded: 'bg-pl-focus',
 }
 
 const total = computed(() => view.value?.categories.reduce((n, c) => n + c.count, 0) ?? 1)
@@ -24,15 +43,16 @@ const total = computed(() => view.value?.categories.reduce((n, c) => n + c.count
 <template>
   <div class="flex h-full">
     <section class="pl-scroll min-w-0 flex-1">
-      <CommonPanelHeader v-if="view" :title="`Прогон ${view.run.id}`" :subtitle="`rev ${view.run.rev} · ${view.run.scope} · ${view.run.time}`">
-        <button class="pl-btn pl-btn-primary h-7" type="button" @click="draft('Прогон проверки запущен')">
+      <CommonPanelHeader :title="view?.run ? `Прогон ${view.run.id}` : 'Проверка'" :subtitle="view?.run ? [`rev ${view.run.rev ?? '—'}`, view.run.scope, view.run.time].filter(Boolean).join(' · ') : ''">
+        <button class="pl-btn pl-btn-primary h-7" type="button" @click="startRun">
           <UIcon name="i-lucide-circle-check-big" class="size-4" aria-hidden="true" /> Запустить
         </button>
       </CommonPanelHeader>
-      <CommonAsyncState :pending="pending" :error="error?.message" :empty="!view" @retry="refresh()">
+      <p v-if="runError" class="px-3 pt-3 text-pl-st-violation" role="alert">{{ runError }}</p>
+      <CommonAsyncState :pending="pending" :error="error?.message" :empty="!view?.run" :empty-text="view?.runsNote ?? 'Прогонов ещё не было.'" @retry="refresh()">
         <div v-if="view" class="p-3">
           <div class="flex items-center gap-2">
-            <span class="text-pl-muted">Фильтры:</span>
+            <span class="text-pl-muted">{{ view.filters.length ? 'Фильтры:' : 'Корпус: все записи проекта' }}</span>
             <button v-for="(f, i) in view.filters" :key="f.label" type="button" class="pl-chip" :aria-pressed="filters[i]" @click="filters[i] = !filters[i]">{{ f.label }}</button>
           </div>
           <div class="mt-3.5 grid grid-cols-4 gap-3">
@@ -62,7 +82,8 @@ const total = computed(() => view.value?.categories.reduce((n, c) => n + c.count
           <p class="mt-2 text-pl-muted">{{ view.categoriesNote }}</p>
 
           <h3 class="pl-caption mt-5 mb-2">Контрпримеры и проблемы</h3>
-          <table class="pl-table">
+          <p v-if="!view.problems.length" class="text-pl-muted">Контрпримеров и проблем нет.</p>
+          <table v-else class="pl-table">
             <thead><tr><th>Категория</th><th>Где</th><th>Что</th></tr></thead>
             <tbody>
               <tr v-for="(p, i) in view.problems" :key="i">
@@ -76,7 +97,7 @@ const total = computed(() => view.value?.categories.reduce((n, c) => n + c.count
       </CommonAsyncState>
     </section>
 
-    <ShellInspectorContent title="Сравнение с run-3">
+    <ShellInspectorContent :title="view?.diffWith ? `Сравнение с ${view.diffWith}` : 'Прогоны'">
       <div v-if="view" class="pl-scroll flex-1">
         <dl class="pl-dl">
           <template v-for="d in view.diff" :key="d.label">

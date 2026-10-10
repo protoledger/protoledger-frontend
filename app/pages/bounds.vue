@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { FramingView } from '~/data/draft'
+import type { FramingView } from '~/data/views'
 
 const data = useData()
 const draft = useDraftAction()

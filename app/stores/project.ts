@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import type { Project, Source, SourceDiagnostics } from '~/api/types'
-import type { ProjectExtras } from '~/data/draft'
+import type { ProjectExtras } from '~/data/views'
 
 /** Текущий проект, его записи и замечания к записям. */
 export const useProjectStore = defineStore('project', () => {
