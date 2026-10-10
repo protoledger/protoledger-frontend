@@ -27,7 +27,7 @@ const hot = 'bg-pl-st-hypothesis/18 text-pl-st-hypothesis'
               <span v-for="i in columns" :key="`h${i}`" class="text-center text-[11px] text-pl-muted">{{ i - 1 }}</span>
 
               <template v-for="row in view.requests" :key="row.label">
-                <span :class="label">{{ row.label }}</span>
+                <span :class="label">{{ safeText(row.label) }}</span>
                 <span v-for="i in columns" :key="i" :class="[cell, row.changed[i - 1] && row.bytes[i - 1] ? hot : 'bg-pl-panel']">{{ row.bytes[i - 1] ?? '' }}</span>
               </template>
 
@@ -35,7 +35,7 @@ const hot = 'bg-pl-st-hypothesis/18 text-pl-st-hypothesis'
               <span v-for="i in columns" :key="`m${i}`" class="h-1.5" :class="view.mask[i - 1] ? 'bg-pl-st-hypothesis' : 'bg-pl-raise'" />
 
               <template v-for="row in view.responses" :key="row.label">
-                <span :class="label">{{ row.label }}</span>
+                <span :class="label">{{ safeText(row.label) }}</span>
                 <span v-for="i in columns" :key="i" :class="[cell, row.changed[i - 1] && row.bytes[i - 1] ? hot : 'bg-pl-panel']">{{ row.bytes[i - 1] ?? '' }}</span>
               </template>
             </div>
@@ -46,7 +46,7 @@ const hot = 'bg-pl-st-hypothesis/18 text-pl-st-hypothesis'
             <thead><tr><th>Позиция</th><th>Как читать</th><th>Значения</th><th>Связь</th><th class="text-right">Доля</th></tr></thead>
             <tbody>
               <tr v-for="(c, i) in view.correlations" :key="i" :aria-selected="i === selectedCorr" @click="selectedCorr = i">
-                <td>{{ c.position }}</td><td>{{ c.read }}</td><td>{{ c.values }}</td><td>{{ c.relation }}</td><td class="text-right whitespace-nowrap">{{ c.share }}</td>
+                <td>{{ c.position }}</td><td>{{ c.read }}</td><td>{{ safeText(c.values) }}</td><td>{{ safeText(c.relation) }}</td><td class="text-right whitespace-nowrap">{{ c.share }}</td>
               </tr>
             </tbody>
           </table>
@@ -59,7 +59,7 @@ const hot = 'bg-pl-st-hypothesis/18 text-pl-st-hypothesis'
         <div v-for="o in view.observations" :key="o.id" class="grid grid-cols-[64px_minmax(0,1fr)] gap-2.5 border-b border-pl-line px-3 py-2.5">
           <span class="text-pl-fg-strong">{{ o.id }}</span>
           <div>
-            <div>{{ o.text }}</div>
+            <div>{{ safeText(o.text) }}</div>
             <div class="mt-1 flex flex-wrap gap-2">
               <CommonStatusBadge :status="o.status" />
               <span v-if="o.anchor" class="rounded-[3px] border border-pl-line px-1.5 text-[11px] text-pl-muted">{{ o.anchor }}</span>

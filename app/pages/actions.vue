@@ -54,9 +54,9 @@ const EVENT = {
           <tbody>
             <tr v-for="r in view.rows" :key="r.id" :aria-selected="r.id === selected" @click="selected = r.id">
               <td>{{ r.time }}</td>
-              <td>{{ r.action }}</td>
-              <td>{{ r.params }}</td>
-              <td>{{ r.result }}</td>
+              <td>{{ safeText(r.action) }}</td>
+              <td>{{ safeText(r.params) }}</td>
+              <td>{{ safeText(r.result) }}</td>
               <td>
                 <CommonStatusBadge v-if="exchangeBadge(r)" :status="exchangeBadge(r)!.status" :label="exchangeBadge(r)!.label" />
                 <span v-else class="text-pl-muted">—</span>
@@ -93,7 +93,7 @@ const EVENT = {
         </div>
         <template v-for="side in [exchange.request, exchange.response]" :key="side?.title">
           <div v-if="side" class="px-3">
-            <h3 class="pl-caption mt-5 mb-2">{{ side.title }}</h3>
+            <h3 class="pl-caption mt-5 mb-2">{{ safeText(side.title) }}</h3>
             <div class="flex flex-col gap-1.5">
               <span class="text-pl-fg-strong">{{ side.direction }}</span>
               <div class="flex flex-wrap gap-0.5 font-mono">
@@ -108,7 +108,7 @@ const EVENT = {
           </div>
         </template>
         <p v-if="!exchange.response" class="mt-3 px-3 text-pl-muted">Ответа в окне времени нет.</p>
-        <p class="mt-3 px-3">{{ exchange.note }}</p>
+        <p class="mt-3 px-3">{{ safeText(exchange.note) }}</p>
         <div class="mt-3 flex flex-wrap gap-2 px-3 pb-3">
           <NuxtLink to="/compare" class="pl-btn pl-btn-primary">Сравнить с другими</NuxtLink>
           <NuxtLink to="/overview" class="pl-btn">Показать в потоке</NuxtLink>

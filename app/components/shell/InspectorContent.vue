@@ -1,10 +1,10 @@
 <script setup lang="ts">
 const props = defineProps<{ title: string }>()
 const inspectorTitle = useState<string>('inspector-title', () => 'Свойства')
-watchEffect(() => { inspectorTitle.value = props.title })
+watchEffect(() => { inspectorTitle.value = safeText(props.title, 200) })
 // Новый экран монтируется раньше, чем размонтируется старый: сбрасываем, только если заголовок ещё наш.
 onBeforeUnmount(() => {
-  if (inspectorTitle.value === props.title) inspectorTitle.value = 'Свойства'
+  if (inspectorTitle.value === safeText(props.title, 200)) inspectorTitle.value = 'Свойства'
 })
 </script>
 

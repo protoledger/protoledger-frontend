@@ -48,7 +48,7 @@ const BADGE: Record<Hypothesis['status'], { status: KnowledgeStatus, label: (h: 
               <tr v-for="h in view.items" :key="h.id" :aria-selected="h.id === selected" @click="selected = h.id">
                 <td class="w-14 font-semibold">{{ h.id }}</td>
                 <td>
-                  <div>{{ h.text }}</div>
+                  <div>{{ safeText(h.text) }}</div>
                   <CommonStatusBadge class="mt-1" :status="BADGE[h.status].status" :label="BADGE[h.status].label(h)" />
                 </td>
               </tr>
@@ -58,7 +58,7 @@ const BADGE: Record<Hypothesis['status'], { status: KnowledgeStatus, label: (h: 
           <h3 class="pl-caption m-0 px-3 pt-3.5 pb-2">Открытые вопросы</h3>
           <p v-if="!view.questions.length" class="px-3 text-pl-muted">Открытых вопросов нет.</p>
           <ul class="mx-3 mb-4 list-disc pl-5">
-            <li v-for="q in view.questions" :key="q" class="py-0.5">{{ q }}</li>
+            <li v-for="q in view.questions" :key="q" class="py-0.5">{{ safeText(q) }}</li>
           </ul>
         </template>
       </CommonAsyncState>
@@ -71,10 +71,10 @@ const BADGE: Record<Hypothesis['status'], { status: KnowledgeStatus, label: (h: 
       <div v-else class="pl-scroll flex-1">
         <div class="px-3 pt-3"><CommonStatusBadge :status="BADGE[detail.status].status" :label="BADGE[detail.status].label({ id: detail.id, text: detail.title, status: detail.status, support: detail.support })" /></div>
         <dl class="pl-dl">
-          <dt>Утверждение</dt><dd>{{ detail.claim }}</dd>
-          <dt>Тест</dt><dd class="font-mono">{{ detail.test }}</dd>
-          <dt>Область</dt><dd>{{ detail.scope }}</dd>
-          <dt>Основания</dt><dd>{{ detail.basis }}</dd>
+          <dt>Утверждение</dt><dd>{{ safeText(detail.claim) }}</dd>
+          <dt>Тест</dt><dd class="font-mono">{{ safeText(detail.test) }}</dd>
+          <dt>Область</dt><dd>{{ safeText(detail.scope) }}</dd>
+          <dt>Основания</dt><dd>{{ safeText(detail.basis) }}</dd>
         </dl>
         <h3 class="pl-caption m-0 px-3 pt-3.5 pb-2">Контрпримеры</h3>
         <p v-if="!detail.counterexamples.length" class="px-3 text-pl-muted">Контрпримеров нет.</p>
@@ -82,12 +82,12 @@ const BADGE: Record<Hypothesis['status'], { status: KnowledgeStatus, label: (h: 
           <thead><tr><th>Где</th><th>Ожидалось</th><th>Получено</th><th /></tr></thead>
           <tbody>
             <tr v-for="c in detail.counterexamples" :key="c.where">
-              <td>{{ c.where }}</td><td>{{ c.expected }}</td><td>{{ c.got }}</td>
+              <td>{{ safeText(c.where) }}</td><td>{{ safeText(c.expected) }}</td><td>{{ safeText(c.got) }}</td>
               <td class="text-right"><NuxtLink to="/overview" class="pl-btn pl-btn-ghost h-6">в поток</NuxtLink></td>
             </tr>
           </tbody>
         </table>
-        <p v-if="detail.note" class="mt-2 px-3 text-pl-muted">{{ detail.note }}</p>
+        <p v-if="detail.note" class="mt-2 px-3 text-pl-muted">{{ safeText(detail.note) }}</p>
         <template v-if="detail.history.length">
           <h3 class="pl-caption m-0 px-3 pt-3.5 pb-2">История статуса</h3>
           <table class="pl-table">
@@ -95,7 +95,7 @@ const BADGE: Record<Hypothesis['status'], { status: KnowledgeStatus, label: (h: 
               <tr v-for="r in detail.history" :key="r.run">
                 <td :class="{ 'text-pl-muted': r.stale }">{{ r.run }} · {{ r.time }}</td>
                 <td><CommonStatusBadge :status="r.status === 'refuted' ? 'violation' : 'hypothesis'" :label="r.label" /></td>
-                <td>{{ r.scope }} <CommonStatusBadge v-if="r.stale" status="stale" /></td>
+                <td>{{ safeText(r.scope) }} <CommonStatusBadge v-if="r.stale" status="stale" /></td>
               </tr>
             </tbody>
           </table>

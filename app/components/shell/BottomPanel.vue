@@ -48,8 +48,8 @@ const JOB_STATE: Record<string, string> = {
         <div v-for="d in diagnostics" :key="`${d.source}:${d.code}`" :class="row">
           <CommonStatusBadge :status="SEVERITY[d.severity].status" :label="SEVERITY[d.severity].label" />
           <span :class="text">
-            {{ d.title }} · {{ formatCount(d.count) }} кадр.
-            <span class="text-pl-muted">— {{ d.detail }}</span>
+            {{ safeText(d.title) }} · {{ formatCount(d.count) }} кадр.
+            <span class="text-pl-muted">— {{ safeText(d.detail) }}</span>
           </span>
           <span class="whitespace-nowrap text-pl-muted">{{ d.source }} · {{ DIAGNOSTIC_STATUS[d.code]?.label ?? d.code }}</span>
         </div>
@@ -67,7 +67,7 @@ const JOB_STATE: Record<string, string> = {
         <p v-if="!workspace.events.length" :class="empty">Событий пока нет.</p>
         <div v-for="(e, i) in workspace.events" :key="i" :class="row">
           <span class="w-20 text-pl-muted">{{ e.time }}</span>
-          <span :class="text">{{ e.text }}</span>
+          <span :class="text">{{ safeText(e.text) }}</span>
         </div>
       </template>
     </div>
