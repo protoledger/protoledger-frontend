@@ -1,8 +1,7 @@
 <script setup lang="ts">
-const data = useData()
-const { data: project } = await useAsyncData('project', () => data.getProject())
+await navigateTo('/project', { replace: true })
 </script>
 
 <template>
-  <main>{{ project?.name }}</main>
+  <div />
 </template>

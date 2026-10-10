@@ -10,7 +10,8 @@ export default defineNuxtConfig({
   modules: ['@nuxt/eslint', '@nuxt/ui', '@pinia/nuxt'],
   css: ['~/assets/css/main.css'],
   // Иконки и шрифты только локальные: интерфейс работает офлайн.
-  icon: { provider: 'none', clientBundle: { scan: true } },
+  // SVG-режим: CSS-режим вставляет <style>, которые запрещены CSP движка.
+  icon: { mode: 'svg', provider: 'none', clientBundle: { scan: { globInclude: ['app/**/*.{vue,ts}'] } } },
   fonts: { providers: { google: false, googleicons: false, bunny: false, fontshare: false, fontsource: false, adobe: false } },
   ui: { colorMode: true },
   colorMode: { preference: 'dark', fallback: 'dark', storageKey: 'protoledger-theme' },
@@ -30,6 +31,12 @@ export default defineNuxtConfig({
   },
   // Встроенная importmap запрещена CSP движка (script-src 'self').
   experimental: { entryImportMap: false },
+  hooks: {
+    // Плагин цветов Nuxt UI вставляет <style>, запрещённый CSP; переменные заданы в main.css.
+    'app:resolve'(app) {
+      app.plugins = app.plugins.filter(p => !(typeof p === 'string' ? p : p.src).includes('@nuxt/ui/dist/runtime/plugins/colors'))
+    },
+  },
   nitro: {
     devProxy: {
       '/api': {
