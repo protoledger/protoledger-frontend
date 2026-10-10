@@ -1,6 +1,7 @@
 import type { ResearchSource } from '../source'
 import { base64ToBytes } from '~/utils/bytes'
 import { streamBytes } from './stand'
+import type { FramingSpec } from '~/api/types'
 import type { ActionLog, ActionsView, CompareView, ExchangeView, FramingView, HypothesesView, HypothesisDetail, InterpretationView, ProjectExtras, ReportView, VerificationView } from '../views'
 
 const delay = (ms = 120) => new Promise(r => setTimeout(r, ms))
@@ -33,33 +34,31 @@ const actionLogs: ActionLog[] = [{
   status: 'mapped',
 }]
 
+const lengthSpec = (at: number, type: NonNullable<FramingSpec['length']>['type'], adjust: number): FramingSpec =>
+  ({ kind: 'length_prefixed', length: { at, type, adjust }, status: 'hypothesis' })
+
 const framing: FramingView = {
   searchRange: 'перебор 0–16 · 1/2/4 байта',
   candidates: [
-    { offset: 2, type: 'u8', adjust: 4, matched: 412, total: 417 },
-    { offset: 2, type: 'u16 BE', adjust: 3, matched: 61, total: 417 },
-    { offset: 4, type: 'u8', adjust: 1, matched: 38, total: 417 },
-    { offset: 1, type: 'u16 LE', adjust: -80, matched: 12, total: 417 },
+    { id: 'len-0', offset: 2, type: 'u8', adjust: 4, messages: 412, share: '98,8%', spec: lengthSpec(2, 'u8', 4), evidence: {
+      hypothesis: 'длина = u8 @2 + 4',
+      confirmed: '412 из 417 сообщений',
+      scope: 'c0001–c0005, порт 5020',
+      counterexamples: [
+        { message: 'сообщ. 233', status: 'gap', note: 'задевает дыру' },
+        { message: 'сообщ. 301', status: 'ambiguous', note: '' },
+        { message: 'сообщ. 388', status: 'unknown', note: 'обрыв в конце потока' },
+      ],
+      note: 'Все 5 несовпадений объясняются дефектами захвата, а не правилом.',
+    } },
+    { id: 'len-1', offset: 2, type: 'u16 BE', adjust: 3, messages: 61, share: '14,6%', spec: lengthSpec(2, 'u16be', 3), evidence: { hypothesis: 'длина = u16 BE @2 + 3', confirmed: '61 из 417', scope: 'c0002', counterexamples: [], note: '' } },
+    { id: 'len-2', offset: 4, type: 'u8', adjust: 1, messages: 38, share: '9,1%', spec: lengthSpec(4, 'u8', 1), evidence: { hypothesis: 'длина = u8 @4 + 1', confirmed: '38 из 417', scope: 'c0002', counterexamples: [], note: '' } },
   ],
   signatures: [
     { label: 'AA 55', matched: 417, total: 417, ok: true },
     { label: '0A в конце', matched: 59, total: 417, ok: false },
   ],
-  variability: [0.02, 0.02, 0.08, 0.55, 0.78, 0.88, 0.55, 0.72],
-  variabilityNote: '0–1 постоянны (сигнатура), 4–7 меняются сильнее всего.',
-  messageStarts: [],
-  lengthField: { offset: 2, size: 1 },
-  evidence: {
-    hypothesis: 'длина = u8 @2 + 4',
-    confirmed: '412 из 417 сообщений',
-    scope: 'c0001–c0005, порт 5020',
-    counterexamples: [
-      { message: 'сообщ. 233', status: 'gap', note: 'задевает дыру' },
-      { message: 'сообщ. 301', status: 'ambiguous', note: '' },
-      { message: 'сообщ. 388', status: 'unknown', note: 'обрыв в конце потока' },
-    ],
-    note: 'Все 5 несовпадений объясняются дефектами захвата, а не правилом.',
-  },
+  notes: [],
 }
 
 const actions: ActionsView = {
@@ -293,10 +292,13 @@ export function createMockResearchSource(): ResearchSource {
   return {
     getProjectExtras: async () => (await delay(), structuredClone(extras)),
     getActionLogs: async () => (await delay(), structuredClone(actionLogs)),
-    getFraming: async (stream) => {
-      await delay()
-      return { ...structuredClone(framing), messageStarts: messageStarts(stream) }
-    },
+    getFraming: async () => (await delay(), structuredClone(framing)),
+    getFramingDetail: async stream => (await delay(), {
+      messageStarts: messageStarts(stream),
+      variability: [0.02, 0.02, 0.08, 0.55, 0.78, 0.88, 0.55, 0.72],
+      variabilityNote: '0–1 постоянны (сигнатура), 4–7 меняются сильнее всего.',
+    }),
+    applyFraming: async () => null,
     getActions: async () => (await delay(), structuredClone(actions)),
     // В примере подробно описан обмен только для первого действия.
     getExchange: async id => (await delay(), id === exchange.actionId ? structuredClone(exchange) : null),

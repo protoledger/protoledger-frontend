@@ -595,6 +595,111 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/analysis/framing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Подсказки по границам сообщений
+         * @description По байтам указанных направленных потоков ищет, где проходят границы сообщений: кандидаты поля длины
+         *     (смещение, ширина 1/2/4, порядок байтов, поправка), фиксированный размер, начальные сигнатуры и разделители.
+         *     Это **подсказки с основаниями**, не выводы: у каждой — доля подтверждений, число сообщений, первый контрпример.
+         *     У каждого кандидата есть `framing` в виде, который принимает интерпретация (`status: hypothesis`).
+         *     Поле длины подтверждается не меньше чем восемью сообщениями, а начала сообщений должны быть похожи друг на друга
+         *     или совпадать с началами TCP-сегментов; иначе кандидат не показывается. Дыры не заполняются: разбор идёт по
+         *     непрерывным участкам. Анализируется не больше 1 МиБ на поток и 16 МиБ на запрос; если часть данных отброшена,
+         *     `truncated: true`; если поиск прерван по времени (20 с), `incomplete: true`.
+         */
+        post: operations["findFraming"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/analysis/variability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Какие байты сообщений постоянны, какие меняются
+         * @description Выравнивает сообщения по началу и для каждого смещения считает число разных значений, энтропию и частые значения;
+         *     постоянные и меняющиеся области подряд идущих смещений; похожие на счётчик поля (значение растёт на 1 от
+         *     сообщения к сообщению). Берутся сообщения одной длины: `length` или самой частой. Границы сообщений — из
+         *     `framing` (например, кандидат из `/api/analysis/framing`) или из сохранённой интерпретации. Фильтр
+         *     `messageId` оставляет сообщения одного типа и требует сохранённой интерпретации. Подсказки, не выводы.
+         */
+        post: operations["getVariability"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/analysis/correlations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Связи байтов сообщений с действиями из журнала
+         * @description Каждому сообщению указанных потоков подбирается действие из журнала (по порядку внутри окна `windowMs`
+         *     от времени первого кадра сообщения, по умолчанию 2000 мс; журнал — `logId` или все журналы проекта).
+         *     Дальше ищутся два вида связей. **`values`**: поле (смещение, тип: u8/i8/u16/i16/u32/i32, оба порядка байтов),
+         *     значение которого равно числовому параметру или результату действия (`params.value`, `result.applied`),
+         *     в том числе с фиксированной точкой (`scale`: 1, 10, 100, 1000). Показываются связи с долей совпадений не ниже
+         *     80 % и не меньше чем на пяти сообщениях; постоянный параметр ни с чем не связывается. **`actions`**: смещение,
+         *     где значение — код действия (у разных действий разные значения, у одного — почти всегда одно). Это подсказки:
+         *     совпадение на примерах не доказывает связь, у каждой есть число примеров и первый контрпример.
+         *     Границы сообщений — из `framing` либо из сохранённой интерпретации; `messageId` оставляет сообщения одного
+         *     типа (нужна интерпретация). Без журнала действий — `409`.
+         */
+        post: operations["findCorrelations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/exchanges": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Пары запрос→ответ в соединении
+         * @description Сообщения соединения по обоим направлениям упорядочиваются по времени первого кадра; подряд идущие сообщения
+         *     одной стороны образуют «ход», ход запросов (от инициатора) сопоставляется со следующим ходом ответов.
+         *     `certainty`: `certain` — один запрос и один ответ; `ordered` — запросов и ответов поровну, сопоставлены по порядку
+         *     (конвейер, порядок — допущение); `ambiguous` — число разное, чей ответ — неизвестно; `unanswered` — запрос без
+         *     ответа; `unsolicited` — ответ без запроса. Границы сообщений — из `framing` либо из сохранённой интерпретации
+         *     (без `framing` и без интерпретации — `409`); типы сообщений берутся из интерпретации, если она есть.
+         */
+        post: operations["findExchanges"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/jobs": {
         parameters: {
             query?: never;
@@ -1142,6 +1247,261 @@ export interface components {
         };
         QuestionList: {
             items: components["schemas"]["Question"][];
+        };
+        /** @description Фрейминг в виде, который принимает интерпретация (раздел `framing`) */
+        FramingSpec: {
+            /** @enum {string} */
+            kind: "length_prefixed" | "delimiter" | "fixed" | "magic";
+            length?: {
+                at: number;
+                /** @enum {string} */
+                type: "u8" | "u16be" | "u16le" | "u32be" | "u32le" | "u64be" | "u64le" | "i8" | "i16be" | "i16le" | "i32be" | "i32le" | "i64be" | "i64le";
+                /** @description Длина сообщения = значение поля + adjust */
+                adjust?: number;
+            };
+            size?: number;
+            /** @description hex */
+            bytes?: string;
+            /** @enum {string} */
+            status?: "rule" | "hypothesis" | "unknown";
+        };
+        FramingRequest: {
+            streams: string[];
+        };
+        /** @description Первое место, где кандидат расходится с данными */
+        FramingCounter: {
+            stream: string;
+            /** @description Смещение внутри непрерывного участка потока */
+            offset: number;
+            /** @description Номер непрерывного участка потока (между дырами), с нуля */
+            run: number;
+            /** @enum {string} */
+            reason: "bad_length" | "overrun" | "short_header" | "dissimilar";
+            /** @description Значение поля длины в этом месте */
+            value?: number | null;
+        };
+        LengthHint: {
+            at: number;
+            /** @enum {integer} */
+            width: 1 | 2 | 4;
+            bigEndian: boolean;
+            adjust: number;
+            messages: number;
+            coveredBytes: number;
+            totalBytes: number;
+            /** @description Доля байтов, разбитых на сообщения без противоречий */
+            scorePermille: number;
+            streamsConfirmed: number;
+            streamsTotal: number;
+            streamsEndedExactly: number;
+            /** @description Доля начал сообщений с самым частым значением на одном из первых 8 смещений */
+            startCoherencePermille: number;
+            /** @description Доля начал сообщений, совпавших с началами TCP-сегментов */
+            segmentAlignmentPermille: number;
+            distinctValues: number;
+            minLength: number;
+            maxLength: number;
+            firstCounterexample: components["schemas"]["FramingCounter"] | null;
+            /** @description Другие поля, дающие те же границы (например, младший байт того же числа) */
+            equivalent: {
+                at: number;
+                type: string;
+                adjust: number;
+            }[];
+            framing: components["schemas"]["FramingSpec"];
+        };
+        FixedHint: {
+            size: number;
+            messages: number;
+            scorePermille: number;
+            framing: components["schemas"]["FramingSpec"];
+        };
+        SignatureHint: {
+            /** @description hex */
+            bytes: string;
+            /**
+             * @description По каким началам посчитано
+             * @enum {string}
+             */
+            basis: "segments" | "length_candidate";
+            atStarts: number;
+            startsTotal: number;
+            /** @description Сколько раз последовательность встречается во всех данных */
+            occurrences: number;
+            framing: components["schemas"]["FramingSpec"];
+        };
+        DelimiterHint: {
+            /** @description hex */
+            bytes: string;
+            atEnds: number;
+            endsTotal: number;
+            /** @description Сколько раз встречается не на конце сегмента */
+            inside: number;
+            framing: components["schemas"]["FramingSpec"];
+        };
+        FramingHints: {
+            streams: string[];
+            sampledBytes: number;
+            /** @description Часть данных не вошла в анализ (предел размера или числа потоков) */
+            truncated: boolean;
+            /** @description Поиск прерван по времени: список по длине неполон */
+            incomplete: boolean;
+            /** @description Сколько сообщений нужно, чтобы показать кандидата поля длины; на меньшем числе совпадения случайны */
+            minMessages: number;
+            length: components["schemas"]["LengthHint"][];
+            fixed: components["schemas"]["FixedHint"][];
+            signatures: components["schemas"]["SignatureHint"][];
+            delimiters: components["schemas"]["DelimiterHint"][];
+        };
+        VariabilityRequest: {
+            streams: string[];
+            framing?: components["schemas"]["FramingSpec"];
+            /** @description Только сообщения этого типа (нужна сохранённая интерпретация) */
+            messageId?: string;
+            /** @description Длина сообщений для анализа; по умолчанию самая частая */
+            length?: number;
+        };
+        VariabilityColumn: {
+            offset: number;
+            samples: number;
+            distinct: number;
+            /** @description Энтропия в тысячных долях бита */
+            entropyMillibits: number;
+            constant: number | null;
+            top: {
+                value: number;
+                count: number;
+            }[];
+        };
+        Variability: {
+            messages: number;
+            truncated: boolean;
+            /** @description Длины сообщений и их количество, частые первыми */
+            classes: {
+                length: number;
+                count: number;
+            }[];
+            /** @description Длина, по которой построены столбцы */
+            length: number;
+            analysed: number;
+            columns: components["schemas"]["VariabilityColumn"][];
+            regions: {
+                start: number;
+                end: number;
+                /** @enum {string} */
+                kind: "constant" | "varying";
+                /** @description Для постоянной области — её байты, hex */
+                bytes?: string;
+            }[];
+            /** @description Поля, значение которых растёт на 1 от сообщения к сообщению */
+            counters: {
+                at: number;
+                /** @enum {integer} */
+                width: 1 | 2 | 4;
+                bigEndian: boolean;
+                steps: number;
+                pairs: number;
+            }[];
+        };
+        CorrelationsRequest: {
+            streams: string[];
+            framing?: components["schemas"]["FramingSpec"];
+            /** @description Только сообщения этого типа (нужна сохранённая интерпретация) */
+            messageId?: string;
+            /** @description Журнал действий (log-0001); без значения — все */
+            logId?: string;
+            /** @description Окно подбора действия, мс (по умолчанию 2000) */
+            windowMs?: number;
+        };
+        CorrelationValue: {
+            /** @description params.<имя> или result.<имя> из журнала */
+            param: string;
+            at: number;
+            /** @enum {string} */
+            type: "u8" | "i8" | "u16be" | "u16le" | "i16be" | "i16le" | "u32be" | "u32le" | "i32be" | "i32le";
+            /**
+             * @description Прочитанное значение = параметр × scale
+             * @enum {integer}
+             */
+            scale: 1 | 10 | 100 | 1000;
+            matches: number;
+            samples: number;
+            sharePermille: number;
+            firstCounterexample: {
+                stream: string;
+                start: number;
+                got: number;
+                expected: number;
+            } | null;
+            /** @description Другие чтения тех же байтов с теми же совпадениями, вида тип@смещение */
+            equivalent: string[];
+        };
+        CorrelationAction: {
+            at: number;
+            /** @enum {string} */
+            type: "u8" | "u16be" | "u16le";
+            purityPermille: number;
+            samples: number;
+            codes: {
+                action: string;
+                value: number;
+                /** @description Сообщений действия с этим значением */
+                count: number;
+                /** @description Всех сообщений действия */
+                of: number;
+            }[];
+        };
+        Correlations: {
+            samples: number;
+            /** @description Сообщений, к которым подобрано действие */
+            withAction: number;
+            truncated: boolean;
+            values: components["schemas"]["CorrelationValue"][];
+            actions: components["schemas"]["CorrelationAction"][];
+        };
+        ExchangesRequest: {
+            /** @description Идентификатор соединения, например 3f5a1c0d:c0001 */
+            connection: string;
+            framing?: components["schemas"]["FramingSpec"];
+            /** @default 100 */
+            limit: number;
+            /** @default 0 */
+            offset: number;
+        };
+        PairedMessage: {
+            stream: string;
+            start: number;
+            end: number;
+            /** @description Тип сообщения по интерпретации; null — не определён */
+            messageId: string | null;
+            /** @description Время первого кадра сообщения, нс с эпохи */
+            firstTsNs: number;
+            lastTsNs: number;
+        };
+        ExchangePair: {
+            requests: components["schemas"]["PairedMessage"][];
+            responses: components["schemas"]["PairedMessage"][];
+            /** @description От последнего кадра запроса до первого кадра ответа */
+            delayNs: number | null;
+            /** @enum {string} */
+            certainty: "certain" | "ordered" | "ambiguous" | "unanswered" | "unsolicited";
+        };
+        ExchangePairPage: {
+            items: components["schemas"]["ExchangePair"][];
+            total: number;
+            limit: number;
+            offset: number;
+            stats: {
+                exchanges: number;
+                certain: number;
+                ordered: number;
+                ambiguous: number;
+                unanswered: number;
+                unsolicited: number;
+                minDelayNs?: number | null;
+                medianDelayNs?: number | null;
+                maxDelayNs?: number | null;
+            };
         };
         ReportRequest: {
             /** @enum {string} */
@@ -3725,6 +4085,392 @@ export interface operations {
             409: components["responses"]["NoProject"];
             413: components["responses"]["TooLarge"];
             415: components["responses"]["UnsupportedMedia"];
+        };
+    };
+    findFraming: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "streams": [
+                 *         "3f5a1c0d:c0001:ab",
+                 *         "3f5a1c0d:c0001:ba"
+                 *       ]
+                 *     }
+                 */
+                "application/json": components["schemas"]["FramingRequest"];
+            };
+        };
+        responses: {
+            /** @description Кандидаты границ, лучшие первыми */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "streams": [
+                     *         "3f5a1c0d:c0001:ab",
+                     *         "3f5a1c0d:c0001:ba"
+                     *       ],
+                     *       "sampledBytes": 61586,
+                     *       "truncated": false,
+                     *       "incomplete": false,
+                     *       "minMessages": 8,
+                     *       "length": [
+                     *         {
+                     *           "at": 4,
+                     *           "width": 2,
+                     *           "bigEndian": false,
+                     *           "adjust": 7,
+                     *           "messages": 64,
+                     *           "coveredBytes": 61586,
+                     *           "totalBytes": 61586,
+                     *           "scorePermille": 1000,
+                     *           "streamsConfirmed": 2,
+                     *           "streamsTotal": 2,
+                     *           "streamsEndedExactly": 2,
+                     *           "startCoherencePermille": 1000,
+                     *           "segmentAlignmentPermille": 312,
+                     *           "distinctValues": 18,
+                     *           "minLength": 8,
+                     *           "maxLength": 1472,
+                     *           "firstCounterexample": null,
+                     *           "equivalent": [
+                     *             {
+                     *               "at": 4,
+                     *               "type": "u8",
+                     *               "adjust": 7
+                     *             }
+                     *           ],
+                     *           "framing": {
+                     *             "kind": "length_prefixed",
+                     *             "length": {
+                     *               "at": 4,
+                     *               "type": "u16le",
+                     *               "adjust": 7
+                     *             },
+                     *             "status": "hypothesis"
+                     *           }
+                     *         }
+                     *       ],
+                     *       "fixed": [],
+                     *       "signatures": [
+                     *         {
+                     *           "bytes": "5ac3",
+                     *           "basis": "segments",
+                     *           "atStarts": 64,
+                     *           "startsTotal": 64,
+                     *           "occurrences": 64,
+                     *           "framing": {
+                     *             "kind": "magic",
+                     *             "bytes": "5ac3",
+                     *             "status": "hypothesis"
+                     *           }
+                     *         }
+                     *       ],
+                     *       "delimiters": []
+                     *     }
+                     */
+                    "application/json": components["schemas"]["FramingHints"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
+            422: components["responses"]["Unprocessable"];
+        };
+    };
+    getVariability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "streams": [
+                 *         "3f5a1c0d:c0001:ab"
+                 *       ],
+                 *       "framing": {
+                 *         "kind": "length_prefixed",
+                 *         "length": {
+                 *           "at": 4,
+                 *           "type": "u16le",
+                 *           "adjust": 7
+                 *         },
+                 *         "status": "hypothesis"
+                 *       }
+                 *     }
+                 */
+                "application/json": components["schemas"]["VariabilityRequest"];
+            };
+        };
+        responses: {
+            /** @description Изменчивость по смещениям */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "messages": 32,
+                     *       "truncated": false,
+                     *       "classes": [
+                     *         {
+                     *           "length": 13,
+                     *           "count": 12
+                     *         },
+                     *         {
+                     *           "length": 15,
+                     *           "count": 8
+                     *         }
+                     *       ],
+                     *       "length": 13,
+                     *       "analysed": 12,
+                     *       "columns": [
+                     *         {
+                     *           "offset": 0,
+                     *           "samples": 12,
+                     *           "distinct": 1,
+                     *           "entropyMillibits": 0,
+                     *           "constant": 90,
+                     *           "top": [
+                     *             {
+                     *               "value": 90,
+                     *               "count": 12
+                     *             }
+                     *           ]
+                     *         },
+                     *         {
+                     *           "offset": 1,
+                     *           "samples": 12,
+                     *           "distinct": 1,
+                     *           "entropyMillibits": 0,
+                     *           "constant": 195,
+                     *           "top": [
+                     *             {
+                     *               "value": 195,
+                     *               "count": 12
+                     *             }
+                     *           ]
+                     *         }
+                     *       ],
+                     *       "regions": [
+                     *         {
+                     *           "start": 0,
+                     *           "end": 2,
+                     *           "kind": "constant",
+                     *           "bytes": "5ac3"
+                     *         },
+                     *         {
+                     *           "start": 2,
+                     *           "end": 6,
+                     *           "kind": "varying"
+                     *         }
+                     *       ],
+                     *       "counters": [
+                     *         {
+                     *           "at": 3,
+                     *           "width": 1,
+                     *           "bigEndian": true,
+                     *           "steps": 11,
+                     *           "pairs": 11
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Variability"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
+            422: components["responses"]["Unprocessable"];
+        };
+    };
+    findCorrelations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "streams": [
+                 *         "3f5a1c0d:c0001:ab"
+                 *       ],
+                 *       "messageId": "set_param_req"
+                 *     }
+                 */
+                "application/json": components["schemas"]["CorrelationsRequest"];
+            };
+        };
+        responses: {
+            /** @description Найденные связи */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "samples": 6,
+                     *       "withAction": 6,
+                     *       "truncated": false,
+                     *       "values": [
+                     *         {
+                     *           "param": "params.value",
+                     *           "at": 8,
+                     *           "type": "i32be",
+                     *           "scale": 1,
+                     *           "matches": 6,
+                     *           "samples": 6,
+                     *           "sharePermille": 1000,
+                     *           "firstCounterexample": null,
+                     *           "equivalent": []
+                     *         }
+                     *       ],
+                     *       "actions": [
+                     *         {
+                     *           "at": 2,
+                     *           "type": "u8",
+                     *           "purityPermille": 1000,
+                     *           "samples": 12,
+                     *           "codes": [
+                     *             {
+                     *               "action": "read_param",
+                     *               "value": 1,
+                     *               "count": 6,
+                     *               "of": 6
+                     *             },
+                     *             {
+                     *               "action": "set_param",
+                     *               "value": 2,
+                     *               "count": 6,
+                     *               "of": 6
+                     *             }
+                     *           ]
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Correlations"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
+            422: components["responses"]["Unprocessable"];
+        };
+    };
+    findExchanges: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "connection": "3f5a1c0d:c0001",
+                 *       "limit": 50,
+                 *       "offset": 0
+                 *     }
+                 */
+                "application/json": components["schemas"]["ExchangesRequest"];
+            };
+        };
+        responses: {
+            /** @description Страница обменов в порядке времени */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "requests": [
+                     *             {
+                     *               "stream": "3f5a1c0d:c0001:ab",
+                     *               "start": 0,
+                     *               "end": 13,
+                     *               "messageId": "set_param_req",
+                     *               "firstTsNs": 1790899200000000000,
+                     *               "lastTsNs": 1790899200000000000
+                     *             }
+                     *           ],
+                     *           "responses": [
+                     *             {
+                     *               "stream": "3f5a1c0d:c0001:ba",
+                     *               "start": 0,
+                     *               "end": 12,
+                     *               "messageId": "set_param_resp",
+                     *               "firstTsNs": 1790899200001200000,
+                     *               "lastTsNs": 1790899200001200000
+                     *             }
+                     *           ],
+                     *           "delayNs": 1200000,
+                     *           "certainty": "certain"
+                     *         }
+                     *       ],
+                     *       "total": 12,
+                     *       "limit": 50,
+                     *       "offset": 0,
+                     *       "stats": {
+                     *         "exchanges": 12,
+                     *         "certain": 8,
+                     *         "ordered": 4,
+                     *         "ambiguous": 0,
+                     *         "unanswered": 0,
+                     *         "unsolicited": 0,
+                     *         "minDelayNs": 900000,
+                     *         "medianDelayNs": 1200000,
+                     *         "maxDelayNs": 4100000
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ExchangePairPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
+            422: components["responses"]["Unprocessable"];
         };
     };
     listJobs: {

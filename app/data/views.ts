@@ -1,5 +1,6 @@
 // Модели экранов исследования. Живой источник собирает их из ответов движка (live-research.ts),
 // пример данных — mock/research.ts; экраны зависят только от этих моделей.
+import type { FramingSpec } from '~/api/types'
 import type { KnowledgeStatus } from '~/utils/status'
 
 export interface ProjectExtras {
@@ -23,30 +24,40 @@ export interface ActionLog {
   status: 'mapped' | 'needs_mapping'
 }
 
+export interface FramingEvidence {
+  hypothesis: string
+  confirmed: string
+  scope: string
+  counterexamples: { message: string, status: KnowledgeStatus, note: string }[]
+  note: string
+}
+
 export interface FramingCandidate {
+  id: string
   offset: number
   type: string
   adjust: number
-  matched: number
-  total: number
+  messages: number
+  /** Доля байтов, разбитых без противоречий, «98,8%». */
+  share: string
+  /** Фрейминг в форме движка — уходит обратно в предпросмотр и интерпретацию. */
+  spec: FramingSpec
+  evidence: FramingEvidence
 }
 
 export interface FramingView {
   searchRange: string
   candidates: FramingCandidate[]
   signatures: { label: string, matched: number, total: number, ok: boolean }[]
+  /** Оговорки анализа: неполный перебор, обрезка данных. */
+  notes: string[]
+}
+
+/** Что даёт выбранный кандидат на потоке: границы сообщений и изменчивость по смещениям. */
+export interface FramingDetail {
+  messageStarts: number[]
   variability: number[]
   variabilityNote: string
-  /** Начала сообщений и поля длины для наложения на поток (смещения потока). */
-  messageStarts: number[]
-  lengthField: { offset: number, size: number }
-  evidence: {
-    hypothesis: string
-    confirmed: string
-    scope: string
-    counterexamples: { message: string, status: KnowledgeStatus, note: string }[]
-    note: string
-  }
 }
 
 export interface ActionRow {
