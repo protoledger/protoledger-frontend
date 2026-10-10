@@ -4,7 +4,7 @@ import { base64ToBytes, formatCount, hexByte } from '~/utils/bytes'
 import type { KnowledgeStatus } from '~/utils/status'
 import type { ContractSource, ResearchSource } from './source'
 import { framingOnlyYaml, replaceFramingBlock } from '~/utils/interpretation-yaml'
-import type { CompareRow, CompareView, ExchangeSide, ExchangeView, FramingCandidate, Hypothesis, InterpretationTreeNode, ResultCategory, VerificationView } from './views'
+import type { CompareRow, CompareView, ExchangeSide, ExchangeView, FramingCandidate, Hypothesis, InterpretationTreeNode, ResultCategory, StreamLink, VerificationView } from './views'
 
 type S = components['schemas']
 
@@ -63,6 +63,24 @@ function clock(iso: string) {
 function pairs(obj: Record<string, number | string>) {
   const entries = Object.entries(obj)
   return entries.length ? entries.map(([k, v]) => `${k} = ${v}`).join(', ') : '—'
+}
+
+const STALE_REASON: Record<S['StaleReason'], string> = {
+  interpretation: 'изменена интерпретация',
+  settings: 'изменены настройки сборки',
+  sources: 'записи пропали из проекта',
+}
+
+function staleText(run: { stale: boolean, staleReasons: S['StaleReason'][] }) {
+  return run.stale ? run.staleReasons.map(r => STALE_REASON[r]).join(', ') || 'устарел' : null
+}
+
+/** Якорь движка → адрес «Обзора»: поток `<запись>:cNNNN:ab` — соединение и направление. */
+function linkOf(a: S['Anchor']): StreamLink | null {
+  const cut = a.stream.lastIndexOf(':')
+  const dir = a.stream.slice(cut + 1)
+  if (cut < 0 || (dir !== 'ab' && dir !== 'ba')) return null
+  return { conn: a.stream.slice(0, cut), dir, from: a.start, to: a.end }
 }
 
 function shortStream(stream: string) {
@@ -330,9 +348,10 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       }
     },
 
-    async getVerification() {
+    async getVerification(runId) {
       const runs = unwrap(await api.GET('/api/runs', { params: { query: { limit: 50 } } }))
-      const head = runs.items[0]
+      const at = runId ? runs.items.findIndex(r => r.id === runId) : 0
+      const head = runs.items[Math.max(at, 0)]
       const empty: VerificationView = {
         run: null, filters: [], totals: [], categories: [], categoriesNote: '', problems: [], diffWith: null, diff: [], runs: [],
         runsNote: 'Прогонов ещё не было — запустите проверку.',
@@ -342,7 +361,8 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
         api.GET('/api/runs/{id}', { params: { path: { id: head.id } } }).then(unwrap),
         sourceNames(),
       ])
-      const prev = runs.items[1]
+      // Сравниваем с предыдущим прогоном — следующим в списке (новые идут первыми).
+      const prev = runs.items[Math.max(at, 0) + 1]
       const diff = prev ? unwrap(await api.GET('/api/runs/diff', { params: { query: { a: prev.id, b: head.id, limit: 1 } } })) : null
       const s = head.summary
       const matched = s.counts.matched ?? 0
@@ -350,11 +370,11 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       const order: ResultCategory[] = ['matched', 'violated', 'incomplete', 'ambiguous', 'unmatched', 'limit_exceeded']
       const corpus = head.corpus
       return {
-        run: { id: head.id, rev: head.revision, scope: `${head.sources.length} зап.`, time: '' },
+        run: { id: head.id, rev: head.revision, scope: `${head.sources.length} зап.`, time: '', stale: staleText(head) },
         filters: [
           ...(corpus.port ? [{ label: `порт ${corpus.port}`, active: true }] : []),
           ...(corpus.direction ? [{ label: corpus.direction === 'a_to_b' ? 'a → b' : 'b → a', active: true }] : []),
-          ...(corpus.sources?.length ? [{ label: `записей: ${corpus.sources.length}`, active: true }] : []),
+          ...(corpus.sources?.length ? corpus.sources.map(sha => ({ label: names.get(sha) ?? sha.slice(0, 8), active: true })) : []),
         ],
         totals: [
           { value: formatCount(s.messages), label: 'сообщений в наборе' },
@@ -372,6 +392,7 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
           label: (CATEGORY[c.category]?.label ?? c.category).toLowerCase(),
           where: where(names, c.anchor),
           what: c.violations.map(v => v.detail).join('; ') || (c.messageId ? `тип ${c.messageId}` : 'тип не определён'),
+          link: linkOf(c.anchor),
         })),
         diffWith: prev?.id ?? null,
         diff: diff
@@ -383,13 +404,13 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
               { label: 'Без изменений', value: formatCount(diff.totals.unchanged), tone: 'neutral' },
             ]
           : [],
-        runs: runs.items.map(r => ({ id: r.id, label: `rev ${r.revision ?? '—'} · ${r.sources.length} зап.`, current: !r.stale })),
+        runs: runs.items.map(r => ({ id: r.id, label: `rev ${r.revision ?? '—'} · ${r.sources.length} зап.`, current: !r.stale, stale: staleText(r) })),
         runsNote: 'Прогон устаревает, если изменились интерпретация, настройки сборки или записи — по хешам входов.',
       }
     },
 
-    async startRun() {
-      return unwrap(await api.POST('/api/runs', { body: {} })).jobId
+    async startRun(corpus) {
+      return unwrap(await api.POST('/api/runs', { body: corpus ? { corpus } : {} })).jobId
     },
 
     async getFraming(stream) {

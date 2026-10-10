@@ -1,5 +1,6 @@
 import type {
   ActionLogMapping,
+  CorpusFilter,
   ActionLogRecord,
   Connection,
   ConnectionFlag,
@@ -85,9 +86,10 @@ export interface ResearchSource {
   getInterpretationRevision(rev: number): Promise<string>
   getHypotheses(): Promise<HypothesesView>
   getHypothesisDetail(id: string): Promise<HypothesisDetail | null>
-  getVerification(): Promise<VerificationView>
-  /** Запускает прогон проверки; id задачи или null, если запуск недоступен (пример данных). */
-  startRun(): Promise<string | null>
+  /** Прогон по id; без id — последний. */
+  getVerification(runId?: string): Promise<VerificationView>
+  /** Запускает прогон на корпусе; id задачи или null, если запуск недоступен (пример данных). */
+  startRun(corpus?: CorpusFilter): Promise<string | null>
   getReport(): Promise<ReportView>
 }
 
