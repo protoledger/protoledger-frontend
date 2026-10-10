@@ -322,5 +322,7 @@ export function createMockResearchSource(): ResearchSource {
     getVerification: async () => (await delay(), structuredClone(verification)),
     startRun: async () => null,
     getReport: async () => (await delay(), structuredClone(report)),
+    generateReport: async () => null,
+    listRuns: async () => (await delay(), verification.runs.map(r => ({ id: r.id, label: r.label, stale: !r.current }))),
   }
 }
