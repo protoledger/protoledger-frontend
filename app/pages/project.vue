@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ProjectSettings, Source } from '~/api/types'
+import type { ActionLogRecord, ProjectSettings, Source } from '~/api/types'
 import type { ActionLog } from '~/data/views'
 import { formatBytesSize, formatCount } from '~/utils/bytes'
 import { DIAGNOSTIC_STATUS } from '~/utils/status'
@@ -11,7 +11,23 @@ const workspace = useWorkspaceStore()
 const fileInput = ref<HTMLInputElement | null>(null)
 const importError = ref<string | null>(null)
 
-const { data: logs } = await useAsyncData('action-logs', () => data.getActionLogs(), { default: () => [] as ActionLog[] })
+const { data: logs, refresh: refreshLogs } = await useAsyncData('action-logs', () => data.getActionLogs(), { default: () => [] as ActionLog[] })
+
+const logInput = ref<HTMLInputElement | null>(null)
+const logFile = ref<File | null>(null)
+const logDialog = ref(false)
+
+function onLogFile(e: Event) {
+  const input = e.target as HTMLInputElement
+  logFile.value = input.files?.[0] ?? null
+  input.value = ''
+  if (logFile.value) logDialog.value = true
+}
+
+async function onLogImported(log: ActionLogRecord) {
+  workspace.log(`Журнал ${log.name}: разобрано ${log.rows}, не разобрано ${log.skipped}`)
+  await Promise.all([refreshLogs(), project.load()])
+}
 
 const totals = computed(() => ({
   sources: project.sources.length,
@@ -110,7 +126,8 @@ const CHECKSUM = [['ignore', 'ignore'], ['warn', 'warn'], ['drop', 'drop']] as c
     </ShellSidePanel>
 
     <section class="pl-scroll min-w-0 flex-1 px-4 pt-[18px] pb-6">
-      <CommonAsyncState :pending="project.loading" :error="project.error" :empty="!project.project" empty-text="Проект не открыт." @retry="project.load()">
+      <ProjectOpenForm v-if="project.loaded && !project.project && !project.error" />
+      <CommonAsyncState v-else :pending="project.loading" :error="project.error" :empty="!project.project" empty-text="Проект не открыт." @retry="project.load()">
         <template v-if="project.project">
           <h1 class="m-0 font-display text-2xl font-semibold text-pl-fg-strong">{{ project.extras?.title ?? project.project.name }}</h1>
           <p class="mt-1 mb-4 text-pl-muted">
@@ -127,7 +144,8 @@ const CHECKSUM = [['ignore', 'ignore'], ['warn', 'warn'], ['drop', 'drop']] as c
 
           <div class="mt-4 mb-6 flex items-center gap-2.5">
             <button class="pl-btn pl-btn-primary" type="button" @click="fileInput?.click()">+ Импорт записей</button>
-            <button class="pl-btn" type="button" disabled title="Импорт журнала появится вместе с эндпоинтом /api/action-logs">+ Журнал действий</button>
+            <button class="pl-btn" type="button" @click="logInput?.click()">+ Журнал действий</button>
+            <input ref="logInput" type="file" accept=".csv,.tsv,.txt" class="hidden" @change="onLogFile">
             <input ref="fileInput" type="file" accept=".pcap,.pcapng" class="hidden" @change="onFile">
             <span v-if="importError" class="text-pl-st-violation" role="alert">{{ importError }}</span>
           </div>
@@ -177,6 +195,7 @@ const CHECKSUM = [['ignore', 'ignore'], ['warn', 'warn'], ['drop', 'drop']] as c
 
         </template>
       </CommonAsyncState>
+      <ProjectActionLogImport v-model:open="logDialog" :file="logFile" @imported="onLogImported" />
     </section>
 
     <ShellInspectorContent :title="selected ? `Запись · ${selected.name}` : 'Проект'">

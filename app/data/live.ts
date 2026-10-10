@@ -13,6 +13,9 @@ export function createLiveSource(): ContractSource {
       if (res.response.status === 409) return null
       return unwrap(res)
     },
+    async openProject(path, mode) {
+      return unwrap(await api.POST('/api/project', { body: { path, mode } }))
+    },
     async updateSettings(patch) {
       return unwrap(await api.PATCH('/api/project/settings', { body: patch }))
     },
@@ -28,6 +31,16 @@ export function createLiveSource(): ContractSource {
         bodySerializer: (b) => b as unknown as FormData,
       })
       return unwrap(res).jobId
+    },
+    async importActionLog(file, mapping) {
+      const body = new FormData()
+      body.append('file', file)
+      body.append('mapping', JSON.stringify(mapping))
+      const res = await api.POST('/api/action-logs', {
+        body: body as unknown as { file: string, mapping: string },
+        bodySerializer: (b) => b as unknown as FormData,
+      })
+      return unwrap(res)
     },
     async getDiagnostics(sha256) {
       return unwrap(await api.GET('/api/sources/{sha256}/diagnostics', { params: { path: { sha256 } } }))
