@@ -4,7 +4,7 @@ import { base64ToBytes, formatCount, hexByte } from '~/utils/bytes'
 import type { KnowledgeStatus } from '~/utils/status'
 import type { ContractSource, ResearchSource } from './source'
 import { framingOnlyYaml, replaceFramingBlock } from '~/utils/interpretation-yaml'
-import type { ExchangeSide, ExchangeView, FramingCandidate, Hypothesis, InterpretationTreeNode, ResultCategory, VerificationView } from './views'
+import type { CompareRow, CompareView, ExchangeSide, ExchangeView, FramingCandidate, Hypothesis, InterpretationTreeNode, ResultCategory, VerificationView } from './views'
 
 type S = components['schemas']
 
@@ -35,6 +35,24 @@ const pct = (permille: number) => `${(permille / 10).toFixed(1).replace('.', ','
 
 function lengthType(h: S['LengthHint']) {
   return h.width === 1 ? 'u8' : `u${h.width * 8} ${h.bigEndian ? 'BE' : 'LE'}`
+}
+
+interface ExchangePart { source: string, stream: string, start: number, end: number, time: number, frameNo?: number }
+
+// Запрос — первое после действия в направлении a→b, ответ — первое после запроса в обратном.
+// used — уже занятые части: у действий с одинаковым временем запросы идут по порядку, а не один на всех.
+export function pickExchange(ex: S['Exchange'], used = new Set<string>()): { request?: ExchangePart, response?: ExchangePart } {
+  const key = (p: ExchangePart) => `${p.stream}@${p.start}`
+  const actionAt = Date.parse(ex.action.time)
+  const parts: ExchangePart[] = ex.messages.length
+    ? ex.messages.map(m => ({ source: m.source, stream: m.stream, start: m.start, end: m.end, time: Date.parse(m.firstTime) }))
+    : ex.frames.filter(f => !f.duplicate).map(f => ({ source: f.source, stream: f.stream, start: f.start, end: f.end, time: Date.parse(f.time), frameNo: f.frameNo }))
+  const byTime = (a: ExchangePart, b: ExchangePart) => a.time - b.time || a.start - b.start
+  const request = parts.filter(p => p.stream.endsWith(':ab') && p.time >= actionAt && !used.has(key(p))).sort(byTime)[0]
+  const response = request ? parts.filter(p => p.stream.endsWith(':ba') && p.time >= request.time && !used.has(key(p))).sort(byTime)[0] : undefined
+  if (request) used.add(key(request))
+  if (response) used.add(key(response))
+  return { request, response }
 }
 
 function clock(iso: string) {
@@ -148,15 +166,9 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       const actionAt = Date.parse(ex.action.time)
       const pos = (t: number) => Math.min(1, Math.max(0, (t - from) / Math.max(1, to - from)))
 
-      // Запрос — первое после действия в направлении a→b, ответ — первое после запроса в обратном.
-      type Part = { stream: string, start: number, end: number, time: number, frameNo?: number }
-      const parts: Part[] = ex.messages.length
-        ? ex.messages.map(m => ({ stream: m.stream, start: m.start, end: m.end, time: Date.parse(m.firstTime) }))
-        : ex.frames.filter(f => !f.duplicate).map(f => ({ stream: f.stream, start: f.start, end: f.end, time: Date.parse(f.time), frameNo: f.frameNo }))
-      const request = parts.filter(p => p.stream.endsWith(':ab') && p.time >= actionAt).sort((a, b) => a.time - b.time)[0]
-      const response = request ? parts.filter(p => p.stream.endsWith(':ba') && p.time >= request.time).sort((a, b) => a.time - b.time)[0] : undefined
+      const { request, response } = pickExchange(ex)
 
-      const side = async (p: Part | undefined, title: string, direction: string): Promise<ExchangeSide | null> => {
+      const side = async (p: ExchangePart | undefined, title: string, direction: string): Promise<ExchangeSide | null> => {
         if (!p) return null
         const frame = p.frameNo ?? ex.frames.find(f => f.stream === p.stream && f.start <= p.start && p.start < f.end)?.frameNo
         return {
@@ -424,8 +436,105 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       return unwrap(await api.PUT('/api/interpretation', { body: { yaml } })).rev
     },
 
-    // Эндпоинтов сравнения и отчёта в контракте ещё нет.
-    getCompare: () => sample.getCompare(),
+    async getCompare(action) {
+      const logs = unwrap(await api.GET('/api/action-logs')).items
+      const obs = unwrap(await api.GET('/api/observations')).items
+      const observations = obs.map(o => ({
+        id: o.id,
+        text: o.comment || 'без комментария',
+        status: (o.anchorState === 'ok' ? 'rule' : o.anchorState === 'broken' ? 'violation' : 'gap') as KnowledgeStatus,
+        label: o.anchorState === 'ok' ? 'якорь цел' : o.anchorState === 'broken' ? 'байты изменились' : 'байты недоступны',
+        anchor: `${shortStream(o.anchor.stream)} [${o.anchor.start}, ${o.anchor.end})`,
+      }))
+      const log = logs[0]
+      const empty = { actions: [], action: null, chips: [], requests: [], mask: [], responses: [], correlations: [], observations, observationTotal: obs.length }
+      if (!log) return { ...empty, notes: ['Журнала действий нет — сравнивать не по чему. Импортируйте журнал на экране «Проект».'] }
+
+      const all = unwrap(await api.GET('/api/action-logs/{id}/actions', { params: { path: { id: log.id }, query: { limit: 500 } } })).items
+      const names = [...new Set(all.map(a => a.action))]
+      const chosen = action && names.includes(action) ? action : (all.find(a => Object.keys(a.params).length)?.action ?? names[0] ?? null)
+      const picked = all.filter(a => a.action === chosen).slice(0, 6)
+      const exchanges = await Promise.all(picked.map(a =>
+        api.GET('/api/action-logs/{id}/actions/{line}/exchange', { params: { path: { id: log.id, line: a.line } } }).then(unwrap)))
+
+      const used = new Set<string>()
+      const pairsByAction = exchanges.map(ex => pickExchange(ex, used))
+      const rows = await Promise.all(exchanges.map(async (ex, i) => {
+        const { request, response } = pairsByAction[i]!
+        return {
+          label: pairs(ex.action.params),
+          result: ex.action.resultRaw || pairs(ex.action.result),
+          request: request ? { part: request, bytes: await hexOf(request.stream, request.start, request.end) } : null,
+          response: response ? { part: response, bytes: await hexOf(response.stream, response.start, response.end) } : null,
+        }
+      }))
+      // Маска — визуальная разница показанных байтов; анализ закономерностей делает движок (корреляции).
+      const diffRows = (list: { label: string, bytes: string[] }[]): CompareRow[] => {
+        const width = Math.max(0, ...list.map(r => r.bytes.length))
+        const changed = Array.from({ length: width }, (_, i) => new Set(list.map(r => r.bytes[i] ?? '')).size > 1)
+        return list.map(r => ({ label: r.label, bytes: r.bytes, changed: r.bytes.map((_, i) => changed[i] ?? false) }))
+      }
+      const requests = diffRows(rows.filter(r => r.request).map(r => ({ label: r.label, bytes: r.request!.bytes })))
+      const responses = diffRows(rows.filter(r => r.response).map(r => ({ label: `ответ: ${r.result}`, bytes: r.response!.bytes })))
+      const width = Math.max(0, ...requests.map(r => r.bytes.length))
+      const mask = Array.from({ length: width }, (_, i) => requests.some(r => r.changed[i]))
+
+      // Запросы и ответы анализируются раздельно: у них разная раскладка, вместе связи теряются.
+      const notes: string[] = []
+      const sizeOf = (type: string) => (type.endsWith('8') ? 1 : type.includes('16') ? 2 : 4)
+      const correlate = async (side: 'request' | 'response', title: string) => {
+        const parts = rows.map(r => r[side]?.part).filter((x): x is ExchangePart => !!x)
+        const streams = [...new Set(parts.map(p => p.stream))]
+        const first = parts[0]
+        if (!streams.length) return []
+        const cor = unwrap(await api.POST('/api/analysis/correlations', { body: { streams, logId: log.id } }))
+        if (cor.truncated) notes.push(`${title}: часть сообщений не вошла в анализ (предел).`)
+        const anchorAt = (at: number, type: string) => (first ? { source: first.source, stream: first.stream, start: first.start + at, end: first.start + at + sizeOf(type) } : undefined)
+        return [
+          ...cor.values.map(v => ({
+            position: `${title} ${v.at}–${v.at + sizeOf(v.type) - 1}`,
+            read: `${v.type}${v.scale > 1 ? ` ÷ ${v.scale}` : ''}`,
+            values: v.equivalent.length ? `также ${v.equivalent.join(', ')}` : '—',
+            relation: `= ${v.param}`,
+            share: `${v.matches} / ${v.samples}`,
+            anchor: anchorAt(v.at, v.type),
+          })),
+          ...cor.actions.slice(0, 3).map(a => ({
+            position: `${title} ${a.at}`,
+            read: a.type,
+            values: a.codes.map(c => `${c.action} = ${c.value}`).join(' · '),
+            relation: '= код действия',
+            share: pct(a.purityPermille),
+            anchor: anchorAt(a.at, a.type),
+          })),
+        ]
+      }
+      const correlations: CompareView['correlations'] = [
+        ...await correlate('request', 'запрос'),
+        ...await correlate('response', 'ответ'),
+      ]
+      if (!rows.some(r => r.request)) notes.push('Для этих действий запросы не найдены в окне времени.')
+      notes.push('Совпадение на примерах — основание для гипотезы, а не вывод: проверьте её тестом.')
+      return {
+        actions: names,
+        action: chosen,
+        chips: picked.map(a => pairs(a.params)),
+        requests,
+        mask,
+        responses,
+        correlations,
+        observations,
+        observationTotal: obs.length,
+        notes,
+      }
+    },
+
+    async createObservation(anchor, comment) {
+      unwrap(await api.POST('/api/observations', { body: { anchor, comment } }))
+      return true
+    },
+
+    // Эндпоинта отчёта в контракте ещё нет.
     getReport: () => sample.getReport(),
   }
 }

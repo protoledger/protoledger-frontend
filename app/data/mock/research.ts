@@ -97,6 +97,9 @@ const compareRow = (label: string, bytes: string, changedFrom = 4): CompareView[
 }
 
 const compare: CompareView = {
+  actions: ['set_param', 'read_measure', 'reset'],
+  action: 'set_param',
+  notes: [],
   chips: ['set 21', 'set 37', 'set 1000'],
   requests: [
     compareRow('set_param = 21', 'AA 55 03 10 00 15 D3'),
@@ -303,6 +306,7 @@ export function createMockResearchSource(): ResearchSource {
     // В примере подробно описан обмен только для первого действия.
     getExchange: async id => (await delay(), id === exchange.actionId ? structuredClone(exchange) : null),
     getCompare: async () => (await delay(), structuredClone(compare)),
+    createObservation: async () => false,
     getInterpretation: async () => (await delay(), structuredClone(interpretation)),
     getHypotheses: async () => (await delay(), structuredClone(hypotheses)),
     getHypothesisDetail: async id => (await delay(), id === hypothesisH4.id ? structuredClone(hypothesisH4) : null),

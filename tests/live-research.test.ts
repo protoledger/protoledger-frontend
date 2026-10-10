@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createLiveResearchSource } from '~/data/live-research'
+import { createLiveResearchSource, pickExchange } from '~/data/live-research'
 import { createMockContractSource } from '~/data/mock/contract'
 import { createMockResearchSource } from '~/data/mock/research'
 import type { ContractSource } from '~/data/source'
@@ -84,5 +84,26 @@ describe('живые модели экранов', () => {
     const v = await createLiveResearchSource(contractWithBytes(), createMockResearchSource()).getInterpretation()
     expect(v.rev).toBeNull()
     expect(v.yaml).toEqual([])
+  })
+
+  it('действия с одинаковым временем получают разные запросы по порядку', () => {
+    const t = (ms: number) => new Date(Date.UTC(2026, 9, 10, 14, 0, 0, ms)).toISOString()
+    const ex = {
+      action: { line: 1, time: t(100), action: 'read_param', params: {}, result: {}, resultRaw: '' },
+      window: { from: t(0), to: t(1000) },
+      interpretationApplied: true,
+      frames: [],
+      messages: [
+        { source: SHA, stream: 'x:c0001:ab', start: 0, end: 8, category: 'matched' as const, messageId: null, firstTime: t(110), lastTime: t(110) },
+        { source: SHA, stream: 'x:c0001:ab', start: 8, end: 16, category: 'matched' as const, messageId: null, firstTime: t(110), lastTime: t(110) },
+        { source: SHA, stream: 'x:c0001:ba', start: 0, end: 12, category: 'matched' as const, messageId: null, firstTime: t(120), lastTime: t(120) },
+        { source: SHA, stream: 'x:c0001:ba', start: 12, end: 24, category: 'matched' as const, messageId: null, firstTime: t(125), lastTime: t(125) },
+      ],
+    }
+    const used = new Set<string>()
+    const a = pickExchange(ex, used)
+    const b = pickExchange(ex, used)
+    expect([a.request?.start, a.response?.start]).toEqual([0, 0])
+    expect([b.request?.start, b.response?.start]).toEqual([8, 12])
   })
 })
