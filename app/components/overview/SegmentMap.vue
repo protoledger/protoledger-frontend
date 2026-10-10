@@ -7,78 +7,26 @@ const emit = defineEmits<{ jump: [offset: number] }>()
 const parts = computed(() => props.segments.map((s, i) => ({
   left: (s.start / props.stream.length) * 100,
   width: Math.max(0.15, ((s.end - s.start) / props.stream.length) * 100),
-  cls: s.status === 'gap' ? 'map__p--gap' : s.status === 'ambiguous' ? 'map__p--amb' : s.frames.some(f => f.duplicate) ? 'map__p--dup' : i % 2 ? 'map__p--a' : 'map__p--b',
+  cls: s.status === 'gap' ? 'bg-hatch-gap' : s.status === 'ambiguous' ? 'bg-pl-st-ambiguous' : s.frames.some(f => f.duplicate) ? 'bg-pl-st-hypothesis' : i % 2 ? 'bg-pl-st-rule/35' : 'bg-pl-st-rule/50',
   start: s.start,
   title: `${s.start}–${s.end - 1}: ${s.status === 'gap' ? 'дыра' : s.status === 'ambiguous' ? 'неоднозначно' : `кадр ${s.frames[0]?.frameNo ?? '?'}`}`,
 })))
+
+const key = 'inline-block h-2 w-2.5 align-middle'
 </script>
 
 <template>
-  <div class="map">
-    <div class="map__bar" role="img" :aria-label="`Карта потока: ${stream.gapBytes} байт в дырах, ${stream.ambiguousBytes} неоднозначных`">
-      <button v-for="p in parts" :key="p.start" class="map__p" :class="p.cls" :style="{ left: `${p.left}%`, width: `${p.width}%` }" :title="p.title" type="button" tabindex="-1" @click="emit('jump', p.start)" />
+  <div class="border-b border-pl-line px-3 pt-2 pb-1.5">
+    <div class="relative h-3 bg-pl-panel" role="img" :aria-label="`Карта потока: ${stream.gapBytes} байт в дырах, ${stream.ambiguousBytes} неоднозначных`">
+      <button v-for="p in parts" :key="p.start" class="absolute inset-y-0" :class="p.cls" :style="{ left: `${p.left}%`, width: `${p.width}%` }" :title="p.title" type="button" tabindex="-1" @click="emit('jump', p.start)" />
     </div>
-    <div class="map__legend">
+    <div class="mt-1 flex justify-between text-[11px] text-pl-muted">
       <span>0</span>
-      <span>сегменты TCP · <i class="map__k map__k--gap" /> дыра · <i class="map__k map__k--amb" /> неоднозначно · <i class="map__k map__k--dup" /> повтор · загружено по мере прокрутки</span>
+      <span>
+        сегменты TCP · <i :class="key" class="bg-hatch-gap" /> дыра · <i :class="key" class="bg-pl-st-ambiguous" /> неоднозначно ·
+        <i :class="key" class="bg-pl-st-hypothesis" /> повтор · загружено по мере прокрутки
+      </span>
       <span>{{ stream.length }}</span>
     </div>
   </div>
 </template>
-
-<style scoped>
-.map {
-  padding: 8px 12px 6px;
-  border-bottom: 1px solid var(--pl-line);
-}
-
-.map__bar {
-  position: relative;
-  height: 12px;
-  background: var(--pl-panel);
-}
-
-.map__p {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-}
-
-.map__p--a {
-  background: #3d5a4b;
-}
-
-.map__p--b {
-  background: #4e7461;
-}
-
-.map__p--gap,
-.map__k--gap {
-  background: repeating-linear-gradient(135deg, transparent 0 3px, var(--pl-st-gap) 3px 5px);
-}
-
-.map__p--amb,
-.map__k--amb {
-  background: var(--pl-st-ambiguous);
-}
-
-.map__p--dup,
-.map__k--dup {
-  background: var(--pl-st-hypothesis);
-}
-
-.map__legend {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 4px;
-  color: var(--pl-muted);
-  font-size: 11px;
-}
-
-.map__k {
-  display: inline-block;
-  width: 10px;
-  height: 8px;
-  vertical-align: middle;
-}
-</style>

@@ -58,6 +58,35 @@
   color-scheme: light;
 }
 
+/* Токены в теме Tailwind: bg-pl-panel, text-pl-muted, border-pl-line, text-pl-st-rule… */
+@theme inline {
+  --color-pl-bg: var(--pl-bg);
+  --color-pl-chrome: var(--pl-chrome);
+  --color-pl-panel: var(--pl-panel);
+  --color-pl-raise: var(--pl-raise);
+  --color-pl-line: var(--pl-line);
+  --color-pl-fg: var(--pl-fg);
+  --color-pl-fg-strong: var(--pl-fg-strong);
+  --color-pl-muted: var(--pl-muted);
+  --color-pl-wine: var(--pl-wine);
+  --color-pl-wine-text: var(--pl-wine-text);
+  --color-pl-wine-soft: var(--pl-wine-soft);
+  --color-pl-focus: var(--pl-focus);
+  --color-pl-card: var(--pl-card);
+  --color-pl-card-fg: var(--pl-card-fg);
+  --color-pl-st-rule: var(--pl-st-rule);
+  --color-pl-st-hypothesis: var(--pl-st-hypothesis);
+  --color-pl-st-unknown: var(--pl-st-unknown);
+  --color-pl-st-gap: var(--pl-st-gap);
+  --color-pl-st-ambiguous: var(--pl-st-ambiguous);
+  --color-pl-st-stale: var(--pl-st-stale);
+  --color-pl-st-violation: var(--pl-st-violation);
+
+  --font-sans: "Montserrat", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-display: "Tektur", "Montserrat", sans-serif;
+}
+
 /* Переменные Nuxt UI задаём сами: его встроенный <style> с цветами запрещён CSP движка. */
 :root,
 .light,
@@ -86,193 +115,107 @@
   --ui-radius: 5px;
 }
 
-@theme {
-  --font-sans: "Montserrat", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
-  --font-display: "Tektur", "Montserrat", sans-serif;
+@layer base {
+  html,
+  body,
+  #__nuxt {
+    @apply h-full;
+  }
+
+  body {
+    @apply m-0 bg-pl-bg font-sans text-[13px] text-pl-fg tabular-nums antialiased;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-1 outline-pl-focus;
+  }
+
+  ::selection {
+    @apply bg-pl-wine-soft;
+  }
 }
 
-html,
-body,
-#__nuxt {
-  height: 100%;
+/* Повторяющиеся элементы прототипа. Разовая вёрстка — утилитами в шаблонах. */
+@layer components {
+  .pl-caption {
+    @apply font-display text-[11px] font-medium tracking-[0.08em] text-pl-muted uppercase;
+  }
+
+  .pl-btn {
+    @apply inline-flex h-[30px] cursor-pointer items-center gap-1.5 rounded-[5px] border border-pl-line bg-transparent px-3 text-xs font-semibold tracking-[0.06em] whitespace-nowrap text-pl-fg-strong uppercase hover:bg-pl-raise disabled:cursor-not-allowed disabled:opacity-55;
+  }
+
+  .pl-btn-primary {
+    @apply border-pl-wine bg-linear-to-b from-[#8a0d2a] to-pl-wine text-white hover:from-[#9c1232] hover:to-[#7a0a24];
+  }
+
+  .pl-btn-ghost {
+    @apply font-medium tracking-normal normal-case;
+  }
+
+  .pl-chip {
+    @apply h-[26px] rounded border border-pl-line px-2.5 text-pl-fg aria-pressed:border-pl-wine-text aria-pressed:bg-pl-wine aria-pressed:text-white;
+  }
+
+  .pl-table {
+    @apply w-full border-collapse;
+
+    & th {
+      @apply sticky top-0 z-[1] bg-pl-panel px-2.5 py-[7px] text-left font-display text-[11px] font-medium tracking-[0.08em] whitespace-nowrap text-pl-muted uppercase;
+    }
+
+    & td {
+      @apply border-b border-pl-line px-2.5 py-2 align-top;
+    }
+
+    & tbody tr:hover td {
+      @apply bg-pl-raise;
+    }
+
+    & tbody tr[aria-selected="true"] td {
+      @apply bg-pl-wine-soft;
+    }
+
+    & tbody tr[aria-selected="true"] td:first-child {
+      @apply shadow-[inset_3px_0_0_var(--pl-wine-text)];
+    }
+  }
+
+  .pl-card {
+    @apply border-2 border-pl-wine bg-pl-card text-pl-card-fg;
+  }
+
+  .pl-dl {
+    @apply m-0 grid grid-cols-[120px_minmax(0,1fr)] gap-x-3 gap-y-2 px-3 py-3.5;
+
+    & dt {
+      @apply text-pl-muted;
+    }
+
+    & dd {
+      @apply m-0 text-pl-fg-strong;
+    }
+  }
+
+  .pl-scroll {
+    @apply overflow-auto [scrollbar-color:var(--pl-raise)_transparent] [scrollbar-width:thin];
+  }
+
+  /* Переключатель из нескольких вариантов (радиогруппа). */
+  .pl-seg {
+    @apply inline-flex overflow-hidden rounded border border-pl-line;
+
+    & > * {
+      @apply px-3 py-1 text-pl-muted aria-checked:bg-pl-wine aria-checked:text-white;
+    }
+  }
 }
 
-body {
-  margin: 0;
-  background: var(--pl-bg);
-  color: var(--pl-fg);
-  font-family: var(--font-sans);
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-  -webkit-font-smoothing: antialiased;
+/* Штриховка «нет данных» для дыр — утилитами не выражается. */
+@utility bg-hatch {
+  background: repeating-linear-gradient(135deg, transparent 0 4px, var(--pl-panel) 4px 7px);
 }
 
-:focus-visible {
-  outline: 2px solid var(--pl-focus);
-  outline-offset: 1px;
-}
-
-::selection {
-  background: var(--pl-wine-soft);
-}
-
-.pl-display {
-  font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: 0.01em;
-}
-
-.pl-mono {
-  font-family: var(--font-mono);
-}
-
-/* Подписи разделов: «ЗАПИСИ», «КОНТРПРИМЕРЫ». */
-.pl-caption {
-  font-family: var(--font-display);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--pl-muted);
-}
-
-.pl-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 30px;
-  padding: 0 12px;
-  border: 1px solid var(--pl-line);
-  border-radius: 5px;
-  background: transparent;
-  color: var(--pl-fg-strong);
-  font: 600 12px/1 var(--font-sans);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.pl-btn:hover {
-  background: var(--pl-raise);
-}
-
-.pl-btn--primary {
-  border-color: var(--pl-wine);
-  background: linear-gradient(180deg, #8a0d2a, var(--pl-wine));
-  color: #ffffff;
-}
-
-.pl-btn--primary:hover {
-  background: linear-gradient(180deg, #9c1232, #7a0a24);
-}
-
-.pl-btn--ghost {
-  text-transform: none;
-  letter-spacing: 0;
-  font-weight: 500;
-}
-
-/* Таблицы окон инструментов: плотные, прямые углы. */
-.pl-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.pl-table th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  padding: 7px 10px;
-  background: var(--pl-panel);
-  color: var(--pl-muted);
-  font: 500 11px/1.2 var(--font-display);
-  letter-spacing: 0.08em;
-  text-align: left;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.pl-table td {
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--pl-line);
-  vertical-align: top;
-}
-
-.pl-table tbody tr {
-  cursor: default;
-}
-
-.pl-table tbody tr:hover td {
-  background: var(--pl-raise);
-}
-
-.pl-table tbody tr[aria-selected="true"] td {
-  background: var(--pl-wine-soft);
-}
-
-.pl-table tbody tr[aria-selected="true"] td:first-child {
-  box-shadow: inset 3px 0 0 var(--pl-wine-text);
-}
-
-.pl-num {
-  text-align: right;
-  white-space: nowrap;
-}
-
-/* Светлые карточки сводок с бордовой рамкой. */
-.pl-card {
-  border: 2px solid var(--pl-wine);
-  background: var(--pl-card);
-  color: var(--pl-card-fg);
-}
-
-.pl-scroll {
-  overflow: auto;
-  scrollbar-color: var(--pl-raise) transparent;
-  scrollbar-width: thin;
-}
-
-.pl-dl {
-  display: grid;
-  grid-template-columns: 120px minmax(0, 1fr);
-  gap: 8px 12px;
-  margin: 0;
-  padding: 14px 12px;
-}
-
-.pl-dl dt {
-  color: var(--pl-muted);
-}
-
-.pl-dl dd {
-  margin: 0;
-  color: var(--pl-fg-strong);
-}
-
-.pl-section-cap {
-  margin: 0;
-  padding: 14px 12px 8px;
-}
-
-/* Байты в ячейках сетки: сравнение, обмен для действия. */
-.pl-cells {
-  display: flex;
-  gap: 2px;
-  font-family: var(--font-mono);
-}
-
-.pl-cells span {
-  display: grid;
-  width: 40px;
-  height: 28px;
-  place-items: center;
-  background: var(--pl-panel);
-  color: var(--pl-fg);
-}
-
-.pl-cells .pl-cell--hot {
-  background: rgb(227 180 79 / 18%);
-  color: var(--pl-st-hypothesis);
+@utility bg-hatch-gap {
+  background: repeating-linear-gradient(135deg, transparent 0 3px, var(--pl-st-gap) 3px 5px);
 }

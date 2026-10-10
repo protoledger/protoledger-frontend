@@ -112,21 +112,22 @@ defineExpose({ scrollIntoView })
 
 function cellClass(cell: { offset: number, info: ByteInfo | null }) {
   const st = cell.info?.segment.status
-  return {
-    'hex__b--sel': selected(cell.offset),
-    'hex__b--gap': st === 'gap',
-    'hex__b--amb': st === 'ambiguous',
-    'hex__b--dup': cell.info?.segment.frames.some(f => f.duplicate),
-    'hex__b--seg': cell.info?.segmentStart && cell.offset % ROW !== 0,
-    'hex__b--msg': props.messageStarts?.has(cell.offset),
-  }
+  const sel = selected(cell.offset)
+  return [
+    sel ? 'bg-pl-wine text-white' : 'hover:bg-pl-raise',
+    !sel && st === 'gap' && 'text-pl-st-gap',
+    !sel && st === 'ambiguous' && 'text-pl-st-ambiguous underline decoration-dotted',
+    !sel && props.messageStarts?.has(cell.offset) && 'text-pl-st-hypothesis',
+    props.messageStarts?.has(cell.offset) ? 'shadow-[inset_2px_0_0_var(--pl-st-violation)]' : cell.info?.segmentStart && cell.offset % ROW !== 0 && 'shadow-[inset_2px_0_0_var(--pl-wine-text)]',
+    cell.info?.segment.frames.some(f => f.duplicate) && 'after:absolute after:top-0.5 after:right-px after:size-[3px] after:rounded-full after:bg-pl-st-hypothesis',
+  ]
 }
 </script>
 
 <template>
   <div
     ref="viewport"
-    class="hex pl-scroll"
+    class="pl-scroll relative h-full font-mono text-[12.5px] leading-[22px] select-none focus-visible:-outline-offset-2"
     tabindex="0"
     role="grid"
     aria-label="Байты потока: стрелки — перемещение, Shift — расширить выделение"
@@ -135,25 +136,27 @@ function cellClass(cell: { offset: number, info: ByteInfo | null }) {
     @mouseup="dragging = false"
     @mouseleave="dragging = false"
   >
-    <div class="hex__space" :style="{ height: `${rowCount * ROW_H}px` }">
-      <div class="hex__rows" :style="{ transform: `translateY(${firstRow * ROW_H}px)` }">
-        <div v-for="row in rows" :key="row.index" class="hex__row" role="row">
-          <span class="hex__off">{{ hexOffset(row.start, offsetWidth) }}</span>
-          <template v-if="row.gapRow">
-            <span class="hex__gap" :class="{ 'hex__gap--label': row.gapStart }">
-              <template v-if="row.gapStart && row.gapSegment">
-                <CommonStatusBadge status="gap" />
-                нет данных · {{ row.gapSegment.end - row.gapSegment.start }} байт ·
-                [{{ row.gapSegment.start }}, {{ row.gapSegment.end }}) не захвачены
-              </template>
-            </span>
-          </template>
+    <div class="relative" :style="{ height: `${rowCount * ROW_H}px` }">
+      <div class="absolute inset-x-0 top-0 will-change-transform" :style="{ transform: `translateY(${firstRow * ROW_H}px)` }">
+        <div v-for="row in rows" :key="row.index" class="flex h-[22px] px-3 whitespace-pre" role="row">
+          <span class="w-[72px] flex-none text-pl-muted">{{ hexOffset(row.start, offsetWidth) }}</span>
+          <span
+            v-if="row.gapRow"
+            class="bg-hatch flex w-[642px] items-center gap-2 border-x border-dashed border-pl-st-gap px-2.5 font-sans text-xs text-pl-muted"
+            :class="{ 'border-t': row.gapStart }"
+          >
+            <template v-if="row.gapStart && row.gapSegment">
+              <CommonStatusBadge status="gap" />
+              нет данных · {{ row.gapSegment.end - row.gapSegment.start }} байт ·
+              [{{ row.gapSegment.start }}, {{ row.gapSegment.end }}) не захвачены
+            </template>
+          </span>
           <template v-else>
-            <span class="hex__bytes">
+            <span class="grid flex-none grid-cols-[repeat(16,26px)]">
               <span
                 v-for="c in row.cells"
                 :key="c.offset"
-                class="hex__b"
+                class="relative cursor-text px-[3px] text-center text-pl-fg-strong"
                 :class="cellClass(c)"
                 role="gridcell"
                 :aria-selected="selected(c.offset)"
@@ -161,11 +164,11 @@ function cellClass(cell: { offset: number, info: ByteInfo | null }) {
                 @mouseenter="onEnter(c.offset)"
               >{{ c.info ? (c.info.value === null ? '░░' : hexByte(c.info.value)) : '··' }}</span>
             </span>
-            <span class="hex__ascii" aria-hidden="true">
+            <span class="ml-5 tracking-[0.25em] text-pl-muted" aria-hidden="true">
               <span
                 v-for="c in row.cells"
                 :key="c.offset"
-                :class="{ 'hex__a--sel': selected(c.offset), 'hex__a--gap': c.info?.segment.status === 'gap' }"
+                :class="{ 'bg-pl-wine text-white': selected(c.offset), 'bg-hatch': c.info?.segment.status === 'gap' }"
                 @mousedown.prevent="onDown(c.offset, $event)"
                 @mouseenter="onEnter(c.offset)"
               >{{ c.info && c.info.value !== null ? asciiChar(c.info.value) : ' ' }}</span>
@@ -176,128 +179,3 @@ function cellClass(cell: { offset: number, info: ByteInfo | null }) {
     </div>
   </div>
 </template>
-
-<style scoped>
-.hex {
-  position: relative;
-  height: 100%;
-  font: 12.5px/22px var(--font-mono);
-  user-select: none;
-}
-
-.hex:focus-visible {
-  outline-offset: -2px;
-}
-
-.hex__space {
-  position: relative;
-}
-
-.hex__rows {
-  position: absolute;
-  inset: 0 0 auto;
-  will-change: transform;
-}
-
-.hex__row {
-  display: flex;
-  height: 22px;
-  padding: 0 12px;
-  white-space: pre;
-}
-
-.hex__off {
-  width: 72px;
-  flex: none;
-  color: var(--pl-muted);
-}
-
-.hex__bytes {
-  display: grid;
-  grid-template-columns: repeat(16, 26px);
-  flex: none;
-}
-
-.hex__b {
-  position: relative;
-  padding: 0 3px;
-  color: var(--pl-fg-strong);
-  text-align: center;
-  cursor: text;
-}
-
-.hex__b:hover {
-  background: var(--pl-raise);
-}
-
-.hex__b--seg {
-  box-shadow: inset 2px 0 0 var(--pl-wine-text);
-}
-
-.hex__b--msg {
-  box-shadow: inset 2px 0 0 var(--pl-st-violation);
-  color: var(--pl-st-hypothesis);
-}
-
-.hex__b--gap {
-  color: var(--pl-st-gap);
-}
-
-.hex__b--amb {
-  color: var(--pl-st-ambiguous);
-  text-decoration: underline dotted;
-}
-
-.hex__b--dup::after {
-  position: absolute;
-  top: 2px;
-  right: 1px;
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: var(--pl-st-hypothesis);
-  content: "";
-}
-
-.hex__b--sel {
-  background: var(--pl-wine);
-  color: #fff;
-}
-
-.hex__b--sel:hover {
-  background: var(--pl-wine);
-}
-
-.hex__ascii {
-  margin-left: 20px;
-  color: var(--pl-muted);
-  letter-spacing: 0.25em;
-}
-
-.hex__a--sel {
-  background: var(--pl-wine);
-  color: #fff;
-}
-
-.hex__a--gap {
-  background: repeating-linear-gradient(135deg, transparent 0 3px, var(--pl-raise) 3px 5px);
-}
-
-.hex__gap {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: calc(16 * 26px + 20px + 16 * 1.25em);
-  padding: 0 10px;
-  border-right: 1px dashed var(--pl-st-gap);
-  border-left: 1px dashed var(--pl-st-gap);
-  background: repeating-linear-gradient(135deg, transparent 0 4px, var(--pl-panel) 4px 7px);
-  color: var(--pl-muted);
-  font-family: var(--font-sans);
-  font-size: 12px;
-}
-
-.hex__gap--label {
-  border-top: 1px dashed var(--pl-st-gap);
-}
-</style>

@@ -19,27 +19,29 @@ const range = computed({
 })
 
 // Якорь в адресе: ?conn=…&dir=ab&from=…&to=… — ссылка ведёт к тем же байтам.
+// Запоминаем его до того, как список соединений выберет первое по умолчанию.
+const initial = { ...route.query }
 async function restoreFromQuery() {
-  const id = typeof route.query.conn === 'string' ? route.query.conn : null
-  if (!id || connection.value?.id === id) return
+  const id = typeof initial.conn === 'string' ? initial.conn : null
+  if (!id) return
   const page = await data.listConnections({ limit: 500 })
   const found = page.items.find(c => c.id === id)
-  if (found) select(found, false)
-  const from = Number(route.query.from)
-  const to = Number(route.query.to)
+  if (!found) return
+  select(found)
+  const from = Number(initial.from)
+  const to = Number(initial.to)
   if (Number.isFinite(from) && Number.isFinite(to) && to > from) {
-    selection.range = { start: from, end: to }
     await nextTick()
+    selection.range = { start: from, end: to }
     hex.value?.scrollIntoView(from)
   }
 }
 onMounted(restoreFromQuery)
 
-function select(c: Connection, resetRange = true) {
+function select(c: Connection) {
   connection.value = c
   if (!c.streams.some(s => s.id.endsWith(`:${dir.value}`))) dir.value = 'ab'
   selection.selectStream(c.id, stream.value?.id ?? '')
-  if (!resetRange) return
 }
 
 watch([connection, dir, () => selection.range], () => {
@@ -67,68 +69,28 @@ function jump(offset: number) {
 </script>
 
 <template>
-  <div class="ov">
-    <OverviewConnectionList class="ov__col" :selected-id="connection?.id ?? null" @select="select" />
+  <div class="grid h-full grid-cols-[minmax(330px,30%)_minmax(560px,1fr)_340px] [&>*]:min-h-0 [&>*]:min-w-0 [&>*]:border-r [&>*]:border-pl-line [&>*:last-child]:border-r-0">
+    <OverviewConnectionList :selected-id="connection?.id ?? null" @select="select" />
 
-    <section class="ov__col ov__stream">
+    <section class="flex flex-col">
       <CommonPanelHeader
         :title="connection ? `Поток ${connection.id.split(':')[1]}` : 'Поток'"
         :subtitle="stream ? `собран по seq · ${formatCount(stream.length)} байт${stream.startAvailable ? '' : ' · начало не захвачено'}` : ''"
       >
-        <div v-if="connection" class="dir" role="radiogroup" aria-label="Направление">
+        <div v-if="connection" class="pl-seg" role="radiogroup" aria-label="Направление">
           <button v-for="d in (['ab', 'ba'] as const)" :key="d" type="button" role="radio" :aria-checked="dir === d" @click="dir = d">{{ roleLabel[d] }}</button>
         </div>
       </CommonPanelHeader>
       <template v-if="stream">
         <OverviewSegmentMap :stream="stream" :segments="segments" @jump="jump" />
-        <p v-if="error" class="p-3 text-[var(--pl-st-violation)]" role="alert">{{ error }}</p>
+        <p v-if="error" class="p-3 text-pl-st-violation" role="alert">{{ error }}</p>
         <div class="flex-1 min-h-0">
           <OverviewHexView ref="hex" v-model:range="range" :stream="stream" :at="at" :ensure="ensure" />
         </div>
       </template>
-      <p v-else class="p-4 text-[var(--pl-muted)]">Выберите соединение слева.</p>
+      <p v-else class="p-4 text-pl-muted">Выберите соединение слева.</p>
     </section>
 
-    <OverviewSelectionPanel class="ov__col" :range="range" :at="at" />
+    <OverviewSelectionPanel :range="range" :at="at" />
   </div>
 </template>
-
-<style scoped>
-.ov {
-  display: grid;
-  grid-template-columns: minmax(330px, 30%) minmax(560px, 1fr) 340px;
-  height: 100%;
-}
-
-.ov__col {
-  min-width: 0;
-  min-height: 0;
-  border-right: 1px solid var(--pl-line);
-}
-
-.ov__col:last-child {
-  border-right: 0;
-}
-
-.ov__stream {
-  display: flex;
-  flex-direction: column;
-}
-
-.dir {
-  display: inline-flex;
-  border: 1px solid var(--pl-line);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.dir button {
-  padding: 4px 12px;
-  color: var(--pl-muted);
-}
-
-.dir button[aria-checked="true"] {
-  background: var(--pl-wine);
-  color: #fff;
-}
-</style>

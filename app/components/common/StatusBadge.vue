@@ -7,40 +7,11 @@ const meta = computed(() => STATUS[props.status])
 
 <template>
   <span
-    class="pl-badge"
-    :class="meta.decoration && `pl-badge--${meta.decoration}`"
+    class="inline-flex max-w-full items-center gap-1 rounded-[3px] border border-[var(--c)] px-1.5 text-[11px] leading-4 font-semibold whitespace-nowrap text-[var(--c)]"
+    :class="{ 'border-dashed': meta.decoration === 'dashed' }"
     :style="{ '--c': meta.color }"
   >
     <UIcon :name="meta.icon" class="size-3.5 shrink-0" aria-hidden="true" />
-    <span class="pl-badge__text">{{ label ?? meta.label }}</span>
+    <span :class="{ 'underline decoration-dotted': meta.decoration === 'dotted', 'line-through': meta.decoration === 'strike' }">{{ label ?? meta.label }}</span>
   </span>
 </template>
-
-<style scoped>
-.pl-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  max-width: 100%;
-  padding: 1px 6px;
-  border: 1px solid var(--c);
-  border-radius: 3px;
-  color: var(--c);
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 16px;
-  white-space: nowrap;
-}
-
-.pl-badge--dashed {
-  border-style: dashed;
-}
-
-.pl-badge--dotted .pl-badge__text {
-  text-decoration: underline dotted;
-}
-
-.pl-badge--strike .pl-badge__text {
-  text-decoration: line-through;
-}
-</style>
