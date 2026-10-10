@@ -19,8 +19,8 @@ export default defineNuxtConfig({
     head: {
       htmlAttrs: { lang: 'ru' },
       title: 'protoledger',
-      // Движок подставляет токен сессии при отдаче index.html.
-      meta: [{ name: 'protoledger-token', content: '__PROTOLEDGER_TOKEN__' }],
+      // Тег с токеном сессии добавляет движок при отдаче index.html. Здесь его нет намеренно:
+      // после гидрации Nuxt перезаписал бы настоящий токен заглушкой.
     },
   },
   runtimeConfig: {
