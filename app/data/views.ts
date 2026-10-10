@@ -190,17 +190,27 @@ export interface HypothesisDetail {
 // Категории контракта плюс out_of_scope/unsupported — ограничения области и реализации.
 export type ResultCategory = 'matched' | 'violated' | 'incomplete' | 'ambiguous' | 'unmatched' | 'limit_exceeded' | 'out_of_scope' | 'unsupported'
 
+export interface StreamLink {
+  conn: string
+  dir: 'ab' | 'ba'
+  from: number
+  to: number
+}
+
 export interface VerificationView {
   /** null — прогонов ещё не было. */
-  run: { id: string, rev: number | null, scope: string, time: string } | null
+  run: { id: string, rev: number | null, scope: string, time: string, stale: string | null } | null
+  /** Фильтры корпуса, с которыми выполнен прогон (только показ). */
   filters: { label: string, active: boolean }[]
   totals: { value: string, label: string }[]
   categories: { key: ResultCategory, label: string, count: number }[]
   categoriesNote: string
-  problems: { status: KnowledgeStatus, label: string, where: string, what: string }[]
+  /** link — куда вести по клику: соединение, направление и диапазон байтов в «Обзоре». */
+  problems: { status: KnowledgeStatus, label: string, where: string, what: string, link: StreamLink | null }[]
   diffWith: string | null
   diff: { label: string, value: string, tone: 'good' | 'bad' | 'neutral' }[]
-  runs: { id: string, label: string, current: boolean }[]
+  /** stale — почему прогон устарел; null — актуален. */
+  runs: { id: string, label: string, current: boolean, stale: string | null }[]
   runsNote: string
 }
 

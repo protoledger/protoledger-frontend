@@ -222,7 +222,7 @@ const hypothesisH4: HypothesisDetail = {
 }
 
 const verification: VerificationView = {
-  run: { id: 'run-4', rev: 3, scope: 'все записи (3)', time: '16:40' },
+  run: { id: 'run-4', rev: 3, scope: 'все записи (3)', time: '16:40', stale: null },
   filters: [{ label: 'порт 5020', active: true }, { label: 'без фона', active: true }, { label: 'только контрпримеры', active: false }],
   totals: [
     { value: '1 714', label: 'сообщений и кадров в наборе' },
@@ -242,11 +242,11 @@ const verification: VerificationView = {
   ],
   categoriesNote: '«Не поддерживается» и «Превышен предел» — ограничения реализации (IPv6, лимиты), а не свойства протокола.',
   problems: [
-    { status: 'violation', label: 'нарушение', where: 'extra-1000 · c0003 · 88', what: 'H4: 70000 не помещается в u16' },
-    { status: 'violation', label: 'нарушение', where: 'base · c0004 · 17', what: 'crc не совпал (checksum TCP тоже плохой)' },
-    { status: 'gap', label: 'неполное', where: 'base · c0002 · 233', what: 'длина 7, байтов 3 — дыра 192–256' },
-    { status: 'ambiguous', label: 'неоднозначно', where: 'base · c0002 · 301', what: 'перекрытие кадров 1294 и 1296' },
-    { status: 'unknown', label: 'не охвачено', where: 'extra-1000 · c0001 · 12', what: 'cmd 0x40 — нет типа' },
+    { status: 'violation', label: 'нарушение', where: 'extra-1000 · c0003 · 88', what: 'H4: 70000 не помещается в u16', link: null },
+    { status: 'violation', label: 'нарушение', where: 'base · c0004 · 17', what: 'crc не совпал (checksum TCP тоже плохой)', link: null },
+    { status: 'gap', label: 'неполное', where: 'base · c0002 · 233', what: 'длина 7, байтов 3 — дыра 192–256', link: { conn: 'c0002', dir: 'ab', from: 186, to: 193 } },
+    { status: 'ambiguous', label: 'неоднозначно', where: 'base · c0002 · 301', what: 'перекрытие кадров 1294 и 1296', link: { conn: 'c0002', dir: 'ab', from: 296, to: 306 } },
+    { status: 'unknown', label: 'не охвачено', where: 'extra-1000 · c0001 · 12', what: 'cmd 0x40 — нет типа', link: null },
   ],
   diffWith: 'run-3',
   diff: [
@@ -255,10 +255,10 @@ const verification: VerificationView = {
     { label: 'Без изменений', value: '1 201', tone: 'neutral' },
   ],
   runs: [
-    { id: 'run-4', label: 'rev 3 · 3 записи', current: true },
-    { id: 'run-3', label: 'rev 3 · 1 запись', current: false },
-    { id: 'run-2', label: 'rev 2', current: false },
-    { id: 'run-1', label: 'rev 1', current: false },
+    { id: 'run-4', label: 'rev 3 · 3 записи', current: true, stale: null },
+    { id: 'run-3', label: 'rev 3 · 1 запись', current: false, stale: 'изменены записи' },
+    { id: 'run-2', label: 'rev 2', current: false, stale: 'изменена интерпретация' },
+    { id: 'run-1', label: 'rev 1', current: false, stale: 'изменена интерпретация' },
   ],
   runsNote: 'Прогон устаревает, если изменились интерпретация, настройки сборки или записи — по хешам входов.',
 }
