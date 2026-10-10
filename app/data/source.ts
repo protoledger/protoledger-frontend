@@ -68,6 +68,12 @@ export interface ResearchSource {
   getExchange(actionId: string): Promise<ExchangeView | null>
   getCompare(): Promise<CompareView>
   getInterpretation(): Promise<InterpretationView>
+  /** Применить текст к потоку без сохранения; без yaml — последняя сохранённая ревизия. */
+  previewInterpretation(stream: string, yaml?: string): Promise<Pick<InterpretationView, 'tree' | 'preview'>>
+  /** Проверить и сохранить текст; created = false — смысл не изменился, ревизии нет. */
+  saveInterpretation(yaml: string): Promise<{ rev: number, created: boolean }>
+  getInterpretationRevisions(): Promise<number[]>
+  getInterpretationRevision(rev: number): Promise<string>
   getHypotheses(): Promise<HypothesesView>
   getHypothesisDetail(id: string): Promise<HypothesisDetail | null>
   getVerification(): Promise<VerificationView>

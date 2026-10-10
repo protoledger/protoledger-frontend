@@ -60,9 +60,59 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
     return res.segments.flatMap(seg => (seg.data ? Array.from(base64ToBytes(seg.data)).map(hexByte) : Array.from({ length: seg.end - seg.start }, () => '░░')))
   }
 
-  async function firstStream(): Promise<string | null> {
-    const page = await contract.listConnections({ limit: 50 })
-    return page.items[0]?.streams[0]?.id ?? null
+  // Для предпросмотра по умолчанию — самый длинный поток: в нём больше всего сообщений.
+  async function defaultStream(): Promise<string | null> {
+    const page = await contract.listConnections({ limit: 200 })
+    let best: { id: string, len: number } | null = null
+    for (const c of page.items) {
+      for (const st of c.streams) {
+        if (!best || st.dataBytes > best.len) best = { id: st.id, len: st.dataBytes }
+      }
+    }
+    return best?.id ?? null
+  }
+
+  async function previewOf(stream: string, yaml?: string) {
+    const preview = unwrap(await api.POST('/api/interpretation/preview', { body: { stream, limit: 500, offset: 0, ...(yaml === undefined ? {} : { yaml }) } }))
+
+    // Дерево типов строится по разбору движка, а не по тексту: фронт YAML не интерпретирует.
+    const byType = new Map<string, Map<string, S['PreviewField']['status']>>()
+    let untyped = 0
+    for (const m of preview.items) {
+      if (!m.messageId) {
+        untyped++
+        continue
+      }
+      const fields = byType.get(m.messageId) ?? new Map()
+      for (const f of m.fields) fields.set(f.name, f.status)
+      byType.set(m.messageId, fields)
+    }
+    const tree: InterpretationTreeNode[] = [{
+      label: 'Типы сообщений',
+      badge: String(byType.size),
+      children: [
+        ...[...byType].map(([name, fields]) => ({
+          label: name,
+          children: [...fields].map(([field, status]) => ({ label: field, status: status as KnowledgeStatus })),
+        })),
+        ...(untyped ? [{ label: `без типа · ${untyped}`, status: 'unknown' as const }] : []),
+      ],
+    }]
+    const counts = preview.counts ?? {}
+    const total = Object.values(counts).reduce((n, c) => n + c, 0)
+    return {
+      tree,
+      preview: {
+        stream: shortStream(stream),
+        rows: preview.outOfScope
+          ? [{ label: 'Поток', value: 'вне области применимости' }]
+          : [
+              { label: 'Сообщений', value: formatCount(total) },
+              ...Object.entries(counts).filter(([, c]) => c > 0).map(([k, c]) => ({ label: CATEGORY[k]?.label ?? k, value: formatCount(c) })),
+              { label: 'Неизвестных байтов', value: formatCount(preview.unknownBytes ?? 0) },
+            ],
+      },
+    }
   }
 
   return {
@@ -184,59 +234,38 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       }
       catch (e) {
         if (e instanceof ApiError && e.status === 404) {
-          return { rev: null, dirty: false, tree: [], yaml: [], selectedLine: 0, preview: { stream: '—', rows: [] }, field: null, quickFix: null }
+          return { rev: null, dirty: false, tree: [], yaml: [], selectedLine: 0, stream: await defaultStream(), preview: { stream: '—', rows: [] }, field: null, quickFix: null }
         }
         throw e
       }
-      const stream = await firstStream()
-      const preview = stream
-        ? unwrap(await api.POST('/api/interpretation/preview', { body: { stream, limit: 500, offset: 0 } }))
-        : null
-
-      // Дерево типов строится по разбору движка, а не по тексту: фронт YAML не интерпретирует.
-      const byType = new Map<string, Map<string, S['PreviewField']['status']>>()
-      let untyped = 0
-      for (const m of preview?.items ?? []) {
-        if (!m.messageId) {
-          untyped++
-          continue
-        }
-        const fields = byType.get(m.messageId) ?? new Map()
-        for (const f of m.fields) fields.set(f.name, f.status)
-        byType.set(m.messageId, fields)
-      }
-      const tree: InterpretationTreeNode[] = [{
-        label: 'Типы сообщений',
-        badge: String(byType.size),
-        children: [
-          ...[...byType].map(([name, fields]) => ({
-            label: name,
-            children: [...fields].map(([field, status]) => ({ label: field, status: status as KnowledgeStatus })),
-          })),
-          ...(untyped ? [{ label: `без типа · ${untyped}`, status: 'unknown' as const }] : []),
-        ],
-      }]
-      const counts = preview?.counts ?? {}
-      const total = Object.values(counts).reduce((n, c) => n + c, 0)
+      const stream = await defaultStream()
+      const { tree, preview } = stream ? await previewOf(stream) : { tree: [], preview: { stream: '—', rows: [] } }
       return {
         rev: doc.rev,
         dirty: false,
         tree,
         yaml: doc.yaml.split('\n').map(text => ({ text })),
         selectedLine: 1,
-        preview: {
-          stream: stream ? shortStream(stream) : '—',
-          rows: preview?.outOfScope
-            ? [{ label: 'Поток', value: 'вне области применимости' }]
-            : [
-                { label: 'Сообщений', value: formatCount(total) },
-                ...Object.entries(counts).filter(([, c]) => c > 0).map(([k, c]) => ({ label: CATEGORY[k]?.label ?? k, value: formatCount(c) })),
-                { label: 'Неизвестных байтов', value: formatCount(preview?.unknownBytes ?? 0) },
-              ],
-        },
+        stream,
+        preview,
         field: null,
         quickFix: null,
       }
+    },
+
+    previewInterpretation: (stream, yaml) => previewOf(stream, yaml),
+
+    async saveInterpretation(yaml) {
+      const res = unwrap(await api.PUT('/api/interpretation', { body: { yaml } }))
+      return { rev: res.rev, created: res.created }
+    },
+
+    async getInterpretationRevisions() {
+      return (await revisions()).map(r => r.rev).sort((a, b) => b - a)
+    },
+
+    async getInterpretationRevision(rev) {
+      return unwrap(await api.GET('/api/interpretation/revisions/{rev}', { params: { path: { rev } } })).yaml
     },
 
     async getHypotheses() {

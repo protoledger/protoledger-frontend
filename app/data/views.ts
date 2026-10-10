@@ -120,9 +120,12 @@ export interface InterpretationView {
   tree: InterpretationTreeNode[]
   yaml: YamlLine[]
   selectedLine: number
+  /** Поток, на котором показан предпросмотр (идентификатор движка); null — потоков нет. */
+  stream: string | null
   preview: { stream: string, rows: { label: string, value: string }[] }
   field: { line: number, status: KnowledgeStatus, ref: string, counterexamples: number, where: string } | null
-  quickFix: { label: string, note: string } | null
+  /** Правка текста одной строки: from → to; применяется в редакторе и сохраняется ревизией. */
+  quickFix: { label: string, note: string, line: number, from: string, to: string } | null
 }
 
 export interface Hypothesis {
