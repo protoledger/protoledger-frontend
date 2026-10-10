@@ -23,6 +23,7 @@ import type {
   FramingDetail,
   FramingView,
   HypothesesView,
+  Hypothesis,
   HypothesisDetail,
   InterpretationView,
   ProjectExtras,
@@ -86,6 +87,13 @@ export interface ResearchSource {
   getInterpretationRevision(rev: number): Promise<string>
   getHypotheses(): Promise<HypothesesView>
   getHypothesisDetail(id: string): Promise<HypothesisDetail | null>
+  /** Наблюдения проекта — основания для гипотез. */
+  getObservations(): Promise<{ id: string, text: string }[]>
+  /** Создать гипотезу; id или null — пример данных, не сохраняется. */
+  createHypothesis(input: { statement: string, test: string, basis: string[] }): Promise<string | null>
+  /** Статус ставит исследователь: проверка теста сам статус не меняет. */
+  setHypothesisStatus(id: string, status: Hypothesis['status']): Promise<boolean>
+  createQuestion(text: string): Promise<boolean>
   /** Прогон по id; без id — последний. */
   getVerification(runId?: string): Promise<VerificationView>
   /** Запускает прогон на корпусе; id задачи или null, если запуск недоступен (пример данных). */
