@@ -14,8 +14,8 @@ watchEffect(() => {
 })
 
 const lines = computed(() => (view.value?.yaml ?? []).map((l, i) => {
-  const text = fixed.value && i + 1 === view.value?.field.line ? l.text.replace('u16be, status: hypothesis', 'i32be, status: hypothesis') : l.text
-  const mark = fixed.value && i + 1 === view.value?.field.line ? 'hypothesis' : l.mark
+  const text = fixed.value && i + 1 === view.value?.field?.line ? l.text.replace('u16be, status: hypothesis', 'i32be, status: hypothesis') : l.text
+  const mark = fixed.value && i + 1 === view.value?.field?.line ? 'hypothesis' : l.mark
   return { n: i + 1, tokens: tokenizeYamlLine(text), mark }
 }))
 
@@ -38,21 +38,21 @@ function applyFix() {
 
 <template>
   <div class="flex h-full">
-    <ShellSidePanel id="interp-tree" title="Структура" :subtitle="view ? `rev ${view.rev}` : ''" :width="260">
+    <ShellSidePanel id="interp-tree" title="Структура" :subtitle="view?.rev ? `rev ${view.rev}` : ''" :width="260">
       <ul v-if="view" class="pl-scroll m-0 flex-1 list-none px-0 py-2">
         <InterpTreeNode v-for="(n, k) in view.tree" :key="k" :node="n" :depth="0" />
       </ul>
     </ShellSidePanel>
 
     <section class="flex min-w-0 flex-1 flex-col">
-      <CommonPanelHeader title="interpretation.yaml" :subtitle="view?.dirty || fixed ? 'изменено · не сохранено в ревизию' : 'сохранено'">
+      <CommonPanelHeader title="interpretation.yaml" :subtitle="!view?.rev ? 'ещё не создана' : view.dirty || fixed ? 'изменено · не сохранено в ревизию' : `ревизия ${view.rev}`">
         <div class="pl-seg" role="radiogroup" aria-label="Вид">
           <button type="button" role="radio" :aria-checked="mode === 'yaml'" @click="mode = 'yaml'">YAML</button>
           <button type="button" role="radio" :aria-checked="mode === 'form'" @click="mode = 'form'">Форма</button>
         </div>
-        <button v-if="view" class="pl-btn pl-btn-primary h-7" type="button" @click="draft(`Ревизия rev ${view.rev + 1} сохранена`)">Сохранить rev {{ view.rev + 1 }}</button>
+        <button v-if="view?.rev && fixed" class="pl-btn pl-btn-primary h-7" type="button" @click="draft(`Ревизия rev ${view.rev + 1} сохранена`)">Сохранить rev {{ view.rev + 1 }}</button>
       </CommonPanelHeader>
-      <CommonAsyncState :pending="pending" :error="error?.message" :empty="!view" @retry="refresh()">
+      <CommonAsyncState :pending="pending" :error="error?.message" :empty="!view?.rev" empty-text="Интерпретации ещё нет: начните с границ сообщений и наблюдений." @retry="refresh()">
         <div v-if="mode === 'yaml'" class="pl-scroll flex-1 py-2 font-mono text-[12.5px] leading-[21px]" role="listbox" aria-label="Строки интерпретации">
           <div
             v-for="l in lines"
@@ -84,6 +84,7 @@ function applyFix() {
             <dt>{{ r.label }}</dt><dd>{{ r.value }}</dd>
           </template>
         </dl>
+        <template v-if="view.field">
         <h3 :class="cap">Поле в строке {{ view.field.line }}</h3>
         <dl class="pl-dl">
           <dt>Статус</dt><dd><CommonStatusBadge :status="view.field.status" /> → {{ view.field.ref }}</dd>
@@ -94,11 +95,14 @@ function applyFix() {
           </dd>
           <dt>Где</dt><dd>{{ view.field.where }}</dd>
         </dl>
+        </template>
+        <template v-if="view.quickFix">
         <h3 :class="cap">Быстрое исправление</h3>
         <div class="px-3">
           <button class="pl-btn" type="button" :disabled="fixed" @click="applyFix">{{ view.quickFix.label }}</button>
           <p class="mt-2 text-pl-muted">{{ view.quickFix.note }}</p>
         </div>
+        </template>
       </div>
     </ShellInspectorContent>
   </div>

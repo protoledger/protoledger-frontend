@@ -5,6 +5,7 @@ import type {
   Job,
   Page,
   Project,
+  ProjectSettings,
   Source,
   SourceDiagnostics,
   StreamBytes,
@@ -13,13 +14,15 @@ import type {
   ActionLog,
   ActionsView,
   CompareView,
+  ExchangeView,
   FramingView,
   HypothesesView,
+  HypothesisDetail,
   InterpretationView,
   ProjectExtras,
   ReportView,
   VerificationView,
-} from './draft'
+} from './views'
 
 export interface ConnectionQuery {
   limit?: number
@@ -33,6 +36,8 @@ export interface ConnectionQuery {
 /** Операции, которые уже есть в контракте API (openapi.yaml). */
 export interface ContractSource {
   getProject(): Promise<Project | null>
+  /** Меняет политики сборки; записи собираются заново фоновыми задачами. */
+  updateSettings(patch: Partial<ProjectSettings>): Promise<Project>
   listSources(): Promise<Page<Source>>
   importSource(file: File): Promise<string>
   getDiagnostics(sha256: string): Promise<SourceDiagnostics>
@@ -46,24 +51,30 @@ export interface ContractSource {
 }
 
 /**
- * Экраны Ф2, для которых эндпоинтов в контракте ещё нет.
- * Пока отдаются примером данных; при появлении эндпоинтов метод переезжает в ContractSource.
+ * Модели экранов исследования. Живой источник собирает их из эндпоинтов движка;
+ * экраны, для которых эндпоинтов нет (sampleOnly), всегда показывают пример данных.
  */
-export interface DraftSource {
+export interface ResearchSource {
   getProjectExtras(): Promise<ProjectExtras>
   getActionLogs(): Promise<ActionLog[]>
   getFraming(stream: string): Promise<FramingView>
   getActions(): Promise<ActionsView>
+  getExchange(actionId: string): Promise<ExchangeView | null>
   getCompare(): Promise<CompareView>
   getInterpretation(): Promise<InterpretationView>
   getHypotheses(): Promise<HypothesesView>
+  getHypothesisDetail(id: string): Promise<HypothesisDetail | null>
   getVerification(): Promise<VerificationView>
+  /** Запускает прогон проверки; id задачи или null, если запуск недоступен (пример данных). */
+  startRun(): Promise<string | null>
   getReport(): Promise<ReportView>
 }
 
 export type DataSourceKind = 'mock' | 'live'
 
-export interface DataSource extends ContractSource, DraftSource {
+export interface DataSource extends ContractSource, ResearchSource {
   /** Откуда берутся данные контракта. */
   readonly kind: DataSourceKind
+  /** Экраны, которые и в live показывают пример данных (эндпоинтов нет). */
+  readonly sampleOnly: ReadonlySet<string>
 }

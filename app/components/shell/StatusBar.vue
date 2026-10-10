@@ -17,7 +17,7 @@ const crumbs = computed(() => {
   }
   return out
 })
-const sample = computed(() => data.kind === 'mock' || screen.value?.inContract === false)
+const sample = computed(() => data.kind === 'mock' || (screen.value ? data.sampleOnly.has(screen.value.path) : false))
 const policies = computed(() => project.project?.settings)
 </script>
 

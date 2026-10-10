@@ -1,17 +1,17 @@
-// Черновые типы экранов Ф2: эндпоинтов в контракте ещё нет.
-// Когда бэкенд добавит их в openapi.yaml, тип заменяется сгенерированным из ~/api/types.
+// Модели экранов исследования. Живой источник собирает их из ответов движка (live-research.ts),
+// пример данных — mock/research.ts; экраны зависят только от этих моделей.
 import type { KnowledgeStatus } from '~/utils/status'
 
 export interface ProjectExtras {
   title: string
-  createdAt: string
+  createdAt: string | null
   actionCount: number
   interpretationRevs: { rev: number, current: boolean }[]
   observationCount: number
   hypothesisCount: number
   runCount: number
-  matchWindowMs: number
-  maxMessageBytes: number
+  matchWindowMs: number | null
+  maxMessageBytes: number | null
   interpretationRev: number
   interpretationDirty: boolean
 }
@@ -55,7 +55,8 @@ export interface ActionRow {
   action: string
   params: string
   result: string
-  exchange: 'found' | 'none'
+  /** unknown — обмен ещё не искали (ищется при выборе действия). */
+  exchange: 'found' | 'none' | 'unknown'
 }
 
 export interface ExchangeSide {
@@ -66,20 +67,21 @@ export interface ExchangeSide {
 }
 
 export interface ActionsView {
-  log: { name: string, rows: number }
+  log: { name: string, rows: number } | null
   rows: ActionRow[]
-  exchange: {
-    actionId: string
-    label: string
-    windowFrom: string
-    windowTo: string
-    windowLabel: string
-    /** События в окне: положение 0..1 и вид. */
-    events: { at: number, kind: 'action' | 'request' | 'response' | 'other' }[]
-    request: ExchangeSide
-    response: ExchangeSide
-    note: string
-  }
+}
+
+export interface ExchangeView {
+  actionId: string
+  label: string
+  windowFrom: string
+  windowTo: string
+  windowLabel: string
+  /** События в окне: положение 0..1 и вид. */
+  events: { at: number, kind: 'action' | 'request' | 'response' | 'other' }[]
+  request: ExchangeSide | null
+  response: ExchangeSide | null
+  note: string
 }
 
 export interface CompareRow {
@@ -112,48 +114,56 @@ export interface InterpretationTreeNode {
 }
 
 export interface InterpretationView {
-  rev: number
+  /** null — интерпретация ещё не создана. */
+  rev: number | null
   dirty: boolean
   tree: InterpretationTreeNode[]
   yaml: YamlLine[]
   selectedLine: number
   preview: { stream: string, rows: { label: string, value: string }[] }
-  field: { line: number, status: KnowledgeStatus, ref: string, counterexamples: number, where: string }
-  quickFix: { label: string, note: string }
+  field: { line: number, status: KnowledgeStatus, ref: string, counterexamples: number, where: string } | null
+  quickFix: { label: string, note: string } | null
 }
 
 export interface Hypothesis {
   id: string
   text: string
-  status: 'supported' | 'refuted' | 'untested'
+  status: 'supported' | 'refuted' | 'untested' | 'superseded'
   support: string
 }
 
 export interface HypothesesView {
   items: Hypothesis[]
   questions: string[]
-  selected: {
-    id: string
-    title: string
-    claim: string
-    test: string
-    scope: string
-    basis: string
-    counterexamples: { where: string, expected: string, got: string }[]
-    note: string
-    history: { run: string, time: string, status: Hypothesis['status'], label: string, scope: string, stale: boolean }[]
-  }
 }
 
-export type ResultCategory = 'matched' | 'violated' | 'incomplete' | 'ambiguous' | 'uncovered' | 'out_of_scope' | 'unsupported' | 'limit'
+export interface HypothesisDetail {
+  id: string
+  title: string
+  status: Hypothesis['status']
+  /** Итог теста на записях: «10 / 10»; пусто, если теста нет. */
+  support: string
+  claim: string
+  test: string
+  scope: string
+  basis: string
+  counterexamples: { where: string, expected: string, got: string }[]
+  note: string
+  history: { run: string, time: string, status: Hypothesis['status'], label: string, scope: string, stale: boolean }[]
+}
+
+// Категории контракта плюс out_of_scope/unsupported — ограничения области и реализации.
+export type ResultCategory = 'matched' | 'violated' | 'incomplete' | 'ambiguous' | 'unmatched' | 'limit_exceeded' | 'out_of_scope' | 'unsupported'
 
 export interface VerificationView {
-  run: { id: string, rev: number, scope: string, time: string }
+  /** null — прогонов ещё не было. */
+  run: { id: string, rev: number | null, scope: string, time: string } | null
   filters: { label: string, active: boolean }[]
   totals: { value: string, label: string }[]
   categories: { key: ResultCategory, label: string, count: number }[]
   categoriesNote: string
   problems: { status: KnowledgeStatus, label: string, where: string, what: string }[]
+  diffWith: string | null
   diff: { label: string, value: string, tone: 'good' | 'bad' | 'neutral' }[]
   runs: { id: string, label: string, current: boolean }[]
   runsNote: string

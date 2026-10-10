@@ -13,6 +13,9 @@ export function createLiveSource(): ContractSource {
       if (res.response.status === 409) return null
       return unwrap(res)
     },
+    async updateSettings(patch) {
+      return unwrap(await api.PATCH('/api/project/settings', { body: patch }))
+    },
     async listSources() {
       return unwrap(await api.GET('/api/sources', { params: { query: { limit: 500 } } }))
     },

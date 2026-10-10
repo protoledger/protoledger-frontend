@@ -33,7 +33,8 @@ let client: ReturnType<typeof createClient<paths>> | null = null
 
 export function apiClient() {
   if (!client) {
-    client = createClient<paths>({ baseUrl: '/' })
+    // fetch берётся при каждом запросе, а не при создании клиента (подмена в тестах).
+    client = createClient<paths>({ baseUrl: '/', fetch: request => globalThis.fetch(request) })
     client.use(tokenMiddleware)
   }
   return client

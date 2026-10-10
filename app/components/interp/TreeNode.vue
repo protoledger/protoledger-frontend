@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { InterpretationTreeNode } from '~/data/draft'
+import type { InterpretationTreeNode } from '~/data/views'
 import { STATUS } from '~/utils/status'
 
 defineProps<{ node: InterpretationTreeNode, depth: number }>()

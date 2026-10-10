@@ -10,6 +10,7 @@ export function createMockContractSource(): ContractSource {
   const jobs = new Map<string, Job>()
   const listeners = new Map<string, Set<(job: Job) => void>>()
   let jobSeq = 1
+  const settings = { ...stand.project.settings }
 
   function emit(job: Job) {
     jobs.set(job.id, job)
@@ -46,7 +47,12 @@ export function createMockContractSource(): ContractSource {
   return {
     async getProject() {
       await delay()
-      return { ...stand.project, sourceCount: sources.length }
+      return { ...stand.project, settings: { ...settings }, sourceCount: sources.length }
+    },
+    async updateSettings(patch) {
+      await delay()
+      Object.assign(settings, patch)
+      return { ...stand.project, settings: { ...settings }, sourceCount: sources.length }
     },
     async listSources() {
       await delay()

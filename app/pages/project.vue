@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { Source } from '~/api/types'
-import type { ActionLog } from '~/data/draft'
+import type { ProjectSettings, Source } from '~/api/types'
+import type { ActionLog } from '~/data/views'
 import { formatBytesSize, formatCount } from '~/utils/bytes'
 import { DIAGNOSTIC_STATUS } from '~/utils/status'
 
@@ -57,6 +57,28 @@ async function onFile(e: Event) {
 const selectedSha = ref<string | null>(null)
 const selected = computed(() => project.sources.find(s => s.sha256 === selectedSha.value) ?? project.sources[0] ?? null)
 
+const savingSettings = ref(false)
+const settingsError = ref<string | null>(null)
+
+async function setSettings(patch: Partial<ProjectSettings>) {
+  const current = project.project?.settings
+  if (!current || Object.entries(patch).every(([k, v]) => current[k as keyof ProjectSettings] === v)) return
+  savingSettings.value = true
+  settingsError.value = null
+  try {
+    await data.updateSettings(patch)
+    workspace.log(`Настройки сборки изменены: ${Object.entries(patch).map(([k, v]) => `${k} = ${v}`).join(', ')}`)
+    await project.load()
+    await jobs.load()
+  }
+  catch (e) {
+    settingsError.value = e instanceof Error ? e.message : 'Не удалось изменить настройки'
+  }
+  finally {
+    savingSettings.value = false
+  }
+}
+
 const OVERLAP = [['first', 'first'], ['last', 'last'], ['flag', 'flag']] as const
 const CHECKSUM = [['ignore', 'ignore'], ['warn', 'warn'], ['drop', 'drop']] as const
 </script>
@@ -93,7 +115,7 @@ const CHECKSUM = [['ignore', 'ignore'], ['warn', 'warn'], ['drop', 'drop']] as c
           <h1 class="m-0 font-display text-2xl font-semibold text-pl-fg-strong">{{ project.extras?.title ?? project.project.name }}</h1>
           <p class="mt-1 mb-4 text-pl-muted">
             {{ project.project.path }} · движок {{ project.project.engineVersion }}
-            <template v-if="project.extras"> · создан {{ new Date(project.extras.createdAt).toLocaleDateString('ru-RU') }}</template>
+            <template v-if="project.extras?.createdAt"> · создан {{ new Date(project.extras.createdAt).toLocaleDateString('ru-RU') }}</template>
           </p>
 
           <div class="grid grid-cols-4 gap-3">
@@ -180,23 +202,26 @@ const CHECKSUM = [['ignore', 'ignore'], ['warn', 'warn'], ['drop', 'drop']] as c
           <dt>Перекрытие с разными байтами</dt>
           <dd>
             <span class="pl-seg" role="radiogroup" aria-label="Перекрытие с разными байтами">
-              <span v-for="[v, l] in OVERLAP" :key="v" role="radio" :aria-checked="project.project.settings.overlapPolicy === v">{{ l }}</span>
+              <button v-for="[v, l] in OVERLAP" :key="v" type="button" role="radio" :aria-checked="project.project.settings.overlapPolicy === v" :disabled="savingSettings" @click="setSettings({ overlapPolicy: v })">{{ l }}</button>
             </span>
           </dd>
           <dt>Плохая контрольная сумма</dt>
           <dd>
             <span class="pl-seg" role="radiogroup" aria-label="Плохая контрольная сумма">
-              <span v-for="[v, l] in CHECKSUM" :key="v" role="radio" :aria-checked="project.project.settings.checksumPolicy === v">{{ l }}</span>
+              <button v-for="[v, l] in CHECKSUM" :key="v" type="button" role="radio" :aria-checked="project.project.settings.checksumPolicy === v" :disabled="savingSettings" @click="setSettings({ checksumPolicy: v })">{{ l }}</button>
             </span>
           </dd>
-          <template v-if="project.extras">
+          <template v-if="project.extras?.matchWindowMs">
             <dt>Окно сопоставления действий</dt>
             <dd>± {{ project.extras.matchWindowMs }} мс от времени действия</dd>
+          </template>
+          <template v-if="project.extras?.maxMessageBytes">
             <dt>Предел длины сообщения</dt>
             <dd>{{ formatBytesSize(project.extras.maxMessageBytes) }} · больше — категория «превышен предел»</dd>
           </template>
         </dl>
         <p class="mt-1 flex flex-wrap items-center gap-1.5 px-3 pb-4 text-pl-muted">
+          <span v-if="settingsError" class="w-full text-pl-st-violation" role="alert">{{ settingsError }}</span>
           Изменение настроек пересобирает потоки; результаты, построенные на старой сборке, получат статус
           <CommonStatusBadge status="stale" />.
         </p>
