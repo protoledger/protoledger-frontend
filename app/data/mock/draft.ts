@@ -1,4 +1,6 @@
 import type { DraftSource } from '../source'
+import { base64ToBytes } from '~/utils/bytes'
+import { streamBytes } from './stand'
 import type { ActionLog, ActionsView, CompareView, FramingView, HypothesesView, InterpretationView, ProjectExtras, ReportView, VerificationView } from '../draft'
 
 const delay = (ms = 120) => new Promise(r => setTimeout(r, ms))
@@ -269,12 +271,27 @@ const report: ReportView = {
   questions: ['Назначение байта 6 в measure_resp.', 'Почему reset не получает ответа.'],
 }
 
+// В примере границы считаются по сигнатуре AA 55 и длине @2 + 4; в продукте их отдаёт движок.
+function messageStarts(stream: string): number[] {
+  const res = streamBytes(stream, 0, 1 << 20)
+  const starts: number[] = []
+  for (const seg of res.segments) {
+    if (!seg.data) continue
+    const b = base64ToBytes(seg.data)
+    for (let i = 0; i + 1 < b.length; i++) if (b[i] === 0xAA && b[i + 1] === 0x55) starts.push(seg.start + i)
+  }
+  return starts
+}
+
 /** Пример данных для экранов, которых ещё нет в контракте API. */
 export function createMockDraftSource(): DraftSource {
   return {
     getProjectExtras: async () => (await delay(), structuredClone(extras)),
     getActionLogs: async () => (await delay(), structuredClone(actionLogs)),
-    getFraming: async () => (await delay(), structuredClone(framing)),
+    getFraming: async (stream) => {
+      await delay()
+      return { ...structuredClone(framing), messageStarts: messageStarts(stream) }
+    },
     getActions: async () => (await delay(), structuredClone(actions)),
     getCompare: async () => (await delay(), structuredClone(compare)),
     getInterpretation: async () => (await delay(), structuredClone(interpretation)),
