@@ -171,6 +171,7 @@ const interpretation: InterpretationView = {
     { text: '    when: "cmd == 0x30"', mark: 'hypothesis' },
   ],
   selectedLine: 13,
+  stream: 'stand:c0002:ab',
   preview: {
     stream: 'c0002',
     rows: [
@@ -182,7 +183,7 @@ const interpretation: InterpretationView = {
     ],
   },
   field: { line: 13, status: 'hypothesis', ref: 'H4', counterexamples: 1, where: 'extra-1000.pcap, сообщ. 88: 70000 не помещается в u16' },
-  quickFix: { label: 'Тип u16be → i32be', note: 'Как подсказка Alt+Enter в IDE: правка видна сразу, сохраняется новой ревизией.' },
+  quickFix: { label: 'Тип u16be → i32be', note: 'Как подсказка Alt+Enter в IDE: правка видна сразу, сохраняется новой ревизией.', line: 13, from: 'u16be', to: 'i32be' },
 }
 
 const hypotheses: HypothesesView = {
@@ -304,6 +305,14 @@ export function createMockResearchSource(): ResearchSource {
     getExchange: async id => (await delay(), id === exchange.actionId ? structuredClone(exchange) : null),
     getCompare: async () => (await delay(), structuredClone(compare)),
     getInterpretation: async () => (await delay(), structuredClone(interpretation)),
+    previewInterpretation: async () => (await delay(), structuredClone({ tree: interpretation.tree, preview: interpretation.preview })),
+    saveInterpretation: async () => {
+      await delay()
+      interpretation.rev = (interpretation.rev ?? 0) + 1
+      return { rev: interpretation.rev, created: true }
+    },
+    getInterpretationRevisions: async () => (await delay(), Array.from({ length: interpretation.rev ?? 0 }, (_, i) => (interpretation.rev ?? 0) - i)),
+    getInterpretationRevision: async () => (await delay(), interpretation.yaml.map(l => l.text).join('\n')),
     getHypotheses: async () => (await delay(), structuredClone(hypotheses)),
     getHypothesisDetail: async id => (await delay(), id === hypothesisH4.id ? structuredClone(hypothesisH4) : null),
     getVerification: async () => (await delay(), structuredClone(verification)),
