@@ -16,8 +16,8 @@ const BADGE: Record<Hypothesis['status'], { status: KnowledgeStatus, label: (h: 
 </script>
 
 <template>
-  <div class="grid h-full grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] [&>*]:min-h-0 [&>*]:min-w-0 [&>*]:border-r [&>*]:border-pl-line">
-    <section class="pl-scroll">
+  <div class="flex h-full">
+    <section class="pl-scroll min-w-0 flex-1">
       <CommonPanelHeader title="Гипотезы" :subtitle="view ? String(view.items.length) : ''">
         <button class="pl-btn pl-btn-ghost h-7" type="button" @click="draft('Гипотеза добавлена')">+ гипотеза</button>
       </CommonPanelHeader>
@@ -42,44 +42,44 @@ const BADGE: Record<Hypothesis['status'], { status: KnowledgeStatus, label: (h: 
       </CommonAsyncState>
     </section>
 
-    <section v-if="view" class="pl-scroll">
-      <CommonPanelHeader :title="`${view.selected.id} · ${view.selected.title}`">
-        <CommonStatusBadge status="violation" label="опровергнута" />
-      </CommonPanelHeader>
-      <p v-if="selected !== view.selected.id" class="p-4 text-pl-muted">В примере данных подробно описана только {{ view.selected.id }}.</p>
-      <template v-else>
-        <dl class="pl-dl">
-          <dt>Утверждение</dt><dd>{{ view.selected.claim }}</dd>
-          <dt>Тест</dt><dd class="font-mono">{{ view.selected.test }}</dd>
-          <dt>Область</dt><dd>{{ view.selected.scope }}</dd>
-          <dt>Основания</dt><dd>{{ view.selected.basis }}</dd>
-        </dl>
-        <h3 class="pl-caption m-0 px-3 pt-3.5 pb-2">Контрпримеры</h3>
-        <table class="pl-table">
-          <thead><tr><th>Где</th><th>Ожидалось</th><th>Получено</th><th /></tr></thead>
-          <tbody>
-            <tr v-for="c in view.selected.counterexamples" :key="c.where">
-              <td>{{ c.where }}</td><td>{{ c.expected }}</td><td>{{ c.got }}</td>
-              <td class="text-right"><NuxtLink to="/overview" class="pl-btn pl-btn-ghost h-6">в поток</NuxtLink></td>
-            </tr>
-          </tbody>
-        </table>
-        <p class="px-3 mt-2 text-pl-muted">{{ view.selected.note }}</p>
-        <h3 class="pl-caption m-0 px-3 pt-3.5 pb-2">История статуса</h3>
-        <table class="pl-table">
-          <tbody>
-            <tr v-for="r in view.selected.history" :key="r.run">
-              <td :class="{ 'text-pl-muted': r.stale }">{{ r.run }} · {{ r.time }}</td>
-              <td><CommonStatusBadge :status="r.status === 'refuted' ? 'violation' : 'hypothesis'" :label="r.label" /></td>
-              <td>{{ r.scope }} <CommonStatusBadge v-if="r.stale" status="stale" /></td>
-            </tr>
-          </tbody>
-        </table>
-        <div class="flex gap-2 p-3">
-          <NuxtLink to="/interpretation" class="pl-btn pl-btn-primary">Исправить в интерпретации</NuxtLink>
-          <button class="pl-btn" type="button" @click="draft('Вопрос добавлен')">Добавить вопрос</button>
-        </div>
-      </template>
-    </section>
+    <ShellInspectorContent :title="view ? `${view.selected.id} · ${view.selected.title}` : 'Гипотеза'">
+      <div v-if="view" class="pl-scroll flex-1">
+        <div class="px-3 pt-3"><CommonStatusBadge status="violation" label="опровергнута" /></div>
+        <p v-if="selected !== view.selected.id" class="p-4 text-pl-muted">В примере данных подробно описана только {{ view.selected.id }}.</p>
+        <template v-else>
+          <dl class="pl-dl">
+            <dt>Утверждение</dt><dd>{{ view.selected.claim }}</dd>
+            <dt>Тест</dt><dd class="font-mono">{{ view.selected.test }}</dd>
+            <dt>Область</dt><dd>{{ view.selected.scope }}</dd>
+            <dt>Основания</dt><dd>{{ view.selected.basis }}</dd>
+          </dl>
+          <h3 class="pl-caption m-0 px-3 pt-3.5 pb-2">Контрпримеры</h3>
+          <table class="pl-table">
+            <thead><tr><th>Где</th><th>Ожидалось</th><th>Получено</th><th /></tr></thead>
+            <tbody>
+              <tr v-for="c in view.selected.counterexamples" :key="c.where">
+                <td>{{ c.where }}</td><td>{{ c.expected }}</td><td>{{ c.got }}</td>
+                <td class="text-right"><NuxtLink to="/overview" class="pl-btn pl-btn-ghost h-6">в поток</NuxtLink></td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="px-3 mt-2 text-pl-muted">{{ view.selected.note }}</p>
+          <h3 class="pl-caption m-0 px-3 pt-3.5 pb-2">История статуса</h3>
+          <table class="pl-table">
+            <tbody>
+              <tr v-for="r in view.selected.history" :key="r.run">
+                <td :class="{ 'text-pl-muted': r.stale }">{{ r.run }} · {{ r.time }}</td>
+                <td><CommonStatusBadge :status="r.status === 'refuted' ? 'violation' : 'hypothesis'" :label="r.label" /></td>
+                <td>{{ r.scope }} <CommonStatusBadge v-if="r.stale" status="stale" /></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="flex flex-wrap gap-2 p-3">
+            <NuxtLink to="/interpretation" class="pl-btn pl-btn-primary">Исправить в интерпретации</NuxtLink>
+            <button class="pl-btn" type="button" @click="draft('Вопрос добавлен')">Добавить вопрос</button>
+          </div>
+        </template>
+      </div>
+    </ShellInspectorContent>
   </div>
 </template>

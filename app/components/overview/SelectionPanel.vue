@@ -69,7 +69,6 @@ function time(iso: string) {
 
 <template>
   <section class="flex h-full min-h-0 flex-col">
-    <CommonPanelHeader title="Выделение" :subtitle="range ? `${length} байт` : 'ничего не выбрано'" />
     <div class="pl-scroll flex-1">
       <p v-if="!range" class="m-3.5 text-pl-muted">Выберите байты в потоке: щелчок, протяжка мышью или Shift+стрелки.</p>
       <template v-else>

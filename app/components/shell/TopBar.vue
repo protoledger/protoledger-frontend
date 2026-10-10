@@ -2,6 +2,7 @@
 const project = useProjectStore()
 const jobs = useJobsStore()
 const colorMode = useColorMode()
+const workspace = useWorkspaceStore()
 const emit = defineEmits<{ search: [] }>()
 
 const importJob = computed(() => jobs.active[0] ?? null)
@@ -54,6 +55,12 @@ const icon = 'grid size-[30px] place-items-center rounded text-pl-fg hover:bg-pl
     </div>
     <button :class="icon" type="button" title="Поиск везде (Ctrl+K, двойной Shift)" @click="emit('search')">
       <UIcon name="i-lucide-search" class="size-4" aria-hidden="true" />
+    </button>
+    <button :class="[icon, !workspace.inspector.collapsed && 'text-pl-fg-strong']" type="button" :aria-pressed="!workspace.inspector.collapsed" title="Панель «Свойства» (Alt+0)" @click="workspace.inspector.collapsed = !workspace.inspector.collapsed">
+      <UIcon name="i-lucide-panel-right" class="size-4" aria-hidden="true" />
+    </button>
+    <button :class="icon" type="button" :aria-pressed="workspace.focus" title="Режим фокуса: только рабочая область (Ctrl+Shift+F12, Esc — выйти)" @click="workspace.focus = !workspace.focus">
+      <UIcon :name="workspace.focus ? 'i-lucide-minimize-2' : 'i-lucide-maximize-2'" class="size-4" aria-hidden="true" />
     </button>
     <button :class="icon" type="button" :title="colorMode.value === 'dark' ? 'Светлая тема' : 'Тёмная тема'" @click="toggleTheme">
       <UIcon :name="colorMode.value === 'dark' ? 'i-lucide-sun' : 'i-lucide-moon'" class="size-4" aria-hidden="true" />

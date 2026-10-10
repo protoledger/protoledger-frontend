@@ -69,10 +69,12 @@ function jump(offset: number) {
 </script>
 
 <template>
-  <div class="grid h-full grid-cols-[minmax(330px,30%)_minmax(560px,1fr)_340px] [&>*]:min-h-0 [&>*]:min-w-0 [&>*]:border-r [&>*]:border-pl-line [&>*:last-child]:border-r-0">
-    <OverviewConnectionList :selected-id="connection?.id ?? null" @select="select" />
+  <div class="flex h-full">
+    <ShellSidePanel id="overview-connections" title="Соединения" :width="420" :min="300">
+      <OverviewConnectionList :selected-id="connection?.id ?? null" @select="select" />
+    </ShellSidePanel>
 
-    <section class="flex flex-col">
+    <section class="flex min-w-0 flex-1 flex-col">
       <CommonPanelHeader
         :title="connection ? `Поток ${connection.id.split(':')[1]}` : 'Поток'"
         :subtitle="stream ? `собран по seq · ${formatCount(stream.length)} байт${stream.startAvailable ? '' : ' · начало не захвачено'}` : ''"
@@ -84,13 +86,15 @@ function jump(offset: number) {
       <template v-if="stream">
         <OverviewSegmentMap :stream="stream" :segments="segments" @jump="jump" />
         <p v-if="error" class="p-3 text-pl-st-violation" role="alert">{{ error }}</p>
-        <div class="flex-1 min-h-0">
+        <div class="min-h-0 flex-1">
           <OverviewHexView ref="hex" v-model:range="range" :stream="stream" :at="at" :ensure="ensure" />
         </div>
       </template>
       <p v-else class="p-4 text-pl-muted">Выберите соединение слева.</p>
     </section>
 
-    <OverviewSelectionPanel :range="range" :at="at" />
+    <ShellInspectorContent :title="range ? `Выделение · ${range.end - range.start} байт` : 'Выделение'">
+      <OverviewSelectionPanel :range="range" :at="at" />
+    </ShellInspectorContent>
   </div>
 </template>
