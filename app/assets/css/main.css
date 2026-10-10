@@ -1,2 +1,278 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
+@import "./fonts.css";
+
+/* Токены ADR 0016. Тёмная тема по умолчанию, светлая — класс .light на <html>. */
+:root,
+.dark {
+  --pl-bg: #131516;
+  --pl-chrome: #18191b;
+  --pl-panel: #1d1d1d;
+  --pl-raise: #26292b;
+  --pl-line: #2b2f32;
+  --pl-fg: #e0e0e0;
+  --pl-fg-strong: #ffffff;
+  --pl-muted: #9f9f9f;
+  --pl-wine: #6d071f;
+  --pl-wine-text: #d2324f;
+  --pl-wine-soft: rgb(109 7 31 / 35%);
+  --pl-focus: #e0663a;
+  --pl-card: #e8e8e8;
+  --pl-card-fg: #131516;
+
+  --pl-st-rule: #6fc28f;
+  --pl-st-hypothesis: #e3b44f;
+  --pl-st-unknown: #9f9f9f;
+  --pl-st-gap: #7c8288;
+  --pl-st-ambiguous: #c58be0;
+  --pl-st-stale: #8f96a0;
+  --pl-st-violation: #ff6b7d;
+
+  color-scheme: dark;
+}
+
+.light {
+  --pl-bg: #f2f2f2;
+  --pl-chrome: #e4e4e4;
+  --pl-panel: #e8e8e8;
+  --pl-raise: #dcdcdc;
+  --pl-line: #c9c9c9;
+  --pl-fg: #131516;
+  --pl-fg-strong: #000000;
+  --pl-muted: #555a5e;
+  --pl-wine: #6d071f;
+  --pl-wine-text: #6d071f;
+  --pl-wine-soft: rgb(109 7 31 / 14%);
+  --pl-focus: #b4441c;
+  --pl-card: #ffffff;
+  --pl-card-fg: #131516;
+
+  --pl-st-rule: #1f7a45;
+  --pl-st-hypothesis: #8a5d00;
+  --pl-st-unknown: #555a5e;
+  --pl-st-gap: #6b7177;
+  --pl-st-ambiguous: #7b3a9a;
+  --pl-st-stale: #6b7280;
+  --pl-st-violation: #b3122f;
+
+  color-scheme: light;
+}
+
+/* Переменные Nuxt UI задаём сами: его встроенный <style> с цветами запрещён CSP движка. */
+:root,
+.light,
+.dark {
+  --ui-primary: var(--pl-wine);
+  --ui-secondary: var(--pl-muted);
+  --ui-success: var(--pl-st-rule);
+  --ui-info: var(--pl-muted);
+  --ui-warning: var(--pl-st-hypothesis);
+  --ui-error: var(--pl-st-violation);
+  --ui-text: var(--pl-fg);
+  --ui-text-muted: var(--pl-muted);
+  --ui-text-dimmed: var(--pl-muted);
+  --ui-text-toned: var(--pl-fg);
+  --ui-text-highlighted: var(--pl-fg-strong);
+  --ui-text-inverted: var(--pl-bg);
+  --ui-bg: var(--pl-bg);
+  --ui-bg-muted: var(--pl-panel);
+  --ui-bg-elevated: var(--pl-raise);
+  --ui-bg-accented: var(--pl-raise);
+  --ui-bg-inverted: var(--pl-fg);
+  --ui-border: var(--pl-line);
+  --ui-border-muted: var(--pl-line);
+  --ui-border-accented: var(--pl-muted);
+  --ui-border-inverted: var(--pl-fg);
+  --ui-radius: 5px;
+}
+
+@theme {
+  --font-sans: "Montserrat", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-display: "Tektur", "Montserrat", sans-serif;
+}
+
+html,
+body,
+#__nuxt {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--pl-bg);
+  color: var(--pl-fg);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--pl-focus);
+  outline-offset: 1px;
+}
+
+::selection {
+  background: var(--pl-wine-soft);
+}
+
+.pl-display {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.pl-mono {
+  font-family: var(--font-mono);
+}
+
+/* Подписи разделов: «ЗАПИСИ», «КОНТРПРИМЕРЫ». */
+.pl-caption {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pl-muted);
+}
+
+.pl-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--pl-line);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--pl-fg-strong);
+  font: 600 12px/1 var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pl-btn:hover {
+  background: var(--pl-raise);
+}
+
+.pl-btn--primary {
+  border-color: var(--pl-wine);
+  background: linear-gradient(180deg, #8a0d2a, var(--pl-wine));
+  color: #ffffff;
+}
+
+.pl-btn--primary:hover {
+  background: linear-gradient(180deg, #9c1232, #7a0a24);
+}
+
+.pl-btn--ghost {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+}
+
+/* Таблицы окон инструментов: плотные, прямые углы. */
+.pl-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.pl-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 7px 10px;
+  background: var(--pl-panel);
+  color: var(--pl-muted);
+  font: 500 11px/1.2 var(--font-display);
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.pl-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--pl-line);
+  vertical-align: top;
+}
+
+.pl-table tbody tr {
+  cursor: default;
+}
+
+.pl-table tbody tr:hover td {
+  background: var(--pl-raise);
+}
+
+.pl-table tbody tr[aria-selected="true"] td {
+  background: var(--pl-wine-soft);
+}
+
+.pl-table tbody tr[aria-selected="true"] td:first-child {
+  box-shadow: inset 3px 0 0 var(--pl-wine-text);
+}
+
+.pl-num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Светлые карточки сводок с бордовой рамкой. */
+.pl-card {
+  border: 2px solid var(--pl-wine);
+  background: var(--pl-card);
+  color: var(--pl-card-fg);
+}
+
+.pl-scroll {
+  overflow: auto;
+  scrollbar-color: var(--pl-raise) transparent;
+  scrollbar-width: thin;
+}
+
+.pl-dl {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 8px 12px;
+  margin: 0;
+  padding: 14px 12px;
+}
+
+.pl-dl dt {
+  color: var(--pl-muted);
+}
+
+.pl-dl dd {
+  margin: 0;
+  color: var(--pl-fg-strong);
+}
+
+.pl-section-cap {
+  margin: 0;
+  padding: 14px 12px 8px;
+}
+
+/* Байты в ячейках сетки: сравнение, обмен для действия. */
+.pl-cells {
+  display: flex;
+  gap: 2px;
+  font-family: var(--font-mono);
+}
+
+.pl-cells span {
+  display: grid;
+  width: 40px;
+  height: 28px;
+  place-items: center;
+  background: var(--pl-panel);
+  color: var(--pl-fg);
+}
+
+.pl-cells .pl-cell--hot {
+  background: rgb(227 180 79 / 18%);
+  color: var(--pl-st-hypothesis);
+}
