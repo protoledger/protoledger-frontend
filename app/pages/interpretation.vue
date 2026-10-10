@@ -37,15 +37,14 @@ function applyFix() {
 </script>
 
 <template>
-  <div class="grid h-full grid-cols-[250px_minmax(0,1fr)_420px] [&>*]:min-h-0 [&>*]:min-w-0 [&>*]:border-r [&>*]:border-pl-line [&>*:last-child]:border-r-0">
-    <section class="pl-scroll">
-      <CommonPanelHeader title="Структура" :subtitle="view ? `rev ${view.rev}` : ''" />
-      <ul v-if="view" class="m-0 list-none px-0 py-2">
+  <div class="flex h-full">
+    <ShellSidePanel id="interp-tree" title="Структура" :subtitle="view ? `rev ${view.rev}` : ''" :width="260">
+      <ul v-if="view" class="pl-scroll m-0 flex-1 list-none px-0 py-2">
         <InterpTreeNode v-for="(n, k) in view.tree" :key="k" :node="n" :depth="0" />
       </ul>
-    </section>
+    </ShellSidePanel>
 
-    <section class="flex flex-col">
+    <section class="flex min-w-0 flex-1 flex-col">
       <CommonPanelHeader title="interpretation.yaml" :subtitle="view?.dirty || fixed ? 'изменено · не сохранено в ревизию' : 'сохранено'">
         <div class="pl-seg" role="radiogroup" aria-label="Вид">
           <button type="button" role="radio" :aria-checked="mode === 'yaml'" @click="mode = 'yaml'">YAML</button>
@@ -77,28 +76,30 @@ function applyFix() {
       </CommonAsyncState>
     </section>
 
-    <section v-if="view" class="pl-scroll">
-      <CommonPanelHeader title="Предпросмотр" :subtitle="`поток ${view.preview.stream}`" />
-      <dl class="pl-dl">
-        <template v-for="r in view.preview.rows" :key="r.label">
-          <dt>{{ r.label }}</dt><dd>{{ r.value }}</dd>
-        </template>
-      </dl>
-      <h3 :class="cap">Поле в строке {{ view.field.line }}</h3>
-      <dl class="pl-dl">
-        <dt>Статус</dt><dd><CommonStatusBadge :status="view.field.status" /> → {{ view.field.ref }}</dd>
-        <dt>Проверка</dt>
-        <dd>
-          <CommonStatusBadge v-if="!fixed" status="violation" :label="`${view.field.counterexamples} контрпример`" />
-          <CommonStatusBadge v-else status="stale" label="нужна перепроверка" />
-        </dd>
-        <dt>Где</dt><dd>{{ view.field.where }}</dd>
-      </dl>
-      <h3 :class="cap">Быстрое исправление</h3>
-      <div class="px-3">
-        <button class="pl-btn" type="button" :disabled="fixed" @click="applyFix">{{ view.quickFix.label }}</button>
-        <p class="mt-2 text-pl-muted">{{ view.quickFix.note }}</p>
+    <ShellInspectorContent :title="selectedLine ? `Строка ${selectedLine}` : 'Предпросмотр'">
+      <div v-if="view" class="pl-scroll flex-1">
+        <h3 :class="cap">Предпросмотр · поток {{ view.preview.stream }}</h3>
+        <dl class="pl-dl">
+          <template v-for="r in view.preview.rows" :key="r.label">
+            <dt>{{ r.label }}</dt><dd>{{ r.value }}</dd>
+          </template>
+        </dl>
+        <h3 :class="cap">Поле в строке {{ view.field.line }}</h3>
+        <dl class="pl-dl">
+          <dt>Статус</dt><dd><CommonStatusBadge :status="view.field.status" /> → {{ view.field.ref }}</dd>
+          <dt>Проверка</dt>
+          <dd>
+            <CommonStatusBadge v-if="!fixed" status="violation" :label="`${view.field.counterexamples} контрпример`" />
+            <CommonStatusBadge v-else status="stale" label="нужна перепроверка" />
+          </dd>
+          <dt>Где</dt><dd>{{ view.field.where }}</dd>
+        </dl>
+        <h3 :class="cap">Быстрое исправление</h3>
+        <div class="px-3">
+          <button class="pl-btn" type="button" :disabled="fixed" @click="applyFix">{{ view.quickFix.label }}</button>
+          <p class="mt-2 text-pl-muted">{{ view.quickFix.note }}</p>
+        </div>
       </div>
-    </section>
+    </ShellInspectorContent>
   </div>
 </template>
