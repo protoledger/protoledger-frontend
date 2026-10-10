@@ -13,159 +13,50 @@ const importPercent = computed(() => {
 function toggleTheme() {
   colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark'
 }
+
+const item = 'inline-flex h-[30px] items-center gap-1.5 rounded px-2 text-[13px] text-pl-fg-strong hover:bg-pl-raise'
+const icon = 'grid size-[30px] place-items-center rounded text-pl-fg hover:bg-pl-raise'
 </script>
 
 <template>
-  <header class="top">
-    <span class="top__logo pl-display" aria-label="protoledger">pl</span>
-    <button class="top__item top__project" type="button" title="Проект">
-      <span class="pl-display">{{ project.project?.name ?? 'нет проекта' }}</span>
+  <header class="flex h-11 items-center gap-1.5 border-b border-pl-line bg-linear-to-r from-pl-wine/22 to-pl-chrome to-30% pr-2.5 pl-2">
+    <span class="mr-2 grid size-7 place-items-center rounded bg-pl-wine font-display text-sm font-semibold text-white" aria-label="protoledger">pl</span>
+    <button :class="item" type="button" title="Проект">
+      <span class="font-display font-semibold">{{ project.project?.name ?? 'нет проекта' }}</span>
       <UIcon name="i-lucide-chevron-down" class="size-3.5" aria-hidden="true" />
     </button>
-    <NuxtLink v-if="project.extras" to="/interpretation" class="top__item top__rev">
-      <span class="text-[var(--pl-muted)]">интерпретация</span>
+    <NuxtLink v-if="project.extras" to="/interpretation" :class="item">
+      <span class="text-pl-muted">интерпретация</span>
       <b>rev {{ project.extras.interpretationRev }}</b>
-      <span v-if="project.extras.interpretationDirty" class="top__dirty">изменена</span>
+      <span v-if="project.extras.interpretationDirty" class="rounded-[3px] border border-pl-st-hypothesis px-1.5 text-[11px] font-semibold text-pl-st-hypothesis">изменена</span>
     </NuxtLink>
 
-    <div class="top__spacer" />
+    <div class="flex-1" />
 
-    <div v-if="importJob" class="top__job" aria-live="polite">
+    <div v-if="importJob" class="mr-2 flex max-w-[420px] items-center gap-2.5" aria-live="polite">
       <span class="truncate">{{ jobs.labels[importJob.id] ?? 'Импорт записи' }}</span>
-      <span class="top__bar" role="progressbar" :aria-valuenow="importPercent ?? undefined" aria-valuemin="0" aria-valuemax="100">
-        <span :style="{ width: `${importPercent ?? 0}%` }" />
+      <span class="relative h-1 w-[90px] flex-none overflow-hidden rounded-sm bg-pl-raise" role="progressbar" :aria-valuenow="importPercent ?? undefined" aria-valuemin="0" aria-valuemax="100">
+        <span class="absolute inset-y-0 left-0 bg-pl-wine-text transition-[width] duration-300" :style="{ width: `${importPercent ?? 0}%` }" />
       </span>
       <span class="w-9 text-right">{{ importPercent ?? '…' }}%</span>
-      <button class="top__icon" type="button" title="Отменить импорт" @click="jobs.cancel(importJob.id)">
+      <button :class="icon" type="button" title="Отменить импорт" @click="jobs.cancel(importJob.id)">
         <UIcon name="i-lucide-x" class="size-4" aria-hidden="true" />
       </button>
     </div>
 
-    <div class="top__run">
-      <span class="text-[var(--pl-muted)]">проверка:</span>
+    <div class="flex h-[30px] items-center gap-1.5 rounded bg-pl-raise pl-2.5 text-pl-fg-strong">
+      <span class="text-pl-muted">проверка:</span>
       <b>все записи</b>
       <UIcon name="i-lucide-chevron-down" class="size-3.5" aria-hidden="true" />
-      <NuxtLink to="/verify" class="top__play" title="Запустить проверку (Shift+F10)">
+      <NuxtLink to="/verify" class="ml-1 grid h-[30px] w-8 place-items-center rounded-r bg-pl-wine text-white" title="Запустить проверку">
         <UIcon name="i-lucide-play" class="size-4" aria-hidden="true" />
       </NuxtLink>
     </div>
-    <button class="top__icon" type="button" title="Поиск везде (Ctrl+K, двойной Shift)" @click="emit('search')">
+    <button :class="icon" type="button" title="Поиск везде (Ctrl+K, двойной Shift)" @click="emit('search')">
       <UIcon name="i-lucide-search" class="size-4" aria-hidden="true" />
     </button>
-    <button class="top__icon" type="button" :title="colorMode.value === 'dark' ? 'Светлая тема' : 'Тёмная тема'" @click="toggleTheme">
+    <button :class="icon" type="button" :title="colorMode.value === 'dark' ? 'Светлая тема' : 'Тёмная тема'" @click="toggleTheme">
       <UIcon :name="colorMode.value === 'dark' ? 'i-lucide-sun' : 'i-lucide-moon'" class="size-4" aria-hidden="true" />
     </button>
   </header>
 </template>
-
-<style scoped>
-.top {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 44px;
-  padding: 0 10px 0 8px;
-  border-bottom: 1px solid var(--pl-line);
-  background: linear-gradient(90deg, rgb(109 7 31 / 22%), var(--pl-chrome) 30%);
-}
-
-.top__logo {
-  display: grid;
-  width: 28px;
-  height: 28px;
-  margin-right: 8px;
-  place-items: center;
-  border-radius: 4px;
-  background: var(--pl-wine);
-  color: #fff;
-  font-size: 14px;
-}
-
-.top__item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 30px;
-  padding: 0 8px;
-  border-radius: 4px;
-  color: var(--pl-fg-strong);
-  font-size: 13px;
-}
-
-.top__item:hover {
-  background: var(--pl-raise);
-}
-
-.top__dirty {
-  padding: 0 5px;
-  border: 1px solid var(--pl-st-hypothesis);
-  border-radius: 3px;
-  color: var(--pl-st-hypothesis);
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.top__spacer {
-  flex: 1;
-}
-
-.top__job {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  max-width: 420px;
-  margin-right: 8px;
-  color: var(--pl-fg);
-}
-
-.top__bar {
-  position: relative;
-  flex: 0 0 90px;
-  height: 4px;
-  overflow: hidden;
-  border-radius: 2px;
-  background: var(--pl-raise);
-}
-
-.top__bar span {
-  position: absolute;
-  inset: 0 auto 0 0;
-  background: var(--pl-wine-text);
-  transition: width 0.3s;
-}
-
-.top__run {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 30px;
-  padding-left: 10px;
-  border-radius: 4px;
-  background: var(--pl-raise);
-  color: var(--pl-fg-strong);
-}
-
-.top__play {
-  display: grid;
-  width: 32px;
-  height: 30px;
-  margin-left: 4px;
-  place-items: center;
-  border-radius: 0 4px 4px 0;
-  background: var(--pl-wine);
-  color: #fff;
-}
-
-.top__icon {
-  display: grid;
-  width: 30px;
-  height: 30px;
-  place-items: center;
-  border-radius: 4px;
-  color: var(--pl-fg);
-}
-
-.top__icon:hover {
-  background: var(--pl-raise);
-}
-</style>

@@ -22,57 +22,16 @@ const policies = computed(() => project.project?.settings)
 </script>
 
 <template>
-  <footer class="status">
-    <nav class="status__crumbs" aria-label="Где вы находитесь">
+  <footer class="flex h-[26px] items-center gap-4 border-t border-pl-line bg-pl-chrome px-2.5 text-xs text-pl-fg">
+    <nav class="flex min-w-0 flex-1 items-center gap-1 overflow-hidden whitespace-nowrap" aria-label="Где вы находитесь">
       <template v-for="(c, i) in crumbs" :key="i">
-        <UIcon v-if="i" name="i-lucide-chevron-right" class="size-3 text-[var(--pl-muted)]" aria-hidden="true" />
+        <UIcon v-if="i" name="i-lucide-chevron-right" class="size-3 text-pl-muted" aria-hidden="true" />
         <span>{{ c }}</span>
       </template>
     </nav>
-    <span v-if="policies" class="status__item">перекрытия <b>{{ policies.overlapPolicy }}</b></span>
-    <span v-if="policies" class="status__item">checksum <b>{{ policies.checksumPolicy }}</b></span>
-    <span class="status__item">движок {{ project.project?.engineVersion ?? '—' }}</span>
-    <span v-if="sample" class="status__sample" title="Эндпоинтов для этих данных ещё нет — показан пример">пример данных</span>
+    <span v-if="policies" class="whitespace-nowrap text-pl-muted">перекрытия <b class="font-semibold text-pl-fg">{{ policies.overlapPolicy }}</b></span>
+    <span v-if="policies" class="whitespace-nowrap text-pl-muted">checksum <b class="font-semibold text-pl-fg">{{ policies.checksumPolicy }}</b></span>
+    <span class="whitespace-nowrap text-pl-muted">движок {{ project.project?.engineVersion ?? '—' }}</span>
+    <span v-if="sample" class="rounded-[3px] border border-dashed border-pl-st-hypothesis px-1.5 text-pl-st-hypothesis" title="Эндпоинтов для этих данных ещё нет — показан пример">пример данных</span>
   </footer>
 </template>
-
-<style scoped>
-.status {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  height: 26px;
-  padding: 0 10px;
-  border-top: 1px solid var(--pl-line);
-  background: var(--pl-chrome);
-  color: var(--pl-fg);
-  font-size: 12px;
-}
-
-.status__crumbs {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-.status__item {
-  color: var(--pl-muted);
-  white-space: nowrap;
-}
-
-.status__item b {
-  color: var(--pl-fg);
-  font-weight: 600;
-}
-
-.status__sample {
-  padding: 0 6px;
-  border: 1px dashed var(--pl-st-hypothesis);
-  border-radius: 3px;
-  color: var(--pl-st-hypothesis);
-}
-</style>

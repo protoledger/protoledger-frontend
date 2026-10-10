@@ -68,12 +68,12 @@ function time(iso: string) {
 </script>
 
 <template>
-  <section class="sel">
+  <section class="flex h-full min-h-0 flex-col">
     <CommonPanelHeader title="Выделение" :subtitle="range ? `${length} байт` : 'ничего не выбрано'" />
     <div class="pl-scroll flex-1">
-      <p v-if="!range" class="sel__hint">Выберите байты в потоке: щелчок, протяжка мышью или Shift+стрелки.</p>
+      <p v-if="!range" class="m-3.5 text-pl-muted">Выберите байты в потоке: щелчок, протяжка мышью или Shift+стрелки.</p>
       <template v-else>
-        <dl class="sel__dl">
+        <dl class="pl-dl grid-cols-[130px_minmax(0,1fr)]">
           <dt>Смещение</dt><dd>[{{ range.start }}, {{ range.end }})</dd>
           <dt>Кадр</dt><dd>{{ primaryFrame ? `№ ${formatCount(primaryFrame.frameNo)}` : '—' }}</dd>
           <dt>Запись</dt><dd class="truncate">{{ primaryFrame ? project.sourceName(primaryFrame.source) : '—' }}</dd>
@@ -81,34 +81,34 @@ function time(iso: string) {
           <dt>Смещение в кадре</dt><dd>{{ offsetInFrame ?? '—' }}</dd>
         </dl>
 
-        <h3 class="pl-caption sel__cap">Значение</h3>
-        <dl v-if="bytes && bytes.length" class="sel__dl">
-          <dt>hex</dt><dd class="pl-mono">{{ bytes.map(hexByte).join(' ') }}<span v-if="length > 64"> …</span></dd>
+        <h3 class="pl-caption m-0 border-t border-pl-line px-3.5 pt-2.5">Значение</h3>
+        <dl v-if="bytes && bytes.length" class="pl-dl grid-cols-[130px_minmax(0,1fr)]">
+          <dt>hex</dt><dd class="font-mono">{{ bytes.map(hexByte).join(' ') }}<span v-if="length > 64"> …</span></dd>
           <template v-if="asNumber">
             <dt>uint BE</dt><dd>{{ formatCount(asNumber.be) }}</dd>
             <dt>uint LE</dt><dd>{{ formatCount(asNumber.le) }}</dd>
           </template>
         </dl>
-        <p v-else class="sel__hint">В выделении есть байты без данных — значение не вычисляется.</p>
+        <p v-else class="m-3.5 text-pl-muted">В выделении есть байты без данных — значение не вычисляется.</p>
 
-        <h3 class="pl-caption sel__cap">Участок</h3>
-        <div class="sel__block">
+        <h3 class="pl-caption m-0 border-t border-pl-line px-3.5 pt-2.5">Участок</h3>
+        <div class="flex flex-col items-start gap-1.5 px-3.5 pt-2.5 pb-3.5 [&_p]:m-0">
           <CommonStatusBadge :status="segStatus.status" :label="segStatus.label" />
           <p v-if="first && first.segment.status !== 'gap'">
             Сегмент TCP из кадра {{ primaryFrame?.frameNo }}, байты потока {{ first.segment.start }}–{{ first.segment.end - 1 }}.
           </p>
           <p v-else-if="first">Данных нет: кадры этого участка не попали в запись. Дыра не заполняется.</p>
-          <p v-for="d in duplicates" :key="d.frameNo" class="text-[var(--pl-muted)]">Повтор тех же байтов в кадре {{ d.frameNo }} — не задвоен.</p>
-          <div v-if="variants.length" class="sel__variants">
+          <p v-for="d in duplicates" :key="d.frameNo" class="text-pl-muted">Повтор тех же байтов в кадре {{ d.frameNo }} — не задвоен.</p>
+          <div v-if="variants.length" class="flex flex-col gap-0.5">
             <p>Варианты байтов при перекрытии (выбран политикой проекта — первый):</p>
-            <p v-for="(v, i) in variants" :key="i" class="pl-mono">{{ i + 1 }}. {{ v.bytes }} <span class="text-[var(--pl-muted)]">· кадр {{ v.frames }}</span></p>
+            <p v-for="(v, i) in variants" :key="i" class="font-mono">{{ i + 1 }}. {{ v.bytes }} <span class="text-pl-muted">· кадр {{ v.frames }}</span></p>
           </div>
         </div>
 
-        <div v-if="showFrame" class="sel__frame">
-          <h3 class="pl-caption sel__cap">Кадр в записи</h3>
+        <div v-if="showFrame">
+          <h3 class="pl-caption m-0 border-t border-pl-line px-3.5 pt-2.5">Кадр в записи</h3>
           <p v-if="frameError" role="alert">{{ frameError }}</p>
-          <dl v-else-if="frame" class="sel__dl">
+          <dl v-else-if="frame" class="pl-dl grid-cols-[130px_minmax(0,1fr)]">
             <dt>Номер</dt><dd>{{ frame.frameNo }} · {{ frame.capturedLength }} из {{ frame.originalLength }} байт</dd>
             <dt>Смещение в файле</dt><dd>{{ formatCount(frame.fileOffset) }}</dd>
             <template v-if="frame.ipv4">
@@ -129,76 +129,9 @@ function time(iso: string) {
         </div>
       </template>
     </div>
-    <footer class="sel__actions">
-      <button class="pl-btn pl-btn--primary" type="button" disabled title="Наблюдения появятся вместе с эндпоинтом /api/observations">Наблюдение</button>
+    <footer class="flex gap-2 border-t border-pl-line px-3.5 py-2.5">
+      <button class="pl-btn pl-btn-primary" type="button" disabled title="Наблюдения появятся вместе с эндпоинтом /api/observations">Наблюдение</button>
       <button class="pl-btn" type="button" :aria-pressed="showFrame" :disabled="!primaryFrame" @click="showFrame = !showFrame">Кадр в записи</button>
     </footer>
   </section>
 </template>
-
-<style scoped>
-.sel {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-}
-
-.sel__hint {
-  margin: 14px;
-  color: var(--pl-muted);
-}
-
-.sel__dl {
-  display: grid;
-  grid-template-columns: 130px minmax(0, 1fr);
-  gap: 8px 12px;
-  margin: 0;
-  padding: 14px;
-}
-
-.sel__dl dt {
-  color: var(--pl-muted);
-}
-
-.sel__dl dd {
-  margin: 0;
-  color: var(--pl-fg-strong);
-}
-
-.sel__cap {
-  margin: 0;
-  padding: 10px 14px 0;
-  border-top: 1px solid var(--pl-line);
-}
-
-.sel__block {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  padding: 10px 14px 14px;
-}
-
-.sel__block p {
-  margin: 0;
-}
-
-.sel__variants {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.sel__actions {
-  display: flex;
-  gap: 8px;
-  padding: 10px 14px;
-  border-top: 1px solid var(--pl-line);
-}
-
-.sel__actions button:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-</style>

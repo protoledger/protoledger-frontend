@@ -44,12 +44,12 @@ onBeforeUnmount(() => window.removeEventListener('keyup', onKeyup))
 </script>
 
 <template>
-  <div class="shell">
-    <ShellTopBar class="shell__top" @search="searchOpen = true" />
-    <ShellToolStrip class="shell__strip" />
-    <div class="shell__main">
+  <div class="grid h-screen min-w-[1280px] grid-cols-[52px_minmax(0,1fr)] grid-rows-[44px_minmax(0,1fr)_26px] overflow-hidden">
+    <ShellTopBar class="col-span-2" @search="searchOpen = true" />
+    <ShellToolStrip />
+    <div class="flex min-h-0 flex-col">
       <ShellScreenTabs />
-      <main class="shell__work">
+      <main class="min-h-0 flex-1 overflow-hidden">
         <div v-if="project.error" class="p-4" role="alert">
           {{ project.error }}
           <button class="pl-btn ml-3" type="button" @click="project.load()">Повторить</button>
@@ -58,44 +58,7 @@ onBeforeUnmount(() => window.removeEventListener('keyup', onKeyup))
       </main>
       <ShellBottomPanel />
     </div>
-    <ShellStatusBar class="shell__status" />
+    <ShellStatusBar class="col-span-2" />
     <ShellSearchPalette v-model:open="searchOpen" />
   </div>
 </template>
-
-<style scoped>
-.shell {
-  display: grid;
-  grid-template-areas: "top top" "strip main" "status status";
-  grid-template-columns: 52px minmax(0, 1fr);
-  grid-template-rows: 44px minmax(0, 1fr) 26px;
-  height: 100vh;
-  min-width: 1280px;
-  overflow: hidden;
-}
-
-.shell__top {
-  grid-area: top;
-}
-
-.shell__strip {
-  grid-area: strip;
-}
-
-.shell__main {
-  display: flex;
-  grid-area: main;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.shell__work {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.shell__status {
-  grid-area: status;
-}
-</style>
