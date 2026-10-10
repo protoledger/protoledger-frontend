@@ -4,8 +4,8 @@ import { createMockContractSource } from './mock/contract'
 import { createMockResearchSource } from './mock/research'
 import type { DataSource, DataSourceKind } from './source'
 
-// Экраны без эндпоинтов в контракте: и в live показывают пример данных.
-const SAMPLE_ONLY_LIVE = new Set(['/compare', '/report'])
+// Экран без эндпоинта в контракте: и в live показывает пример данных.
+const SAMPLE_ONLY_LIVE = new Set(['/report'])
 
 /**
  * Единственное место выбора источника данных. Экраны работают только с DataSource,

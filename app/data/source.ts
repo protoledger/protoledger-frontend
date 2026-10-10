@@ -16,6 +16,7 @@ import type {
 import type {
   ActionLog,
   ActionsView,
+  AnchorRef,
   CompareView,
   ExchangeView,
   FramingDetail,
@@ -71,7 +72,10 @@ export interface ResearchSource {
   applyFraming(spec: FramingSpec): Promise<number | null>
   getActions(): Promise<ActionsView>
   getExchange(actionId: string): Promise<ExchangeView | null>
-  getCompare(): Promise<CompareView>
+  /** Сравнение сообщений одного действия журнала; без action — первое действие с параметрами. */
+  getCompare(action?: string): Promise<CompareView>
+  /** Наблюдение на байтах потока; false — пример данных, не сохраняется. */
+  createObservation(anchor: AnchorRef, comment: string): Promise<boolean>
   getInterpretation(): Promise<InterpretationView>
   /** Применить текст к потоку без сохранения; без yaml — последняя сохранённая ревизия. */
   previewInterpretation(stream: string, yaml?: string): Promise<Pick<InterpretationView, 'tree' | 'preview'>>

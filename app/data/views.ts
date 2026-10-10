@@ -101,14 +101,35 @@ export interface CompareRow {
   changed: boolean[]
 }
 
+export interface AnchorRef {
+  source: string
+  stream: string
+  start: number
+  end: number
+}
+
+export interface CompareCorrelation {
+  position: string
+  read: string
+  values: string
+  relation: string
+  share: string
+  /** Байты первого сообщения, на которые указывает связь: из них создаётся наблюдение. */
+  anchor?: AnchorRef
+}
+
 export interface CompareView {
+  /** Действия журнала, по которым можно сравнивать; выбранное — action. */
+  actions: string[]
+  action: string | null
   chips: string[]
   requests: CompareRow[]
   mask: boolean[]
   responses: CompareRow[]
-  correlations: { position: string, read: string, values: string, relation: string, share: string }[]
-  observations: { id: string, text: string, status: KnowledgeStatus, anchor?: string }[]
+  correlations: CompareCorrelation[]
+  observations: { id: string, text: string, status: KnowledgeStatus, label?: string, anchor?: string }[]
   observationTotal: number
+  notes: string[]
 }
 
 export interface YamlLine {
