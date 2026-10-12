@@ -167,6 +167,17 @@ export interface Hypothesis {
   text: string
   status: 'supported' | 'refuted' | 'untested' | 'superseded'
   support: string
+  /** Итог теста в последнем прогоне; null — прогона с этой гипотезой не было. */
+  run: { status: KnowledgeStatus, label: string } | null
+}
+
+/** Строка поиска везде: объект проекта и куда по нему перейти. */
+export interface SearchEntry {
+  group: 'connection' | 'hypothesis' | 'run' | 'observation'
+  label: string
+  suffix?: string
+  path: string
+  query?: Record<string, string>
 }
 
 export interface HypothesesView {

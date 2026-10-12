@@ -1,8 +1,29 @@
 <script setup lang="ts">
+import type { SearchEntry } from '~/data/views'
 import { SCREENS } from '~/utils/screens'
 
 const open = defineModel<boolean>('open', { default: false })
 const project = useProjectStore()
+const data = useData()
+const index = ref<SearchEntry[]>([])
+
+// Объекты проекта подгружаем при открытии: так в поиске свежие гипотезы и прогоны.
+watch(open, async (v) => {
+  if (!v || !project.project) return
+  try {
+    index.value = await data.getSearchIndex()
+  }
+  catch {
+    index.value = []
+  }
+})
+
+const GROUPS: { id: SearchEntry['group'], label: string, icon: string }[] = [
+  { id: 'connection', label: 'Соединения', icon: 'i-lucide-arrow-left-right' },
+  { id: 'hypothesis', label: 'Гипотезы', icon: 'i-lucide-flask-conical' },
+  { id: 'run', label: 'Прогоны', icon: 'i-lucide-circle-check-big' },
+  { id: 'observation', label: 'Наблюдения', icon: 'i-lucide-bookmark' },
+]
 const workspace = useWorkspaceStore()
 
 const groups = computed(() => [
@@ -26,6 +47,16 @@ const groups = computed(() => [
     label: 'Записи',
     items: project.sources.map(s => ({ label: safeText(s.name, 200), suffix: s.sha256.slice(0, 8), icon: 'i-lucide-file', onSelect: () => go('/project') })),
   },
+  ...GROUPS.map(g => ({
+    id: g.id,
+    label: g.label,
+    items: index.value.filter(e => e.group === g.id).map(e => ({
+      label: safeText(e.label, 200),
+      suffix: e.suffix ? safeText(e.suffix, 80) : undefined,
+      icon: g.icon,
+      onSelect: () => go(e.path, e.query),
+    })),
+  })).filter(g => g.items.length),
 ])
 
 function run(action: () => void) {
@@ -33,9 +64,9 @@ function run(action: () => void) {
   action()
 }
 
-async function go(path: string) {
+async function go(path: string, query?: Record<string, string>) {
   open.value = false
-  await navigateTo(path)
+  await navigateTo({ path, query })
 }
 </script>
 

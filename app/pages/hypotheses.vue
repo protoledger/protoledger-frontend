@@ -6,7 +6,9 @@ const data = useData()
 const draft = useDraftAction()
 const workspace = useWorkspaceStore()
 const { data: view, error, refresh, pending } = await useAsyncData('hypotheses', () => data.getHypotheses())
-const selected = ref<string | null>(null)
+const route = useRoute()
+const selected = ref<string | null>(typeof route.query.h === 'string' ? route.query.h : null)
+watch(() => route.query.h, (h) => { if (typeof h === 'string') selected.value = h })
 const detail = ref<HypothesisDetail | null>(null)
 const detailState = ref<'idle' | 'loading' | 'error'>('idle')
 
@@ -107,7 +109,7 @@ function openAnchor(a: AnchorRef | undefined) {
 // «Поддержана на N примерах», а не «подтверждена»: гипотеза не становится фактом.
 const BADGE: Record<Hypothesis['status'], { status: KnowledgeStatus, label: (h: Hypothesis) => string }> = {
   supported: { status: 'hypothesis', label: h => (h.support ? `поддержана ${h.support}` : 'поддержана') },
-  refuted: { status: 'violation', label: h => `опровергнута · ${h.support}` },
+  refuted: { status: 'violation', label: h => (h.support ? `опровергнута · ${h.support}` : 'опровергнута') },
   untested: { status: 'unknown', label: () => 'не проверена' },
   superseded: { status: 'stale', label: () => 'заменена' },
 }
@@ -127,7 +129,10 @@ const BADGE: Record<Hypothesis['status'], { status: KnowledgeStatus, label: (h: 
                 <td class="w-14 font-semibold">{{ h.id }}</td>
                 <td>
                   <div>{{ safeText(h.text) }}</div>
-                  <CommonStatusBadge class="mt-1" :status="BADGE[h.status].status" :label="BADGE[h.status].label(h)" />
+                  <div class="mt-1 flex flex-wrap items-center gap-1.5">
+                    <CommonStatusBadge :status="BADGE[h.status].status" :label="BADGE[h.status].label(h)" />
+                    <CommonStatusBadge v-if="h.run" :status="h.run.status" :label="h.run.label" title="Итог теста в последнем прогоне проверки" />
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -159,7 +164,7 @@ const BADGE: Record<Hypothesis['status'], { status: KnowledgeStatus, label: (h: 
       <p v-else-if="detailState === 'error'" class="p-3 text-pl-st-violation" role="alert">Не удалось загрузить гипотезу.</p>
       <p v-else-if="!detail" class="p-3 text-pl-muted">{{ !view?.items.length ? 'Гипотез пока нет.' : data.kind === 'mock' ? 'В примере данных подробно описана только H4.' : 'Выберите гипотезу.' }}</p>
       <div v-else class="pl-scroll flex-1">
-        <div class="px-3 pt-3"><CommonStatusBadge :status="BADGE[detail.status].status" :label="BADGE[detail.status].label({ id: detail.id, text: detail.title, status: detail.status, support: detail.support })" /></div>
+        <div class="px-3 pt-3"><CommonStatusBadge :status="BADGE[detail.status].status" :label="BADGE[detail.status].label({ id: detail.id, text: detail.title, status: detail.status, support: detail.support, run: null })" /></div>
         <div class="flex flex-col gap-1.5 px-3 pt-3">
           <span class="pl-caption">Статус, по вашему решению</span>
           <div class="flex flex-wrap gap-1.5" role="group" aria-label="Статус гипотезы">

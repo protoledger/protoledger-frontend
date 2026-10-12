@@ -22,22 +22,27 @@ const range = computed({
 // Якорь в адресе: ?conn=…&dir=ab&from=…&to=… — ссылка ведёт к тем же байтам.
 // Запоминаем его до того, как список соединений выберет первое по умолчанию.
 const initial = { ...route.query }
-async function restoreFromQuery() {
-  const id = typeof initial.conn === 'string' ? initial.conn : null
+async function restoreFromQuery(query: typeof initial = initial) {
+  const id = typeof query.conn === 'string' ? query.conn : null
   if (!id) return
   const page = await data.listConnections({ limit: 500 })
   const found = page.items.find(c => c.id === id)
   if (!found) return
+  if (query.dir === 'ab' || query.dir === 'ba') dir.value = query.dir
   select(found)
-  const from = Number(initial.from)
-  const to = Number(initial.to)
+  const from = Number(query.from)
+  const to = Number(query.to)
   if (Number.isFinite(from) && Number.isFinite(to) && to > from) {
     await nextTick()
     selection.range = { start: from, end: to }
     hex.value?.scrollIntoView(from)
   }
 }
-onMounted(restoreFromQuery)
+onMounted(() => restoreFromQuery())
+// Переход из поиска или ссылки, когда «Обзор» уже открыт: адрес меняется, а страница — нет.
+watch(() => route.query.conn, (conn) => {
+  if (typeof conn === 'string' && conn !== connection.value?.id) void restoreFromQuery({ ...route.query })
+})
 
 function select(c: Connection) {
   connection.value = c

@@ -80,6 +80,8 @@ const STALE_REASON: Record<S['StaleReason'], string> = {
 }
 
 // Итог теста гипотезы: «поддержана на N», а не «доказана».
+const normTest = (t: string) => t.replace(/\s+/g, '')
+
 function verdictLabel(v: 'untested' | 'no_counterexample' | 'refuted' | null) {
   return v === 'refuted' ? 'опровергнута' : v === 'no_counterexample' ? 'контрпримеров нет' : v === 'untested' ? 'не проверена' : '—'
 }
@@ -117,6 +119,32 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
 
   function where(names: Map<string, string>, a: { source: string, stream: string, start: number, end: number }) {
     return `${names.get(a.source) ?? a.source.slice(0, 8)} · ${shortStream(a.stream)} · [${a.start}, ${a.end})`
+  }
+
+  // Итог гипотезы в прогоне — тем же языком, что на «Проверке».
+  function runVerdict(h: S['RunHypothesis'], runId: string): { status: KnowledgeStatus, label: string } {
+    if (h.verdict === 'refuted') return { status: 'violation', label: `${runId}: опровергнута · ${formatCount(h.counterexamples)}` }
+    if (h.verdict === 'no_counterexample') return { status: 'hypothesis', label: `${runId}: ${formatCount(h.held)} / ${formatCount(h.applicable)}` }
+    return { status: 'unknown', label: `${runId}: не проверена` }
+  }
+
+  // История статуса — по последним прогонам: в каждом прогоне свой итог теста.
+  async function historyOf(test: string) {
+    const runs = unwrap(await api.GET('/api/runs', { params: { query: { limit: 10 } } })).items
+    const details = await Promise.all(runs.map(r => api.GET('/api/runs/{id}', { params: { path: { id: r.id } } }).then(unwrap)))
+    return details.flatMap((d, i) => {
+      const h = d.hypotheses?.find(x => normTest(x.test) === normTest(test))
+      if (!h) return []
+      const status: Hypothesis['status'] = h.verdict === 'refuted' ? 'refuted' : h.verdict === 'no_counterexample' ? 'supported' : 'untested'
+      return [{
+        run: d.id,
+        time: `rev ${d.revision ?? '—'}`,
+        status,
+        label: h.verdict === 'refuted' ? `опровергнута · ${formatCount(h.counterexamples)}` : h.verdict === 'no_counterexample' ? `поддержана ${formatCount(h.held)} / ${formatCount(h.applicable)}` : 'не проверена',
+        scope: `${d.sources.length} зап.`,
+        stale: runs[i]!.stale,
+      }]
+    })
   }
 
   async function revisions() {
@@ -332,12 +360,27 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
     },
 
     async getHypotheses() {
-      const [hyps, questions] = await Promise.all([
+      const [hyps, questions, runs] = await Promise.all([
         api.GET('/api/hypotheses').then(unwrap),
         api.GET('/api/questions').then(unwrap),
+        api.GET('/api/runs', { params: { query: { limit: 1 } } }).then(unwrap),
       ])
+      // Числа «k / n» — из последнего прогона: тесты выполняет прогон проверки.
+      // Номера гипотез исследователя и интерпретации независимы, поэтому сопоставляем по выражению теста.
+      const last = runs.items[0] ? unwrap(await api.GET('/api/runs/{id}', { params: { path: { id: runs.items[0].id } } })) : null
+      const inRun = new Map((last?.hypotheses ?? []).map(h => [normTest(h.test), h]))
       return {
-        items: hyps.items.map(h => ({ id: h.id, text: h.statement, status: HYPOTHESIS_STATUS[h.status], support: '' })),
+        items: hyps.items.map((h) => {
+          const r = h.test ? inRun.get(normTest(h.test)) : undefined
+          return {
+            id: h.id,
+            text: h.statement,
+            status: HYPOTHESIS_STATUS[h.status],
+            // В списке: статус — решение исследователя, числа — отдельным значком итога прогона.
+            support: '',
+            run: r ? runVerdict(r, last!.id) : null,
+          }
+        }),
         questions: questions.items.filter(q => q.status === 'open').map(q => q.text),
       }
     },
@@ -365,8 +408,34 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
           anchor: { source: c.anchor.source, stream: c.anchor.stream, start: c.anchor.start, end: c.anchor.end },
         })),
         note: [h.note, test && test.counterexamplesTotal > test.counterexamples.length ? `Показано ${test.counterexamples.length} из ${test.counterexamplesTotal} контрпримеров.` : null].filter(Boolean).join(' '),
-        history: [],
+        history: h.test ? await historyOf(h.test) : [],
       }
+    },
+
+    async getSearchIndex() {
+      const [conns, hyps, runs, obs, names] = await Promise.all([
+        contract.listConnections({ limit: 200 }),
+        api.GET('/api/hypotheses').then(unwrap),
+        api.GET('/api/runs', { params: { query: { limit: 50 } } }).then(unwrap),
+        api.GET('/api/observations').then(unwrap),
+        sourceNames(),
+      ])
+      const link = (stream: string, from?: number, to?: number) => {
+        const cut = stream.lastIndexOf(':')
+        return { conn: stream.slice(0, cut), dir: stream.slice(cut + 1), ...(from === undefined ? {} : { from: String(from), to: String(to) }) }
+      }
+      return [
+        ...conns.items.map(c => ({
+          group: 'connection' as const,
+          label: `${c.id.split(':')[1] ?? c.id} · ${c.a.address}:${c.a.port} → ${c.b.address}:${c.b.port}`,
+          suffix: names.get(c.source) ?? c.source.slice(0, 8),
+          path: '/overview',
+          query: { conn: c.id, dir: 'ab' },
+        })),
+        ...hyps.items.map(h => ({ group: 'hypothesis' as const, label: `${h.id} · ${h.statement}`, suffix: HYPOTHESIS_STATUS[h.status], path: '/hypotheses', query: { h: h.id } })),
+        ...runs.items.map(r => ({ group: 'run' as const, label: `${r.id} · rev ${r.revision ?? '—'} · ${r.sources.length} зап.`, suffix: r.stale ? 'устарел' : 'актуален', path: '/verify', query: { run: r.id } })),
+        ...obs.items.map(o => ({ group: 'observation' as const, label: `${o.id} · ${o.comment || 'без комментария'}`, suffix: shortStream(o.anchor.stream), path: '/overview', query: link(o.anchor.stream, o.anchor.start, o.anchor.end) })),
+      ]
     },
 
     async getObservations() {
