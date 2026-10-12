@@ -230,9 +230,7 @@ const TOKEN: Record<string, string> = {
             </div>
           </div>
         </div>
-        <div v-else class="p-4 text-pl-muted">
-          Форма редактирования полей строится по той же структуре; пока доступен вид YAML.
-        </div>
+        <InterpFormView v-else v-model="text" :selected-line="selectedLine" @select="selectedLine = $event" />
       </CommonAsyncState>
     </section>
 
