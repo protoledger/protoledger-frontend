@@ -2,7 +2,6 @@
 import type { ExchangeView } from '~/data/views'
 
 const data = useData()
-const draft = useDraftAction()
 const { data: view, error, refresh, pending } = await useAsyncData('actions', () => data.getActions())
 const selected = ref<string | null>(null)
 const exchange = ref<ExchangeView | null>(null)
@@ -46,7 +45,7 @@ const EVENT = {
   <div class="flex h-full">
     <section class="pl-scroll min-w-0 flex-1">
       <CommonPanelHeader title="Журнал действий" :subtitle="view?.log ? `${view.log.name} · ${view.log.rows} строк` : ''">
-        <button class="pl-btn pl-btn-ghost h-7" type="button" @click="draft('Сопоставление колонок')">Колонки…</button>
+        <NuxtLink to="/project" class="pl-btn pl-btn-ghost h-7" title="Колонки сопоставляются при импорте журнала: импортируйте его заново на «Проекте»">Колонки…</NuxtLink>
       </CommonPanelHeader>
       <CommonAsyncState :pending="pending" :error="error?.message" :empty="!view?.rows.length" empty-text="Журнала действий в проекте нет — импортируйте его на экране «Проект»." @retry="refresh()">
         <table v-if="view" class="pl-table">
