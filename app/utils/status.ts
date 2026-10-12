@@ -1,4 +1,4 @@
-/** Единый язык статусов (ADR 0004, 0016): цвет + значок + подпись, одинаково в UI и отчёте. */
+/** Единый язык статусов: цвет + значок + подпись, одинаково в UI и отчёте. */
 export type KnowledgeStatus =
   | 'rule'
   | 'hypothesis'
@@ -50,6 +50,7 @@ export const DIAGNOSTIC_STATUS: Record<string, { label: string, status: Knowledg
   bad_ip_header: { label: 'заголовок IP', status: 'violation' },
   bad_tcp_header: { label: 'заголовок TCP', status: 'violation' },
   bad_checksum: { label: 'checksum', status: 'violation' },
+  checksum_offload: { label: 'checksum offload', status: 'rule' },
   bad_block: { label: 'блок записи', status: 'violation' },
   limit_exceeded: { label: 'предел', status: 'violation' },
 }

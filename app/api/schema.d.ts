@@ -864,9 +864,12 @@ export interface components {
             value: number | boolean | string | null;
         };
         PreviewViolation: {
-            /** @enum {string} */
-            kind: "framing" | "expect" | "check" | "field_range";
-            /** @description Поле или проверка */
+            /**
+             * @description hypothesis — не выполнился тест гипотезы (только в прогоне)
+             * @enum {string}
+             */
+            kind: "framing" | "expect" | "check" | "field_range" | "hypothesis";
+            /** @description Поле */
             id: string;
             detail: string;
             /** @enum {string} */
@@ -912,10 +915,10 @@ export interface components {
             revision?: number | null;
         };
         /**
-         * @description Почему прогон устарел — интерпретацию или настройки сборки изменили, записи пропали из проекта
+         * @description Почему прогон устарел — интерпретацию или настройки сборки изменили, записи пропали из проекта, сменились журналы действий для тестов гипотез
          * @enum {string}
          */
-        StaleReason: "interpretation" | "settings" | "sources";
+        StaleReason: "interpretation" | "settings" | "sources" | "action_logs";
         RunSummary: {
             streams: number;
             outOfScopeStreams: number;
@@ -983,6 +986,25 @@ export interface components {
         RunDetail: components["schemas"]["RunHead"] & {
             streams: components["schemas"]["RunStream"][];
             counterexamples: components["schemas"]["Counterexample"][];
+            /** @description Тесты гипотез интерпретации на записях корпуса */
+            hypotheses: components["schemas"]["RunHypothesis"][];
+        };
+        RunHypothesis: {
+            /** @example H6 */
+            id: string;
+            /** @example threshold_centi_c == dec(action.params.threshold_c, 2) */
+            test: string;
+            /** @enum {string} */
+            verdict: "untested" | "no_counterexample" | "refuted";
+            /** @description Сообщений */
+            applicable: number;
+            /** @description Из них выполнилось */
+            held: number;
+            notApplicable: number;
+            /** @description Всего контрпримеров; первые — в общем списке прогона */
+            counterexamples: number;
+            /** @description Сообщения */
+            errors: number;
         };
         RunItem: {
             stream: string;
@@ -1008,6 +1030,19 @@ export interface components {
             to: components["schemas"]["ResultCategory"] | null;
             messageId: string | null;
         };
+        RunHypothesisChange: {
+            id: string;
+            /** @description fixed — была опровергнута, теперь нет; regressed — стала опровергнутой; changed — изменились числа или выражение теста; added, removed */
+            kind: components["schemas"]["ChangeKind"];
+            /** @enum {string|null} */
+            from: "untested" | "no_counterexample" | "refuted" | null;
+            /** @enum {string|null} */
+            to: "untested" | "no_counterexample" | "refuted" | null;
+            counterexamplesFrom: number;
+            counterexamplesTo: number;
+            applicableFrom: number;
+            applicableTo: number;
+        };
         RunDiffPage: {
             a: string;
             b: string;
@@ -1027,6 +1062,8 @@ export interface components {
             countsB: {
                 [key: string]: number;
             };
+            /** @description Гипотезы, итог теста которых изменился между прогонами; без изменений — не перечисляются */
+            hypotheses: components["schemas"]["RunHypothesisChange"][];
             items: components["schemas"]["RunChange"][];
             total: number;
             limit: number;
@@ -1068,6 +1105,8 @@ export interface components {
              * @default 0
              */
             clockOffsetMs: number;
+            /** @description Колонка с именем или путём записи: журнал на несколько записей, действия сопоставляются только со своей записью (по имени файла, без учёта регистра) */
+            source?: string | null;
         };
         ImportActionLogRequest: {
             /** @description Путь к файлу журнала на диске */
@@ -1110,6 +1149,8 @@ export interface components {
                 [key: string]: number | string;
             };
             resultRaw: string;
+            /** @description Запись действия из колонки source сопоставления */
+            source?: string | null;
         };
         ActionPage: {
             items: components["schemas"]["Action"][];
@@ -1262,6 +1303,8 @@ export interface components {
             size?: number;
             /** @description hex */
             bytes?: string;
+            /** @description Сигнатура начала сообщения для length_prefixed, hex: разбор продолжается с неё после дыры или без начала потока */
+            sync?: string;
             /** @enum {string} */
             status?: "rule" | "hypothesis" | "unknown";
         };
@@ -1431,7 +1474,10 @@ export interface components {
                 stream: string;
                 start: number;
                 got: number;
+                /** @description Значение параметра; у дробного — целая часть */
                 expected: number;
+                /** @description Значение параметра точно, как в журнале («-2.5») */
+                paramValue?: string;
             } | null;
             /** @description Другие чтения тех же байтов с теми же совпадениями, вида тип@смещение */
             equivalent: string[];
@@ -1586,7 +1632,7 @@ export interface components {
         Diagnostic: {
             /**
              * @description Стабильный код: `unsupported_link_type`, `non_ip`, `ipv6_skipped`, `non_tcp`, `ip_fragment`,
-             *     `truncated_frame`, `bad_ip_header`, `bad_tcp_header`, `bad_checksum`, `bad_block`, `limit_exceeded`
+             *     `truncated_frame`, `bad_ip_header`, `bad_tcp_header`, `bad_checksum`, `checksum_offload`, `bad_block`, `limit_exceeded`
              */
             code: string;
             severity: components["schemas"]["Severity"];
@@ -1734,10 +1780,10 @@ export interface components {
             window: number;
             headerLength: number;
             /**
-             * @description `unknown` — кадр усечён, сумму проверить нельзя
+             * @description `offload` — в поле только сумма псевдозаголовка (checksum offload при захвате на отправителе), байты верны; `unknown` — кадр усечён, сумму проверить нельзя
              * @enum {string}
              */
-            checksum: "ok" | "bad" | "unknown";
+            checksum: "ok" | "bad" | "offload" | "unknown";
         };
         /** @description Куда попали байты payload кадра */
         StreamRange: {
@@ -2574,6 +2620,18 @@ export interface operations {
                      *       "countsB": {
                      *         "matched": 32
                      *       },
+                     *       "hypotheses": [
+                     *         {
+                     *           "id": "H2",
+                     *           "kind": "fixed",
+                     *           "from": "refuted",
+                     *           "to": "no_counterexample",
+                     *           "counterexamplesFrom": 3,
+                     *           "counterexamplesTo": 0,
+                     *           "applicableFrom": 12,
+                     *           "applicableTo": 12
+                     *         }
+                     *       ],
                      *       "items": [
                      *         {
                      *           "stream": "d05c6bf0:c0001:ba",
@@ -2685,6 +2743,18 @@ export interface operations {
                      *               "status": "rule"
                      *             }
                      *           ]
+                     *         }
+                     *       ],
+                     *       "hypotheses": [
+                     *         {
+                     *           "id": "H2",
+                     *           "test": "value == action.params.value",
+                     *           "verdict": "no_counterexample",
+                     *           "applicable": 10,
+                     *           "held": 10,
+                     *           "notApplicable": 22,
+                     *           "counterexamples": 0,
+                     *           "errors": 0
                      *         }
                      *       ]
                      *     }

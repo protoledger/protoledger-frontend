@@ -76,6 +76,13 @@ const offsetInFrame = computed(() => {
   return frame.value.payload.offset + (props.range.start - (frame.value.streamRange?.start ?? first.value.segment.start))
 })
 
+// offload — в поле только сумма псевдозаголовка (подсчёт на сетевой карте), байты при этом верны.
+const CHECKSUM: Record<string, { status: KnowledgeStatus, label: string }> = {
+  ok: { status: 'rule', label: 'верна' },
+  offload: { status: 'rule', label: 'offload (верно)' },
+  bad: { status: 'violation', label: 'неверна' },
+}
+
 const segStatus = computed<{ status: KnowledgeStatus, label: string }>(() => {
   const st = first.value?.segment.status
   if (st === 'gap') return { status: 'gap', label: 'дыра' }
@@ -145,7 +152,7 @@ function time(iso: string) {
               <dt>seq / ack</dt><dd>{{ frame.tcp.seq }} / {{ frame.tcp.ack }}</dd>
               <dt>Контрольная сумма</dt>
               <dd>
-                <CommonStatusBadge :status="frame.tcp.checksum === 'ok' ? 'rule' : frame.tcp.checksum === 'bad' ? 'violation' : 'unknown'" :label="frame.tcp.checksum === 'ok' ? 'верна' : frame.tcp.checksum === 'bad' ? 'неверна' : 'не проверить'" />
+                <CommonStatusBadge :status="CHECKSUM[frame.tcp.checksum]?.status ?? 'unknown'" :label="CHECKSUM[frame.tcp.checksum]?.label ?? 'не проверить'" :title="frame.tcp.checksum === 'offload' ? 'В поле только сумма псевдозаголовка: подсчёт на сетевой карте отправителя, байты верны' : undefined" />
               </dd>
             </template>
             <template v-if="frame.payload">

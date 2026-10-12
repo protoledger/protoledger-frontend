@@ -250,6 +250,12 @@ const verification: VerificationView = {
     { status: 'unknown', label: 'не охвачено', where: 'extra-1000 · c0001 · 12', what: 'cmd 0x40 — нет типа', link: null },
   ],
   diffWith: 'run-3',
+  diffNote: null,
+  hypothesisChanges: [{ id: 'H4', text: 'контрпримеров нет → опровергнута, контрпримеров 0 → 1', tone: 'bad' }],
+  hypotheses: [
+    { id: 'H1', test: 'value == action.params.value', status: 'hypothesis', label: 'поддержана 41 / 41' },
+    { id: 'H4', test: 'value < 65536', status: 'violation', label: 'опровергнута · контрпримеров 1' },
+  ],
   diff: [
     { label: 'Исправилось', value: '+2 · crc в c0001', tone: 'good' },
     { label: 'Новое', value: '+1 · H4 опровергнута', tone: 'bad' },
