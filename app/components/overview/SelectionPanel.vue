@@ -8,6 +8,9 @@ const props = defineProps<{ range: { start: number, end: number } | null, at: (o
 
 const data = useData()
 const project = useProjectStore()
+const selection = useSelectionStore()
+const workspace = useWorkspaceStore()
+const draft = useDraftAction()
 const frame = ref<Frame | null>(null)
 const frameError = ref<string | null>(null)
 const showFrame = ref(false)
@@ -43,6 +46,30 @@ watch(primaryFrame, async (ref) => {
     frameError.value = e instanceof Error ? e.message : 'Кадр не загрузился'
   }
 }, { immediate: true })
+
+// Наблюдение — якорь на выделенные байты потока и комментарий исследователя.
+const noting = ref(false)
+const note = ref('')
+const noteState = ref<{ ok: boolean, text: string } | null>(null)
+watch(() => props.range, () => { noteState.value = null })
+
+async function saveObservation() {
+  const source = primaryFrame.value?.source
+  if (!props.range || !selection.streamId || !source) return
+  const { start, end } = props.range
+  noteState.value = null
+  try {
+    const saved = await data.createObservation({ source, stream: selection.streamId, start, end }, note.value.trim() || `байты [${start}, ${end})`)
+    if (!saved) return draft('Наблюдение создано')
+    workspace.log(`Наблюдение на байтах [${start}, ${end})`)
+    note.value = ''
+    noting.value = false
+    noteState.value = { ok: true, text: 'Наблюдение сохранено.' }
+  }
+  catch (e) {
+    noteState.value = { ok: false, text: e instanceof Error ? e.message : 'Не удалось сохранить наблюдение' }
+  }
+}
 
 const offsetInFrame = computed(() => {
   if (!frame.value?.payload || !first.value || !props.range) return null
@@ -128,8 +155,17 @@ function time(iso: string) {
         </div>
       </template>
     </div>
+    <form v-if="noting" class="flex flex-col gap-2 border-t border-pl-line px-3.5 py-2.5" @submit.prevent="saveObservation">
+      <label for="obs-comment" class="pl-caption">Что замечено в байтах</label>
+      <input id="obs-comment" v-model="note" class="h-7 rounded border border-pl-line bg-pl-raise px-2 text-pl-fg-strong outline-none focus:border-pl-wine-text" placeholder="например: длина сообщения, u16 LE">
+      <div class="flex gap-2">
+        <button class="pl-btn pl-btn-primary h-7" type="submit">Сохранить</button>
+        <button class="pl-btn h-7" type="button" @click="noting = false">Отмена</button>
+      </div>
+    </form>
+    <p v-if="noteState" class="m-0 border-t border-pl-line px-3.5 py-2" :class="noteState.ok ? 'text-pl-st-rule' : 'text-pl-st-violation'" aria-live="polite">{{ noteState.text }}</p>
     <footer class="flex gap-2 border-t border-pl-line px-3.5 py-2.5">
-      <button class="pl-btn pl-btn-primary" type="button" disabled title="Наблюдения появятся вместе с эндпоинтом /api/observations">Наблюдение</button>
+      <button class="pl-btn pl-btn-primary" type="button" :disabled="!range || !primaryFrame || noting" :title="range ? 'Сохранить выделение как наблюдение' : 'Выделите байты в потоке'" @click="noting = true">Наблюдение</button>
       <button class="pl-btn" type="button" :aria-pressed="showFrame" :disabled="!primaryFrame" @click="showFrame = !showFrame">Кадр в записи</button>
     </footer>
   </section>

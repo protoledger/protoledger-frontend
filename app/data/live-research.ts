@@ -24,6 +24,13 @@ const HYPOTHESIS_STATUS: Record<S['HypothesisStatus'], Hypothesis['status']> = {
   superseded: 'superseded',
 }
 
+const API_HYPOTHESIS_STATUS: Record<Hypothesis['status'], S['HypothesisStatus']> = {
+  untested: 'proposed',
+  supported: 'supported',
+  refuted: 'refuted',
+  superseded: 'superseded',
+}
+
 const COUNTER_REASON: Record<S['FramingCounter']['reason'], { status: KnowledgeStatus, note: string }> = {
   bad_length: { status: 'violation', note: 'значение длины вне допустимого' },
   overrun: { status: 'gap', note: 'сообщение выходит за конец участка' },
@@ -338,14 +345,34 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
         test: h.test ?? 'теста нет',
         scope: test ? `применим к ${formatCount(test.applicable)} сообщ., выполнился на ${formatCount(test.held)}` : 'все записи проекта',
         basis: h.basis.length ? h.basis.join(', ') : '—',
+        marked: HYPOTHESIS_STATUS[h.status],
         counterexamples: (test?.counterexamples ?? []).map(c => ({
           where: where(names, c.anchor),
           expected: h.test ?? '—',
           got: pairs(c.values),
+          anchor: { source: c.anchor.source, stream: c.anchor.stream, start: c.anchor.start, end: c.anchor.end },
         })),
         note: [h.note, test && test.counterexamplesTotal > test.counterexamples.length ? `Показано ${test.counterexamples.length} из ${test.counterexamplesTotal} контрпримеров.` : null].filter(Boolean).join(' '),
         history: [],
       }
+    },
+
+    async getObservations() {
+      return unwrap(await api.GET('/api/observations')).items.map(o => ({ id: o.id, text: o.comment || 'без комментария' }))
+    },
+
+    async createHypothesis({ statement, test, basis }) {
+      return unwrap(await api.POST('/api/hypotheses', { body: { statement, basis, ...(test ? { test } : {}) } })).id
+    },
+
+    async setHypothesisStatus(id, status) {
+      unwrap(await api.PUT('/api/hypotheses/{id}', { params: { path: { id } }, body: { status: API_HYPOTHESIS_STATUS[status] } }))
+      return true
+    },
+
+    async createQuestion(text) {
+      unwrap(await api.POST('/api/questions', { body: { text } }))
+      return true
     },
 
     async getVerification(runId) {

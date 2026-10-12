@@ -182,7 +182,9 @@ export interface HypothesisDetail {
   test: string
   scope: string
   basis: string
-  counterexamples: { where: string, expected: string, got: string }[]
+  /** Статус, отмеченный исследователем; status выше — итог теста на записях. */
+  marked: Hypothesis['status']
+  counterexamples: { where: string, expected: string, got: string, anchor?: AnchorRef }[]
   note: string
   history: { run: string, time: string, status: Hypothesis['status'], label: string, scope: string, stale: boolean }[]
 }
