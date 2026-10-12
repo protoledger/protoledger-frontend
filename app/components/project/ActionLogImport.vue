@@ -8,7 +8,7 @@ const emit = defineEmits<{ imported: [log: ActionLogRecord] }>()
 
 const data = useData()
 const columns = ref<string[]>([])
-const mapping = reactive<ActionLogMapping>({ time: '', action: '', params: null, result: null, timeFormat: 'rfc3339', paramsFormat: 'kv', resultFormat: 'kv', delimiter: null, utcOffsetMinutes: 0, clockOffsetMs: 0 })
+const mapping = reactive<ActionLogMapping>({ time: '', action: '', params: null, result: null, source: null, timeFormat: 'rfc3339', paramsFormat: 'kv', resultFormat: 'kv', delimiter: null, utcOffsetMinutes: 0, clockOffsetMs: 0 })
 const busy = ref(false)
 const error = ref<string | null>(null)
 const done = ref<ActionLogRecord | null>(null)
@@ -19,9 +19,10 @@ watch(() => props.file, async (file) => {
   error.value = null
   columns.value = []
   if (!file) return
-  const header = readCsvHeader(await file.slice(0, 64 * 1024).text())
+  const head = await file.slice(0, 64 * 1024).text()
+  const header = readCsvHeader(head)
   columns.value = header.columns
-  Object.assign(mapping, guessMapping(header.columns), { delimiter: header.delimiter === ',' ? null : header.delimiter })
+  Object.assign(mapping, guessMapping(header.columns, head), { delimiter: header.delimiter === ',' ? null : header.delimiter })
   if (!header.columns.length) error.value = 'В первой строке файла не найдены названия колонок'
 }, { immediate: true })
 
@@ -85,12 +86,27 @@ const field = 'h-[30px] w-full rounded border border-pl-line bg-pl-raise px-2 te
           <option :value="null">— нет —</option>
           <option v-for="c in columns" :key="c" :value="c">{{ c }}</option>
         </select>
+        <label for="al-source" class="text-pl-muted">Колонка записи</label>
+        <select id="al-source" v-model="mapping.source" :class="field" title="Если журнал описывает несколько записей: колонка с именем файла записи для каждого действия">
+          <option :value="null">— нет —</option>
+          <option v-for="c in columns" :key="c" :value="c">{{ c }}</option>
+        </select>
+        <label for="al-pformat" class="text-pl-muted">Формат параметров</label>
+        <select id="al-pformat" v-model="mapping.paramsFormat" :class="field">
+          <option value="kv">ключ=значение;…</option>
+          <option value="json">JSON</option>
+        </select>
+        <label for="al-rformat" class="text-pl-muted">Формат результата</label>
+        <select id="al-rformat" v-model="mapping.resultFormat" :class="field">
+          <option value="kv">ключ=значение;…</option>
+          <option value="json">JSON</option>
+        </select>
         <label for="al-utc" class="text-pl-muted">Пояс, мин от UTC</label>
         <input id="al-utc" v-model.number="mapping.utcOffsetMinutes" type="number" step="15" :class="field">
         <label for="al-clock" class="text-pl-muted">Сдвиг часов, мс</label>
         <input id="al-clock" v-model.number="mapping.clockOffsetMs" type="number" :class="field">
         <p class="col-span-2 m-0 text-xs text-pl-muted">
-          Параметры и результат — <code class="font-mono">ключ=значение;…</code>. Сдвиг часов — поправка, если часы клиента расходились с часами записи.
+          Колонка записи нужна, если один журнал описывает несколько записей. Сдвиг часов — поправка, если часы клиента расходились с часами записи.
         </p>
       </form>
       <p v-if="error" class="mt-3 mb-0 text-pl-st-violation" role="alert">{{ error }}</p>

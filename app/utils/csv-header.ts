@@ -20,20 +20,39 @@ export function readCsvHeader(text: string): CsvHeader {
   return { delimiter: best.sep === '\t' ? 'tab' : best.sep, columns }
 }
 
-const HINTS: Record<'time' | 'action' | 'params' | 'result', RegExp> = {
-  time: /^(time|timestamp|ts|date|datetime|время|дата)/i,
-  action: /^(action|event|command|cmd|op|действие|команда|событие)/i,
-  params: /^(param|args|arguments|value|параметр|аргумент|значение)/i,
-  result: /^(result|status|outcome|response|результат|статус|ответ)/i,
+type Guessed = Pick<ActionLogMapping, 'time' | 'action' | 'params' | 'result' | 'source' | 'paramsFormat' | 'resultFormat'>
+
+// Сначала точное имя колонки, потом похожее: иначе «action_id» перехватит «action».
+const HINTS: Record<'time' | 'action' | 'params' | 'result' | 'source', { exact: string[], like: RegExp }> = {
+  time: { exact: ['time', 'timestamp', 'ts', 'время'], like: /(^|_)(time|utc|ts|date)|^start|время|дата/i },
+  action: { exact: ['action', 'event', 'command', 'действие'], like: /^(action|event|command|cmd|op|действие|команда|событие)/i },
+  params: { exact: ['params', 'parameters', 'параметры'], like: /param|args|arguments|value|параметр|аргумент|значение/i },
+  result: { exact: ['result', 'результат'], like: /result|status|outcome|response|результат|статус|ответ/i },
+  source: { exact: ['capture', 'source', 'запись'], like: /^(capture|source|pcap|file|record|запись)/i },
 }
 
-/** Начальное сопоставление по именам колонок; человек правит его перед импортом. */
-export function guessMapping(columns: string[]): Pick<ActionLogMapping, 'time' | 'action' | 'params' | 'result'> {
-  const pick = (re: RegExp) => columns.find(c => re.test(c)) ?? null
+/**
+ * Начальное сопоставление по именам колонок и первым строкам; человек правит его перед импортом.
+ * JSON в ячейках узнаётся по «{» в данных.
+ */
+export function guessMapping(columns: string[], sample = ''): Guessed {
+  const used = new Set<string>()
+  const pick = (k: keyof typeof HINTS) => {
+    const h = HINTS[k]
+    const found = columns.find(c => !used.has(c) && h.exact.includes(c.toLowerCase())) ?? columns.find(c => !used.has(c) && h.like.test(c)) ?? null
+    if (found) used.add(found)
+    return found
+  }
+  const action = pick('action')
+  const time = pick('time')
+  const json = /(^|,)"?\{/m.test(sample.split(/\r?\n/).slice(1, 6).join('\n'))
   return {
-    time: pick(HINTS.time) ?? columns[0] ?? '',
-    action: pick(HINTS.action) ?? columns[1] ?? '',
-    params: pick(HINTS.params),
-    result: pick(HINTS.result),
+    time: time ?? columns[0] ?? '',
+    action: action ?? columns[1] ?? '',
+    params: pick('params'),
+    result: pick('result'),
+    source: pick('source'),
+    paramsFormat: json ? 'json' : 'kv',
+    resultFormat: json ? 'json' : 'kv',
   }
 }

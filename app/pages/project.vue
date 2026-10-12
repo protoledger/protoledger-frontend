@@ -13,6 +13,11 @@ const importError = ref<string | null>(null)
 
 const { data: logs, refresh: refreshLogs } = await useAsyncData('action-logs', () => data.getActionLogs(), { default: () => [] as ActionLog[] })
 
+// Движок перечитывает журналы при открытии проекта фоновой задачей: обновляем список, когда она кончилась.
+watch([() => project.project?.path, () => jobs.active.length], ([, active], [, before]) => {
+  if (active === 0 || before === undefined) void refreshLogs()
+})
+
 const logInput = ref<HTMLInputElement | null>(null)
 const logFile = ref<File | null>(null)
 const logDialog = ref(false)
