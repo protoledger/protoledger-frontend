@@ -258,6 +258,13 @@ const TOKEN: Record<string, string> = {
         </dl>
         <p v-else class="m-0 px-3 py-2 text-pl-muted">Начните с шаблона слева: разбор обновляется при правке.</p>
 
+        <h3 :class="cap">Выражения в when, check и тестах</h3>
+        <dl class="pl-dl pt-0 [&_dt]:font-mono [&_dt]:text-pl-fg-strong">
+          <dt>action.params.x</dt><dd>параметр действия из журнала; вложенные — через точку</dd>
+          <dt>response.x</dt><dd>поле парного ответа</dd>
+          <dt>dec(x, n)</dt><dd>число с n знаками после запятой как целое: <span class="font-mono">dec(action.params.threshold_c, 2) == -250</span></dd>
+        </dl>
+
         <template v-if="view.field">
           <h3 :class="cap">Поле в строке {{ view.field.line }}</h3>
           <dl class="pl-dl">
