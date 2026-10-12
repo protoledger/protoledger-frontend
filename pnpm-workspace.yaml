@@ -6,3 +6,15 @@ allowBuilds:
   esbuild: true
   unrs-resolver: true
   vue-demi: true
+
+# Уязвимости только в инструментах сборки и dev-сервера (nitropack, devtools, @nuxt/fonts):
+# в SPA, которую отдаёт движок, этого кода нет. Пересматривать при обновлении Nuxt.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-g7r4-m6w7-qqqr # esbuild, dev-сервер под Windows
+    - GHSA-86w9-cpqp-85rv # node-forge в listhen (dev-сервер)
+    - GHSA-vfj7-8cjw-p6xm # braces в globby (сборка)
+    - GHSA-v5rq-49vh-5v5c # @simple-git/argv-parser в @nuxt/devtools (выключены)
+    - GHSA-x6jw-m9v5-85vh # simple-git в @nuxt/devtools
+    - GHSA-g4wm-2vf7-vfgr # simple-git в @nuxt/devtools
+    - GHSA-858h-whjf-mvg5 # simple-git в @nuxt/devtools

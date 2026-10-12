@@ -42,6 +42,9 @@ jobs:
       - name: Зависимости
         if: steps.ready.outputs.ok == 'true'
         run: pnpm install --frozen-lockfile
+      - name: Аудит зависимостей
+        if: steps.ready.outputs.ok == 'true'
+        run: pnpm audit --prod
       - name: Линтер
         if: steps.ready.outputs.ok == 'true'
         run: pnpm lint
