@@ -324,6 +324,7 @@ export function createMockResearchSource(): ResearchSource {
       interpretation.rev = (interpretation.rev ?? 0) + 1
       return { rev: interpretation.rev, created: true }
     },
+    getFieldHints: async () => null,
     getInterpretationRevisions: async () => (await delay(), Array.from({ length: interpretation.rev ?? 0 }, (_, i) => (interpretation.rev ?? 0) - i)),
     getInterpretationRevision: async () => (await delay(), interpretation.yaml.map(l => l.text).join('\n')),
     getHypotheses: async () => (await delay(), structuredClone(hypotheses)),

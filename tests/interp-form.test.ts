@@ -46,6 +46,10 @@ describe('parseForm', () => {
     expect(form[0]!.fields.map(f => f.attrs.name)).toEqual(['signature', 'length'])
   })
 
+  it('у поля группы — имя группы (движок зовёт его «группа.поле»)', () => {
+    expect(form[1]!.fields.map(f => [f.attrs.name, f.group])).toEqual([['count', null], ['temperature_centi_c', 'measurements']])
+  })
+
   it('поле повторяющейся группы — глубже, блочное поле не теряет соседей', () => {
     expect(form[1]!.fields.map(f => [f.attrs.name, f.depth])).toEqual([['count', 0], ['temperature_centi_c', 1]])
   })

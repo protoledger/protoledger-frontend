@@ -152,6 +152,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/interpretation/field-hints": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Подсказка типа поля
+         * @description Для целочисленного поля перебирает типы той же ширины (знаковый и беззнаковый, оба порядка байтов) и для
+         *     каждого применяет описание к записям проекта: границы значений, число отрицательных, нарушения проверок и итог
+         *     тестов гипотез, в которых участвует поле (в том числе с `dec()` и `response.*`). `suggested` — тип с наименьшим
+         *     числом противоречий, если он лучше текущего; иначе `null`. Замена типа той же ширины не сдвигает соседние
+         *     поля, поэтому годится как быстрое исправление. Поле с тем же именем и типом в других сообщениях (запрос и
+         *     ответ) меняется вместе с этим — они перечислены в `messages`. Для поля повторяющейся группы имя —
+         *     `<группа>.<поле>`. Это подсказка с основаниями (числа контрпримеров при каждом варианте), а не вывод.
+         *     Без `yaml` берётся текущая ревизия. Ничего не сохраняется.
+         */
+        post: operations["getFieldTypeHints"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/runs": {
         parameters: {
             query?: never;
@@ -837,6 +864,52 @@ export interface components {
          * @enum {string}
          */
         ResultCategory: "matched" | "violated" | "incomplete" | "ambiguous" | "unmatched" | "limit_exceeded";
+        FieldHintsRequest: {
+            /** @description Тип сообщения из описания */
+            messageId: string;
+            /** @description Имя поля; для поля повторяющейся группы — <группа>.<поле> */
+            field: string;
+            /** @description Несохранённый текст описания; без него — текущая ревизия */
+            yaml?: string;
+            /** @description Окно подбора действия журнала, мс (по умолчанию 2000) */
+            windowMs?: number;
+        };
+        FieldTypeCandidate: {
+            /** @enum {string} */
+            type: "u8" | "i8" | "u16be" | "u16le" | "i16be" | "i16le" | "u32be" | "u32le" | "i32be" | "i32le" | "u64be" | "u64le" | "i64be" | "i64le";
+            /** @description Тип, записанный в описании сейчас */
+            current: boolean;
+            /** @description Сколько значений поля прочитано */
+            values: number;
+            min: number | null;
+            max: number | null;
+            /** @description Сколько значений отрицательны при этом типе */
+            negative: number;
+            /** @description Нарушения проверок и ожидаемых значений в сообщениях с полем */
+            violations: number;
+            /** @description Контрпримеры всех тестов гипотез, где участвует поле */
+            counterexamples: number;
+            tests: {
+                id: string;
+                /** @enum {string} */
+                verdict: "untested" | "no_counterexample" | "refuted";
+                applicable: number;
+                held: number;
+                counterexamples: number;
+            }[];
+        };
+        FieldHints: {
+            messageId: string;
+            field: string;
+            currentType: string;
+            /** @description Сообщения, где поле с этим именем и типом меняется вместе */
+            messages: string[];
+            /** @description Гипотезы, в тестах которых участвует поле */
+            hypotheses: string[];
+            candidates: components["schemas"]["FieldTypeCandidate"][];
+            /** @description Тип с наименьшим числом противоречий, если он лучше текущего */
+            suggested: string | null;
+        };
         PreviewRequest: {
             /** @description Идентификатор направленного потока */
             stream: string;
@@ -2440,6 +2513,114 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["PreviewPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
+            422: components["responses"]["Unprocessable"];
+        };
+    };
+    getFieldTypeHints: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "messageId": "set_config_req",
+                 *       "field": "threshold_centi_c"
+                 *     }
+                 */
+                "application/json": components["schemas"]["FieldHintsRequest"];
+            };
+        };
+        responses: {
+            /** @description Варианты типа с основаниями */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "messageId": "set_config_req",
+                     *       "field": "threshold_centi_c",
+                     *       "currentType": "u16be",
+                     *       "messages": [
+                     *         "set_config_req",
+                     *         "config_resp"
+                     *       ],
+                     *       "hypotheses": [
+                     *         "H6",
+                     *         "H12"
+                     *       ],
+                     *       "suggested": "i16be",
+                     *       "candidates": [
+                     *         {
+                     *           "type": "u16be",
+                     *           "current": true,
+                     *           "values": 40,
+                     *           "min": 0,
+                     *           "max": 65286,
+                     *           "negative": 0,
+                     *           "violations": 0,
+                     *           "counterexamples": 8,
+                     *           "tests": [
+                     *             {
+                     *               "id": "H6",
+                     *               "verdict": "refuted",
+                     *               "applicable": 24,
+                     *               "held": 20,
+                     *               "counterexamples": 4
+                     *             },
+                     *             {
+                     *               "id": "H12",
+                     *               "verdict": "refuted",
+                     *               "applicable": 38,
+                     *               "held": 34,
+                     *               "counterexamples": 4
+                     *             }
+                     *           ]
+                     *         },
+                     *         {
+                     *           "type": "i16be",
+                     *           "current": false,
+                     *           "values": 40,
+                     *           "min": -1000,
+                     *           "max": 2500,
+                     *           "negative": 4,
+                     *           "violations": 0,
+                     *           "counterexamples": 0,
+                     *           "tests": [
+                     *             {
+                     *               "id": "H6",
+                     *               "verdict": "no_counterexample",
+                     *               "applicable": 24,
+                     *               "held": 24,
+                     *               "counterexamples": 0
+                     *             },
+                     *             {
+                     *               "id": "H12",
+                     *               "verdict": "no_counterexample",
+                     *               "applicable": 38,
+                     *               "held": 38,
+                     *               "counterexamples": 0
+                     *             }
+                     *           ]
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["FieldHints"];
                 };
             };
             400: components["responses"]["BadRequest"];
