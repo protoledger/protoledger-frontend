@@ -175,6 +175,8 @@ const interpretation: InterpretationView = {
   ],
   selectedLine: 13,
   stream: 'stand:c0002:ab',
+  violations: [{ messageId: 'set_param', field: 'value', kind: 'field_range', detail: 'value: 70000 не помещается в u16', count: 1 }],
+  runIssues: [{ id: 'H3', label: 'опровергнута в run-4 · контрпримеров 1', runId: 'run-4' }],
   preview: {
     stream: 'c0002',
     rows: [
@@ -316,7 +318,7 @@ export function createMockResearchSource(): ResearchSource {
     getCompare: async () => (await delay(), structuredClone(compare)),
     createObservation: async () => false,
     getInterpretation: async () => (await delay(), structuredClone(interpretation)),
-    previewInterpretation: async () => (await delay(), structuredClone({ tree: interpretation.tree, preview: interpretation.preview })),
+    previewInterpretation: async () => (await delay(), structuredClone({ tree: interpretation.tree, preview: interpretation.preview, violations: interpretation.violations })),
     saveInterpretation: async () => {
       await delay()
       interpretation.rev = (interpretation.rev ?? 0) + 1

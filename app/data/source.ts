@@ -81,7 +81,7 @@ export interface ResearchSource {
   createObservation(anchor: AnchorRef, comment: string): Promise<boolean>
   getInterpretation(): Promise<InterpretationView>
   /** Применить текст к потоку без сохранения; без yaml — последняя сохранённая ревизия. */
-  previewInterpretation(stream: string, yaml?: string): Promise<Pick<InterpretationView, 'tree' | 'preview'>>
+  previewInterpretation(stream: string, yaml?: string): Promise<Pick<InterpretationView, 'tree' | 'preview' | 'violations'>>
   /** Проверить и сохранить текст; created = false — смысл не изменился, ревизии нет. */
   saveInterpretation(yaml: string): Promise<{ rev: number, created: boolean }>
   getInterpretationRevisions(): Promise<number[]>
