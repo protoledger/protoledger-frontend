@@ -28,6 +28,7 @@ import type {
   InterpretationView,
   ProjectExtras,
   ReportView,
+  SearchEntry,
   VerificationView,
 } from './views'
 
@@ -87,6 +88,8 @@ export interface ResearchSource {
   getInterpretationRevision(rev: number): Promise<string>
   getHypotheses(): Promise<HypothesesView>
   getHypothesisDetail(id: string): Promise<HypothesisDetail | null>
+  /** Объекты проекта для поиска везде: соединения, гипотезы, прогоны, наблюдения. */
+  getSearchIndex(): Promise<SearchEntry[]>
   /** Наблюдения проекта — основания для гипотез. */
   getObservations(): Promise<{ id: string, text: string }[]>
   /** Создать гипотезу; id или null — пример данных, не сохраняется. */

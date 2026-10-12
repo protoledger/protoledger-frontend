@@ -191,11 +191,11 @@ const interpretation: InterpretationView = {
 
 const hypotheses: HypothesesView = {
   items: [
-    { id: 'H1', text: 'value в set_param равно параметру действия', status: 'supported', support: '41 / 41' },
-    { id: 'H2', text: 'measure ÷ 10 равно результату read_measure', status: 'supported', support: '12 / 12' },
-    { id: 'H3', text: 'последний байт — xor всех предыдущих', status: 'supported', support: '417 / 417' },
-    { id: 'H4', text: 'value помещается в u16 без знака', status: 'refuted', support: '1 контрпример' },
-    { id: 'H5', text: 'text_cmd передаёт строку ASCII с \\n в конце', status: 'untested', support: '' },
+    { id: 'H1', text: 'value в set_param равно параметру действия', status: 'supported', support: '41 / 41', run: { status: 'hypothesis', label: 'run-4: 41 / 41' } },
+    { id: 'H2', text: 'measure ÷ 10 равно результату read_measure', status: 'supported', support: '12 / 12', run: { status: 'hypothesis', label: 'run-4: 12 / 12' } },
+    { id: 'H3', text: 'последний байт — xor всех предыдущих', status: 'supported', support: '417 / 417', run: { status: 'hypothesis', label: 'run-4: 417 / 417' } },
+    { id: 'H4', text: 'value помещается в u16 без знака', status: 'refuted', support: '1 контрпример', run: { status: 'violation', label: 'run-4: опровергнута · 1' } },
+    { id: 'H5', text: 'text_cmd передаёт строку ASCII с \\n в конце', status: 'untested', support: '', run: null },
   ],
   questions: [
     'Что означает байт 6 в measure_resp?',
@@ -326,6 +326,11 @@ export function createMockResearchSource(): ResearchSource {
     getInterpretationRevision: async () => (await delay(), interpretation.yaml.map(l => l.text).join('\n')),
     getHypotheses: async () => (await delay(), structuredClone(hypotheses)),
     getHypothesisDetail: async id => (await delay(), id === hypothesisH4.id ? structuredClone(hypothesisH4) : null),
+    getSearchIndex: async () => (await delay(), [
+      { group: 'connection' as const, label: 'c0002 · 10.0.0.12:51544 → 10.0.0.50:5020', suffix: 'base-session.pcapng', path: '/overview', query: { conn: 'c0002', dir: 'ab' } },
+      ...hypotheses.items.map(h => ({ group: 'hypothesis' as const, label: `${h.id} · ${h.text}`, path: '/hypotheses', query: { h: h.id } })),
+      ...verification.runs.map(r => ({ group: 'run' as const, label: `${r.id} · ${r.label}`, path: '/verify', query: { run: r.id } })),
+    ]),
     getObservations: async () => (await delay(), compare.observations.map(o => ({ id: o.id, text: o.text }))),
     createHypothesis: async () => null,
     setHypothesisStatus: async () => false,

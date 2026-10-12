@@ -1,6 +1,34 @@
 <script setup lang="ts">
 const project = useProjectStore()
 const jobs = useJobsStore()
+const data = useData()
+const toast = useToast()
+const running = ref(false)
+
+// Прогон по всем записям проекта; по завершении открывается его результат на «Проверке».
+async function runCheck() {
+  if (running.value) return
+  running.value = true
+  try {
+    const jobId = await data.startRun()
+    if (!jobId) {
+      running.value = false
+      return navigateTo('/verify')
+    }
+    workspace.log('Прогон проверки: начат')
+    jobs.track(jobId, 'Прогон проверки', (job) => {
+      running.value = false
+      workspace.log(`Прогон проверки: ${job.state === 'succeeded' ? 'готово' : job.state === 'cancelled' ? 'отменён' : 'ошибка'}`)
+      if (job.state === 'failed') toast.add({ title: 'Прогон не выполнен', description: job.error?.detail ?? job.error?.title, color: 'error', icon: 'i-lucide-x' })
+      const id = job.result && 'runId' in job.result ? job.result.runId : undefined
+      void navigateTo({ path: '/verify', query: id ? { run: id } : {} })
+    })
+  }
+  catch (e) {
+    running.value = false
+    toast.add({ title: 'Прогон не запущен', description: e instanceof Error ? e.message : undefined, color: 'error', icon: 'i-lucide-x' })
+  }
+}
 const colorMode = useColorMode()
 const workspace = useWorkspaceStore()
 const emit = defineEmits<{ search: [] }>()
@@ -57,13 +85,11 @@ const icon = 'grid size-[30px] place-items-center rounded text-pl-fg hover:bg-pl
       </button>
     </div>
 
-    <div class="flex h-[30px] items-center gap-1.5 rounded bg-pl-raise pl-2.5 text-pl-fg-strong">
-      <span class="text-pl-muted">проверка:</span>
-      <b>все записи</b>
-      <UIcon name="i-lucide-chevron-down" class="size-3.5" aria-hidden="true" />
-      <NuxtLink to="/verify" class="ml-1 grid h-[30px] w-8 place-items-center rounded-r bg-pl-wine text-white" title="Запустить проверку">
-        <UIcon name="i-lucide-play" class="size-4" aria-hidden="true" />
-      </NuxtLink>
+    <div v-if="project.project" class="flex h-[30px] items-center gap-1.5 rounded bg-pl-raise pl-2.5 text-pl-fg-strong">
+      <NuxtLink to="/verify" class="hover:underline" title="Экран «Проверка»: корпус, сводка, контрпримеры"><span class="text-pl-muted">проверка:</span> <b>все записи</b></NuxtLink>
+      <button class="ml-1 grid h-[30px] w-8 place-items-center rounded-r bg-pl-wine text-white disabled:opacity-70" type="button" :disabled="running" :title="running ? 'Прогон идёт…' : 'Запустить проверку на всех записях'" @click="runCheck">
+        <UIcon :name="running ? 'i-lucide-loader-circle' : 'i-lucide-play'" class="size-4" :class="running && 'animate-spin'" aria-hidden="true" />
+      </button>
     </div>
     <button :class="icon" type="button" title="Поиск везде (Ctrl+K, двойной Shift)" @click="emit('search')">
       <UIcon name="i-lucide-search" class="size-4" aria-hidden="true" />
