@@ -54,24 +54,31 @@ function skipped(source: Source) {
   return project.diagnostics[source.sha256]?.items.filter(d => d.severity === 'info') ?? []
 }
 
+const importErrors = ref<string[]>([])
+
+// Файлы уходят по очереди; ошибка движка приходит в задаче, а не в ответе на загрузку.
 async function onFile(e: Event) {
   const input = e.target as HTMLInputElement
-  const file = input.files?.[0]
+  const files = [...(input.files ?? [])]
   input.value = ''
-  if (!file) return
+  if (!files.length) return
   importError.value = null
-  try {
-    const jobId = await data.importSource(file)
-    const label = `Импорт ${file.name}`
-    workspace.log(`${label}: начат`)
-    jobs.track(jobId, label, (job) => {
-      workspace.log(`${label}: ${job.state === 'succeeded' ? 'готово' : job.state === 'cancelled' ? 'отменён' : 'ошибка'}`)
-      void project.load()
-    })
-    await project.refreshSources()
-  }
-  catch (err) {
-    importError.value = err instanceof Error ? err.message : 'Не удалось начать импорт'
+  importErrors.value = []
+  for (const file of files) {
+    try {
+      const jobId = await data.importSource(file)
+      const label = `Импорт ${file.name}`
+      workspace.log(`${label}: начат`)
+      jobs.track(jobId, label, (job) => {
+        workspace.log(`${label}: ${job.state === 'succeeded' ? 'готово' : job.state === 'cancelled' ? 'отменён' : 'ошибка'}`)
+        if (job.state === 'failed') importErrors.value.push(`${file.name}: ${job.error?.detail ?? job.error?.title ?? 'не удалось импортировать'}`)
+        void project.load()
+      })
+      await project.refreshSources()
+    }
+    catch (err) {
+      importErrors.value.push(`${file.name}: ${err instanceof Error ? err.message : 'не удалось начать импорт'}`)
+    }
   }
 }
 
@@ -151,8 +158,11 @@ const CHECKSUM = [['ignore', 'ignore'], ['warn', 'warn'], ['drop', 'drop']] as c
             <button class="pl-btn pl-btn-primary" type="button" @click="fileInput?.click()">+ Импорт записей</button>
             <button class="pl-btn" type="button" @click="logInput?.click()">+ Журнал действий</button>
             <input ref="logInput" type="file" accept=".csv,.tsv,.txt" class="hidden" @change="onLogFile">
-            <input ref="fileInput" type="file" accept=".pcap,.pcapng" class="hidden" @change="onFile">
+            <input ref="fileInput" type="file" accept=".pcap,.pcapng" multiple class="hidden" @change="onFile">
             <span v-if="importError" class="text-pl-st-violation" role="alert">{{ importError }}</span>
+          </div>
+          <div v-if="importErrors.length" class="-mt-3 mb-5 flex flex-col gap-1 border-l-2 border-pl-st-violation pl-2.5" role="alert">
+            <span v-for="m in importErrors" :key="m" class="text-pl-st-violation">{{ safeText(m) }}</span>
           </div>
 
           <h2 class="pl-caption mt-5 mb-2">Записи</h2>

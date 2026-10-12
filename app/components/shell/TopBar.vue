@@ -4,6 +4,12 @@ const jobs = useJobsStore()
 const colorMode = useColorMode()
 const workspace = useWorkspaceStore()
 const emit = defineEmits<{ search: [] }>()
+const projectDialog = ref(false)
+
+async function onProjectOpened() {
+  projectDialog.value = false
+  await navigateTo('/project')
+}
 
 const importJob = computed(() => jobs.active[0] ?? null)
 const importPercent = computed(() => {
@@ -21,8 +27,14 @@ const icon = 'grid size-[30px] place-items-center rounded text-pl-fg hover:bg-pl
 
 <template>
   <header class="flex h-11 items-center gap-1.5 border-b border-pl-line bg-linear-to-r from-pl-wine/22 to-pl-chrome to-30% pr-2.5 pl-2">
+    <UModal v-model:open="projectDialog" title="Проект" :description="project.project ? `Сейчас открыт: ${project.project.path}` : 'Проект не открыт'">
+      <template #body>
+        <ProjectOpenForm title="" class="p-0" @opened="onProjectOpened" />
+      </template>
+    </UModal>
+
     <span class="mr-2 grid size-7 place-items-center rounded bg-pl-wine font-display text-sm font-semibold text-white" aria-label="protoledger">pl</span>
-    <button :class="item" type="button" title="Проект">
+    <button :class="item" type="button" title="Открыть или создать проект" @click="projectDialog = true">
       <span class="font-display font-semibold">{{ safeText(project.project?.name ?? 'нет проекта') }}</span>
       <UIcon name="i-lucide-chevron-down" class="size-3.5" aria-hidden="true" />
     </button>

@@ -6,6 +6,7 @@ const route = useRoute()
 const router = useRouter()
 const selection = useSelectionStore()
 const data = useData()
+const project = useProjectStore()
 
 const connection = ref<Connection | null>(null)
 const dir = ref<'ab' | 'ba'>(route.query.dir === 'ba' ? 'ba' : 'ab')
@@ -76,7 +77,7 @@ function jump(offset: number) {
 
     <section class="flex min-w-0 flex-1 flex-col">
       <CommonPanelHeader
-        :title="connection ? `Поток ${connection.id.split(':')[1]}` : 'Поток'"
+        :title="connection ? `Поток ${connection.id.split(':')[1]}${project.sources.length > 1 ? ` · ${safeText(project.sourceName(connection.source))}` : ''}` : 'Поток'"
         :subtitle="stream ? `собран по seq · ${formatCount(stream.length)} байт${stream.startAvailable ? '' : ' · начало не захвачено'}` : ''"
       >
         <div v-if="connection" class="pl-seg" role="radiogroup" aria-label="Направление">

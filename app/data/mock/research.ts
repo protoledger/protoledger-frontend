@@ -64,14 +64,14 @@ const framing: FramingView = {
 const actions: ActionsView = {
   log: { name: 'actions.csv', rows: 46 },
   rows: [
-    { id: 'a1', time: '14:02:11.200', action: 'set_param', params: 'value = 21', result: 'ok', exchange: 'found' },
-    { id: 'a2', time: '14:02:12.900', action: 'read_measure', params: '—', result: '21,0', exchange: 'found' },
-    { id: 'a3', time: '14:02:19.410', action: 'set_param', params: 'value = 37', result: 'ok', exchange: 'found' },
-    { id: 'a4', time: '14:02:21.050', action: 'read_measure', params: '—', result: '37,0', exchange: 'found' },
-    { id: 'a5', time: '14:02:30.770', action: 'set_param', params: 'value = 1000', result: 'ok', exchange: 'found' },
-    { id: 'a6', time: '14:02:32.300', action: 'read_measure', params: '—', result: '1000,0', exchange: 'found' },
-    { id: 'a7', time: '14:02:40.010', action: 'reset', params: '—', result: 'ok', exchange: 'none' },
-    { id: 'a8', time: '15:12:04.600', action: 'set_param', params: 'value = 70000', result: 'ok', exchange: 'found' },
+    { id: 'a1', time: '14:02:11.200', action: 'set_param', params: 'value = 21', result: 'ok', source: null, exchange: 'found' },
+    { id: 'a2', time: '14:02:12.900', action: 'read_measure', params: '—', result: '21,0', source: null, exchange: 'found' },
+    { id: 'a3', time: '14:02:19.410', action: 'set_param', params: 'value = 37', result: 'ok', source: null, exchange: 'found' },
+    { id: 'a4', time: '14:02:21.050', action: 'read_measure', params: '—', result: '37,0', source: null, exchange: 'found' },
+    { id: 'a5', time: '14:02:30.770', action: 'set_param', params: 'value = 1000', result: 'ok', source: null, exchange: 'found' },
+    { id: 'a6', time: '14:02:32.300', action: 'read_measure', params: '—', result: '1000,0', source: null, exchange: 'found' },
+    { id: 'a7', time: '14:02:40.010', action: 'reset', params: '—', result: 'ok', source: null, exchange: 'none' },
+    { id: 'a8', time: '15:12:04.600', action: 'set_param', params: 'value = 70000', result: 'ok', source: null, exchange: 'found' },
   ],
 }
 
