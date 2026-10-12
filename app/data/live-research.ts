@@ -237,6 +237,7 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
           action: a.action,
           params: pairs(a.params),
           result: a.resultRaw || pairs(a.result),
+          source: a.source ?? null,
           exchange: 'unknown' as const,
         })),
       }

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const props = defineProps<{ title?: string }>()
+const emit = defineEmits<{ opened: [] }>()
 const project = useProjectStore()
 const jobs = useJobsStore()
 const workspace = useWorkspaceStore()
@@ -20,6 +22,7 @@ async function submit(mode: 'create' | 'open') {
     workspace.log(`${mode === 'create' ? 'Создан' : 'Открыт'} проект ${value}`)
     // При открытии движок заново разбирает записи фоновыми задачами.
     await jobs.load()
+    emit('opened')
   }
   catch (e) {
     error.value = e instanceof Error ? e.message : 'Не удалось открыть проект'
@@ -32,7 +35,7 @@ async function submit(mode: 'create' | 'open') {
 
 <template>
   <form class="flex max-w-xl flex-col gap-3 p-4" @submit.prevent="submit('open')">
-    <h1 class="m-0 font-display text-2xl font-semibold text-pl-fg-strong">Проект не открыт</h1>
+    <h1 v-if="props.title !== ''" class="m-0 font-display text-2xl font-semibold text-pl-fg-strong">{{ props.title ?? 'Проект не открыт' }}</h1>
     <p class="m-0 text-pl-muted">
       Проект — папка <code class="font-mono">*.protoledger</code> с копиями записей, журналами и результатами.
       Относительный путь считается от каталога проектов движка.

@@ -7,6 +7,7 @@ const selected = ref<string | null>(null)
 const exchange = ref<ExchangeView | null>(null)
 const exchangeState = ref<'idle' | 'loading' | 'none' | 'error'>('idle')
 const found = ref<Record<string, 'found' | 'none'>>({})
+const withSource = computed(() => !!view.value?.rows.some(r => r.source))
 
 watchEffect(() => {
   if (!selected.value && view.value?.rows[0]) selected.value = view.value.rows[0].id
@@ -49,10 +50,11 @@ const EVENT = {
       </CommonPanelHeader>
       <CommonAsyncState :pending="pending" :error="error?.message" :empty="!view?.rows.length" empty-text="Журнала действий в проекте нет — импортируйте его на экране «Проект»." @retry="refresh()">
         <table v-if="view" class="pl-table">
-          <thead><tr><th>Время</th><th>Действие</th><th>Параметры</th><th>Результат</th><th>Обмен</th></tr></thead>
+          <thead><tr><th>Время</th><th v-if="withSource">Запись</th><th>Действие</th><th>Параметры</th><th>Результат</th><th>Обмен</th></tr></thead>
           <tbody>
             <tr v-for="r in view.rows" :key="r.id" :aria-selected="r.id === selected" @click="selected = r.id">
               <td>{{ r.time }}</td>
+              <td v-if="withSource" class="whitespace-nowrap text-pl-muted">{{ safeText(r.source ?? '—') }}</td>
               <td>{{ safeText(r.action) }}</td>
               <td>{{ safeText(r.params) }}</td>
               <td>{{ safeText(r.result) }}</td>

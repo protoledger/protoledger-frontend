@@ -66,6 +66,8 @@ export interface ActionRow {
   action: string
   params: string
   result: string
+  /** Запись, к которой относится действие (колонка записи в журнале); null — не указана. */
+  source: string | null
   /** unknown — обмен ещё не искали (ищется при выборе действия). */
   exchange: 'found' | 'none' | 'unknown'
 }
