@@ -76,6 +76,17 @@ const STALE_REASON: Record<S['StaleReason'], string> = {
   interpretation: 'изменена интерпретация',
   settings: 'изменены настройки сборки',
   sources: 'записи пропали из проекта',
+  action_logs: 'изменились журналы действий',
+}
+
+// Итог теста гипотезы: «поддержана на N», а не «доказана».
+function verdictLabel(v: 'untested' | 'no_counterexample' | 'refuted' | null) {
+  return v === 'refuted' ? 'опровергнута' : v === 'no_counterexample' ? 'контрпримеров нет' : v === 'untested' ? 'не проверена' : '—'
+}
+
+// Сравнивать имеет смысл только прогоны одного корпуса: иначе разница — это другие данные, а не правка.
+function corpusKey(c: S['CorpusFilter']) {
+  return JSON.stringify([[...(c.sources ?? [])].sort(), c.direction ?? null, c.port ?? null])
 }
 
 function staleText(run: { stale: boolean, staleReasons: S['StaleReason'][] }) {
@@ -380,7 +391,7 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       const at = runId ? runs.items.findIndex(r => r.id === runId) : 0
       const head = runs.items[Math.max(at, 0)]
       const empty: VerificationView = {
-        run: null, filters: [], totals: [], categories: [], categoriesNote: '', problems: [], diffWith: null, diff: [], runs: [],
+        run: null, filters: [], totals: [], categories: [], categoriesNote: '', problems: [], diffWith: null, diffNote: null, diff: [], hypothesisChanges: [], hypotheses: [], runs: [],
         runsNote: 'Прогонов ещё не было — запустите проверку.',
       }
       if (!head) return empty
@@ -388,8 +399,8 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
         api.GET('/api/runs/{id}', { params: { path: { id: head.id } } }).then(unwrap),
         sourceNames(),
       ])
-      // Сравниваем с предыдущим прогоном — следующим в списке (новые идут первыми).
-      const prev = runs.items[Math.max(at, 0) + 1]
+      // Сравниваем с предыдущим прогоном того же корпуса (новые идут первыми).
+      const prev = runs.items.slice(Math.max(at, 0) + 1).find(r => corpusKey(r.corpus) === corpusKey(head.corpus))
       const diff = prev ? unwrap(await api.GET('/api/runs/diff', { params: { query: { a: prev.id, b: head.id, limit: 1 } } })) : null
       const s = head.summary
       const matched = s.counts.matched ?? 0
@@ -414,14 +425,29 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
           { key: 'out_of_scope' as const, label: 'Потоков вне области', count: s.outOfScopeStreams },
         ],
         categoriesNote: '«Превышен предел» и потоки вне области — ограничения реализации и области применимости, а не свойства протокола.',
+        // Контрпример теста гипотезы: структура сообщения цела (категория «совпало»), не выполнился тест.
         problems: detail.counterexamples.slice(0, 50).map(c => ({
-          status: CATEGORY[c.category]?.status ?? 'unknown',
-          label: (CATEGORY[c.category]?.label ?? c.category).toLowerCase(),
+          status: c.violations[0]?.kind === 'hypothesis' ? 'hypothesis' : CATEGORY[c.category]?.status ?? 'unknown',
+          label: c.violations[0]?.kind === 'hypothesis' ? 'гипотеза' : (CATEGORY[c.category]?.label ?? c.category).toLowerCase(),
           where: where(names, c.anchor),
           what: c.violations.map(v => v.detail).join('; ') || (c.messageId ? `тип ${c.messageId}` : 'тип не определён'),
           link: linkOf(c.anchor),
         })),
         diffWith: prev?.id ?? null,
+        diffNote: prev ? null : runs.items.length > 1 ? 'Прошлых прогонов с таким же корпусом нет — сравнивать не с чем.' : null,
+        hypothesisChanges: (diff?.hypotheses ?? []).map(h => ({
+          id: h.id,
+          text: `${verdictLabel(h.from)} → ${verdictLabel(h.to)}, контрпримеров ${formatCount(h.counterexamplesFrom)} → ${formatCount(h.counterexamplesTo)}`,
+          tone: h.kind === 'fixed' ? 'good' : h.kind === 'regressed' ? 'bad' : 'neutral',
+        })),
+        hypotheses: (detail.hypotheses ?? []).map(h => ({
+          id: h.id,
+          test: h.test,
+          status: h.verdict === 'refuted' ? 'violation' : h.verdict === 'no_counterexample' ? 'hypothesis' : 'unknown',
+          label: h.verdict === 'refuted'
+            ? `опровергнута · контрпримеров ${formatCount(h.counterexamples)}`
+            : h.verdict === 'no_counterexample' ? `поддержана ${formatCount(h.held)} / ${formatCount(h.applicable)}` : 'не проверена',
+        })),
         diff: diff
           ? [
               { label: 'Исправилось', value: formatCount(diff.totals.fixed), tone: 'good' },

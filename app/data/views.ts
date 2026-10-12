@@ -210,7 +210,13 @@ export interface VerificationView {
   /** link — куда вести по клику: соединение, направление и диапазон байтов в «Обзоре». */
   problems: { status: KnowledgeStatus, label: string, where: string, what: string, link: StreamLink | null }[]
   diffWith: string | null
+  /** Почему сравнения нет, если оно не показано. */
+  diffNote: string | null
   diff: { label: string, value: string, tone: 'good' | 'bad' | 'neutral' }[]
+  /** Гипотезы, у которых итог теста изменился по сравнению с прошлым прогоном. */
+  hypothesisChanges: { id: string, text: string, tone: 'good' | 'bad' | 'neutral' }[]
+  /** Тесты гипотез интерпретации в этом прогоне. */
+  hypotheses: { id: string, test: string, status: KnowledgeStatus, label: string }[]
   /** stale — почему прогон устарел; null — актуален. */
   runs: { id: string, label: string, current: boolean, stale: string | null }[]
   runsNote: string

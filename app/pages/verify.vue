@@ -101,9 +101,18 @@ const total = computed(() => view.value?.categories.reduce((n, c) => n + c.count
       <form v-if="showCorpus" class="flex flex-wrap items-end gap-x-6 gap-y-2.5 border-b border-pl-line px-3 py-3" @submit.prevent="startRun">
         <fieldset class="m-0 flex flex-col gap-1 border-0 p-0">
           <legend class="pl-caption mb-1">Записи</legend>
-          <label v-for="s in project.sources" :key="s.sha256" class="flex items-center gap-1.5">
-            <input v-model="corpusSources" type="checkbox" :value="s.sha256"> {{ safeText(s.name) }}
-          </label>
+          <div class="mb-1 flex gap-1.5">
+            <button class="pl-chip" type="button" @click="corpusSources = project.sources.map(x => x.sha256)">все</button>
+            <button class="pl-chip" type="button" @click="corpusSources = []">ни одной</button>
+          </div>
+          <div class="grid max-h-56 grid-cols-[auto_auto] items-center gap-x-3 gap-y-1 overflow-auto pr-1">
+            <template v-for="s in project.sources" :key="s.sha256">
+              <label class="flex items-center gap-1.5">
+                <input v-model="corpusSources" type="checkbox" :value="s.sha256"> {{ safeText(s.name) }}
+              </label>
+              <button class="text-left text-xs text-pl-muted underline-offset-2 hover:text-pl-fg-strong hover:underline" type="button" :aria-label="`Только ${s.name}`" @click="corpusSources = [s.sha256]">только эта</button>
+            </template>
+          </div>
         </fieldset>
         <label class="flex flex-col gap-1">
           <span class="pl-caption">Направление</span>
@@ -152,6 +161,21 @@ const total = computed(() => view.value?.categories.reduce((n, c) => n + c.count
           </div>
           <p class="mt-2 text-pl-muted">{{ view.categoriesNote }}</p>
 
+          <template v-if="view.hypotheses.length">
+            <h3 class="pl-caption mt-5 mb-2">Гипотезы в прогоне</h3>
+            <table class="pl-table">
+              <thead><tr><th>Гипотеза</th><th>Тест</th><th>Итог</th></tr></thead>
+              <tbody>
+                <tr v-for="h in view.hypotheses" :key="h.id">
+                  <td class="font-semibold">{{ h.id }}</td>
+                  <td class="font-mono text-xs break-all">{{ safeText(h.test) }}</td>
+                  <td><CommonStatusBadge :status="h.status" :label="h.label" /></td>
+                </tr>
+              </tbody>
+            </table>
+            <p class="mt-1.5 text-pl-muted">Тест без контрпримеров — «поддержана на этих примерах», а не доказательство.</p>
+          </template>
+
           <h3 class="pl-caption mt-5 mb-2">Контрпримеры и проблемы</h3>
           <p v-if="!view.problems.length" class="text-pl-muted">Контрпримеров и проблем нет.</p>
           <table v-else class="pl-table">
@@ -178,12 +202,22 @@ const total = computed(() => view.value?.categories.reduce((n, c) => n + c.count
 
     <ShellInspectorContent :title="view?.diffWith ? `Сравнение с ${view.diffWith}` : 'Прогоны'">
       <div v-if="view" class="pl-scroll flex-1">
+        <p v-if="view.diffNote" class="m-0 px-3 pt-3 text-pl-muted">{{ view.diffNote }}</p>
         <dl class="pl-dl">
           <template v-for="d in view.diff" :key="d.label">
             <dt>{{ d.label }}</dt>
             <dd :class="{ 'text-pl-st-rule': d.tone === 'good', 'text-pl-st-violation': d.tone === 'bad' }">{{ d.value }}</dd>
           </template>
         </dl>
+        <template v-if="view.hypothesisChanges.length">
+          <h3 class="pl-caption m-0 px-3 pt-1 pb-2">Гипотезы: что изменилось</h3>
+          <dl class="pl-dl pt-0">
+            <template v-for="h in view.hypothesisChanges" :key="h.id">
+              <dt class="font-semibold">{{ h.id }}</dt>
+              <dd :class="{ 'text-pl-st-rule': h.tone === 'good', 'text-pl-st-violation': h.tone === 'bad' }">{{ h.text }}</dd>
+            </template>
+          </dl>
+        </template>
         <h3 class="pl-caption m-0 px-3 pt-3.5 pb-2">Прогоны</h3>
         <table class="pl-table">
           <tbody>
