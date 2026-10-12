@@ -26,6 +26,7 @@ export type JobProgress = S['JobProgress']
 export type ActionLogMapping = S['ActionLogMapping']
 export type ActionLogRecord = S['ActionLog']
 export type CorpusFilter = S['CorpusFilter']
+export type FieldHints = S['FieldHints']
 
 export interface Page<T> {
   items: T[]

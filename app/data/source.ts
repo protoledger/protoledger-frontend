@@ -1,6 +1,7 @@
 import type {
   ActionLogMapping,
   CorpusFilter,
+  FieldHints,
   ActionLogRecord,
   Connection,
   ConnectionFlag,
@@ -85,6 +86,8 @@ export interface ResearchSource {
   /** Проверить и сохранить текст; created = false — смысл не изменился, ревизии нет. */
   saveInterpretation(yaml: string): Promise<{ rev: number, created: boolean }>
   getInterpretationRevisions(): Promise<number[]>
+  /** Подсказка типа поля по значениям в записях; null — пример данных. Поле группы — «группа.поле». */
+  getFieldHints(messageId: string, field: string, yaml?: string): Promise<FieldHints | null>
   getInterpretationRevision(rev: number): Promise<string>
   getHypotheses(): Promise<HypothesesView>
   getHypothesisDetail(id: string): Promise<HypothesisDetail | null>

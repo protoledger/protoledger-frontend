@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { InterpretationView } from '~/data/views'
 import { STATUS } from '~/utils/status'
-import { parseForm } from '~/utils/interp-form'
+import type { FieldHints } from '~/api/types'
+import { parseForm, setFieldAttr } from '~/utils/interp-form'
 import { tokenizeYamlLine } from '~/utils/yaml-tokens'
 
 const data = useData()
@@ -80,6 +81,49 @@ const lineIssues = computed(() => {
   return map
 })
 const issueList = computed(() => [...lineIssues.value].sort((a, b) => a[0] - b[0]))
+
+// Быстрое исправление: движок перебирает типы той же ширины и предлагает тот, где противоречий меньше.
+const unq = (v: string | undefined) => (v ?? '').replace(/^"(.*)"$/, '$1')
+const fieldAt = computed(() => {
+  for (const m of parseForm(text.value)) {
+    for (const f of m.fields) {
+      if (f.line === selectedLine.value) return { line: f.line, message: m.id, name: `${f.group ? `${f.group}.` : ''}${unq(f.attrs.name)}`, type: unq(f.attrs.type) }
+    }
+  }
+  return null
+})
+const hint = ref<FieldHints | null>(null)
+const hintState = ref<'idle' | 'loading' | 'error'>('idle')
+watch([fieldAt, () => issueList.value.length], async ([f]) => {
+  hint.value = null
+  hintState.value = 'idle'
+  if (!f || !lineIssues.value.has(f.line) || !/^[ui]\d/.test(f.type)) return
+  hintState.value = 'loading'
+  try {
+    hint.value = await data.getFieldHints(f.message, f.name, dirty.value ? text.value : undefined)
+    hintState.value = 'idle'
+  }
+  catch {
+    hintState.value = 'error'
+  }
+})
+const hintCurrent = computed(() => hint.value?.candidates.find(c => c.current) ?? null)
+const hintBest = computed(() => hint.value?.candidates.find(c => c.type === hint.value?.suggested) ?? null)
+
+function applyHint() {
+  const h = hint.value
+  if (!h?.suggested) return
+  let t = text.value
+  // Одно поле в запросе и ответе меняется вместе: строки не сдвигаются, номера из разбора остаются верными.
+  for (const m of parseForm(t)) {
+    if (!h.messages.includes(m.id)) continue
+    for (const f of m.fields) {
+      if (`${f.group ? `${f.group}.` : ''}${unq(f.attrs.name)}` === h.field && unq(f.attrs.type) === h.currentType) t = setFieldAttr(t, f.line, 'type', h.suggested)
+    }
+  }
+  workspace.log(`Быстрое исправление: ${h.field} ${h.currentType} → ${h.suggested} (${h.messages.join(', ')})`)
+  text.value = t
+}
 
 // Переход к строке из списка нарушений: выделить и прокрутить редактор (строка — 21px).
 const editorScroll = ref<HTMLElement | null>(null)
@@ -300,6 +344,22 @@ const TOKEN: Record<string, string> = {
             </li>
           </ul>
         </template>
+        <template v-if="hintState !== 'idle' || hint">
+          <h3 :class="cap">Быстрое исправление</h3>
+          <div class="flex flex-col gap-2 px-3 pb-2">
+            <p v-if="hintState === 'loading'" class="m-0 text-pl-muted" aria-live="polite">Подбираю тип по значениям в записях…</p>
+            <p v-else-if="hintState === 'error'" class="m-0 text-pl-muted">Подсказка для этого поля недоступна.</p>
+            <template v-else-if="hint && hint.suggested && hintCurrent && hintBest">
+              <button class="pl-btn pl-btn-primary self-start" type="button" @click="applyHint">Тип {{ hint.currentType }} → {{ hint.suggested }}</button>
+              <p class="m-0 text-pl-muted">
+                Контрпримеров {{ hintCurrent.counterexamples }} → {{ hintBest.counterexamples }}; значения от {{ hintBest.min }} до {{ hintBest.max }}<template v-if="hintBest.negative">, отрицательных {{ hintBest.negative }}</template>.
+                Меняется в: {{ hint.messages.join(', ') }}. Это подсказка по данным — решение и сохранение ревизии за вами.
+              </p>
+            </template>
+            <p v-else-if="hint" class="m-0 text-pl-muted">Тип той же ширины противоречий не убирает — дело не в знаке или порядке байтов.</p>
+          </div>
+        </template>
+
         <template v-if="issueList.length">
           <h3 :class="cap">Нарушения · {{ issueList.length }} {{ issueList.length === 1 ? 'строка' : 'строк' }}</h3>
           <ul class="m-0 list-none p-0">

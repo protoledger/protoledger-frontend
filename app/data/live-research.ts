@@ -373,6 +373,10 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       return { rev: res.rev, created: res.created }
     },
 
+    async getFieldHints(messageId, field, yaml) {
+      return unwrap(await api.POST('/api/interpretation/field-hints', { body: { messageId, field, ...(yaml === undefined ? {} : { yaml }) } }))
+    },
+
     async getInterpretationRevisions() {
       return (await revisions()).map(r => r.rev).sort((a, b) => b - a)
     },

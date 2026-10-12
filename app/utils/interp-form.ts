@@ -7,6 +7,8 @@ export interface FormField {
   line: number
   /** Уровень вложенности: 0 — поле сообщения, больше — поле повторяющейся группы. */
   depth: number
+  /** Блочное поле-группа, внутри которого стоит поле (`- name: measurements` … `repeat:`); null — поле сообщения. */
+  group: string | null
   /** Значения как в тексте (кавычки сохранены). */
   attrs: Record<string, string>
 }
@@ -57,6 +59,7 @@ export function parseForm(text: string): FormMessage[] {
   const out: FormMessage[] = []
   let indent: number | null = null
   let baseField: number | null = null
+  let block: { name: string, pad: number } | null = null
   for (let i = start + 1; i < lines.length; i++) {
     const l = lines[i]!
     if (/^\S/.test(l)) break
@@ -64,6 +67,7 @@ export function parseForm(text: string): FormMessage[] {
     if (m && (indent === null || m[1]!.length === indent)) {
       indent = m[1]!.length
       baseField = null
+      block = null
       out.push({ id: m[2]!, line: i + 1, when: null, fields: [] })
       continue
     }
@@ -74,12 +78,18 @@ export function parseForm(text: string): FormMessage[] {
       cur.when = w[1]!.trim()
       continue
     }
+    const b = /^(\s*)- name:\s*([^\s#{]+)\s*$/.exec(l)
+    if (b && !FLOW.test(l)) {
+      block = { name: b[2]!, pad: b[1]!.length }
+      continue
+    }
     const f = FLOW.exec(l)
     if (f) {
       const pad = f[1]!.length
+      if (block && pad <= block.pad) block = null
       if (baseField === null) baseField = pad
       const attrs = Object.fromEntries(splitFlow(f[2]!))
-      if ('name' in attrs) cur.fields.push({ line: i + 1, depth: Math.max(0, Math.round((pad - baseField) / 6)), attrs })
+      if ('name' in attrs) cur.fields.push({ line: i + 1, depth: Math.max(0, Math.round((pad - baseField) / 6)), group: block?.name ?? null, attrs })
     }
   }
   return out
