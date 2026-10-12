@@ -147,6 +147,15 @@ export interface InterpretationTreeNode {
   selected?: boolean
 }
 
+export interface FieldViolation {
+  messageId: string | null
+  /** Имя поля (для гипотез — номер гипотезы). */
+  field: string
+  kind: string
+  detail: string
+  count: number
+}
+
 export interface InterpretationView {
   /** null — интерпретация ещё не создана. */
   rev: number | null
@@ -157,6 +166,10 @@ export interface InterpretationView {
   /** Поток, на котором показан предпросмотр (идентификатор движка); null — потоков нет. */
   stream: string | null
   preview: { stream: string, rows: { label: string, value: string }[] }
+  /** Нарушения в предпросмотре, сгруппированные по типу сообщения и полю. */
+  violations: FieldViolation[]
+  /** Опровергнутые гипотезы последнего прогона этой ревизии. */
+  runIssues: { id: string, label: string, runId: string }[]
   field: { line: number, status: KnowledgeStatus, ref: string, counterexamples: number, where: string } | null
   /** Правка текста одной строки: from → to; применяется в редакторе и сохраняется ревизией. */
   quickFix: { label: string, note: string, line: number, from: string, to: string } | null

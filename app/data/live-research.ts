@@ -4,7 +4,7 @@ import { base64ToBytes, formatCount, hexByte } from '~/utils/bytes'
 import type { KnowledgeStatus } from '~/utils/status'
 import type { ContractSource, ResearchSource } from './source'
 import { framingOnlyYaml, replaceFramingBlock } from '~/utils/interpretation-yaml'
-import type { CompareRow, CompareView, ExchangeSide, ExchangeView, FramingCandidate, Hypothesis, InterpretationTreeNode, ResultCategory, StreamLink, VerificationView } from './views'
+import type { CompareRow, CompareView, ExchangeSide, ExchangeView, FieldViolation, FramingCandidate, Hypothesis, InterpretationTreeNode, ResultCategory, StreamLink, VerificationView } from './views'
 
 type S = components['schemas']
 
@@ -196,8 +196,19 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
     }]
     const counts = preview.counts ?? {}
     const total = Object.values(counts).reduce((n, c) => n + c, 0)
+    // Одно нарушение одного поля повторяется в каждом сообщении — показываем первое объяснение и число.
+    const byField = new Map<string, FieldViolation>()
+    for (const m of preview.items) {
+      for (const v of m.violations) {
+        const key = `${m.messageId ?? ''}|${v.id}|${v.kind}`
+        const seen = byField.get(key)
+        if (seen) seen.count++
+        else byField.set(key, { messageId: m.messageId, field: v.id, kind: v.kind, detail: v.detail, count: 1 })
+      }
+    }
     return {
       tree,
+      violations: [...byField.values()],
       preview: {
         stream: shortStream(stream),
         rows: preview.outOfScope
@@ -325,12 +336,21 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       }
       catch (e) {
         if (e instanceof ApiError && e.status === 404) {
-          return { rev: null, dirty: false, tree: [], yaml: [], selectedLine: 0, stream: await defaultStream(), preview: { stream: '—', rows: [] }, field: null, quickFix: null }
+          return { rev: null, dirty: false, tree: [], yaml: [], selectedLine: 0, stream: await defaultStream(), preview: { stream: '—', rows: [] }, violations: [], runIssues: [], field: null, quickFix: null }
         }
         throw e
       }
       const stream = await defaultStream()
-      const { tree, preview } = stream ? await previewOf(stream) : { tree: [], preview: { stream: '—', rows: [] } }
+      const { tree, preview, violations } = stream ? await previewOf(stream) : { tree: [], preview: { stream: '—', rows: [] }, violations: [] }
+      // Тесты гипотез выполняет прогон: берём последний прогон этой же ревизии.
+      const runs = unwrap(await api.GET('/api/runs', { params: { query: { limit: 20 } } })).items
+      const sameRev = runs.find(r => r.revision === doc.rev)
+      const detail = sameRev ? unwrap(await api.GET('/api/runs/{id}', { params: { path: { id: sameRev.id } } })) : null
+      const runIssues = (detail?.hypotheses ?? []).filter(h => h.verdict === 'refuted').map(h => ({
+        id: h.id,
+        label: `опровергнута в ${detail!.id} · контрпримеров ${formatCount(h.counterexamples)}`,
+        runId: detail!.id,
+      }))
       return {
         rev: doc.rev,
         dirty: false,
@@ -339,6 +359,8 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
         selectedLine: 1,
         stream,
         preview,
+        violations,
+        runIssues,
         field: null,
         quickFix: null,
       }

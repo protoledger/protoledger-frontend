@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { InterpretationView } from '~/data/views'
 import { STATUS } from '~/utils/status'
+import { parseForm } from '~/utils/interp-form'
 import { tokenizeYamlLine } from '~/utils/yaml-tokens'
 
 const data = useData()
@@ -28,7 +29,7 @@ const text = ref('')
 const original = ref('')
 const basedOn = ref<number | null>(null)
 const stream = ref<string | null>(null)
-const result = ref<Pick<InterpretationView, 'tree' | 'preview'> | null>(null)
+const result = ref<Pick<InterpretationView, 'tree' | 'preview' | 'violations'> | null>(null)
 const problem = ref<string | null>(null)
 const previewing = ref(false)
 const saving = ref(false)
@@ -41,7 +42,7 @@ watch(view, (v) => {
   text.value = v.rev ? original.value : TEMPLATE
   basedOn.value = v.rev
   stream.value = v.stream
-  result.value = v.rev ? { tree: v.tree, preview: v.preview } : null
+  result.value = v.rev ? { tree: v.tree, preview: v.preview, violations: v.violations } : null
   selectedLine.value = v.selectedLine || null
 }, { immediate: true })
 
@@ -54,13 +55,47 @@ const problemLine = computed(() => {
   return m ? Number(m[1]) : null
 })
 
+// Нарушение → строка поля: тип сообщения и имя поля; для гипотезы — поля с `hypothesis: Hn`.
+// Итоги прогона относятся к сохранённой ревизии — показываем их, пока текст не меняли.
+const lineIssues = computed(() => {
+  const map = new Map<number, string[]>()
+  const put = (line: number, msg: string) => map.set(line, [...(map.get(line) ?? []), msg])
+  const form = parseForm(text.value)
+  const name = (v: string | undefined) => (v ?? '').replace(/^"(.*)"$/, '$1')
+  for (const v of result.value?.violations ?? []) {
+    for (const m of form) {
+      if (v.messageId && m.id !== v.messageId) continue
+      for (const f of m.fields) {
+        const n = name(f.attrs.name)
+        const hit = v.kind === 'hypothesis' ? name(f.attrs.hypothesis) === v.field : n === v.field || v.field.endsWith(`.${n}`)
+        if (hit) put(f.line, `${v.detail}${v.count > 1 ? ` · в ${v.count} сообщ.` : ''}`)
+      }
+    }
+  }
+  if (!dirty.value) {
+    for (const h of view.value?.runIssues ?? []) {
+      for (const m of form) for (const f of m.fields) if (name(f.attrs.hypothesis) === h.id) put(f.line, `${h.id}: ${h.label}`)
+    }
+  }
+  return map
+})
+const issueList = computed(() => [...lineIssues.value].sort((a, b) => a[0] - b[0]))
+
+// Переход к строке из списка нарушений: выделить и прокрутить редактор (строка — 21px).
+const editorScroll = ref<HTMLElement | null>(null)
+function goToLine(line: number) {
+  selectedLine.value = line
+  mode.value = 'yaml'
+  void nextTick(() => editorScroll.value?.scrollTo({ top: Math.max(0, (line - 4) * 21) }))
+}
+
 const lines = computed(() => {
   const marks = view.value?.yaml ?? []
   return text.value.split('\n').map((t, i) => ({
     n: i + 1,
     tokens: tokenizeYamlLine(safeText(t)),
     // Значки статусов — от последнего разбора, только пока строка не менялась.
-    mark: marks[i]?.text === t ? marks[i]?.mark : undefined,
+    mark: lineIssues.value.has(i + 1) ? 'violation' as const : marks[i]?.text === t ? marks[i]?.mark : undefined,
   }))
 })
 
@@ -201,7 +236,7 @@ const TOKEN: Record<string, string> = {
         </button>
       </CommonPanelHeader>
       <CommonAsyncState :pending="pending" :error="error?.message" :empty="!view" @retry="refresh()">
-        <div v-if="mode === 'yaml'" class="pl-scroll flex-1 py-2 font-mono text-[12.5px] leading-[21px]">
+        <div v-if="mode === 'yaml'" ref="editorScroll" class="pl-scroll flex-1 py-2 font-mono text-[12.5px] leading-[21px]">
           <div class="flex min-w-max">
             <div class="flex-none select-none" aria-hidden="true">
               <div v-for="l in lines" :key="l.n" class="flex h-[21px]" :class="[l.n === selectedLine && 'bg-pl-raise', l.n === problemLine && 'bg-pl-st-violation/15']">
@@ -255,6 +290,27 @@ const TOKEN: Record<string, string> = {
           </template>
         </dl>
         <p v-else class="m-0 px-3 py-2 text-pl-muted">Начните с шаблона слева: разбор обновляется при правке.</p>
+
+        <template v-if="selectedLine && lineIssues.get(selectedLine)">
+          <h3 :class="cap">Поле в строке {{ selectedLine }}</h3>
+          <ul class="m-0 flex list-none flex-col gap-1.5 px-3 pb-2">
+            <li v-for="(msg, i) in lineIssues.get(selectedLine)" :key="i" class="flex items-start gap-1.5">
+              <UIcon :name="STATUS.violation.icon" class="mt-1 size-3 flex-none" :style="{ color: STATUS.violation.color }" aria-hidden="true" />
+              <span>{{ safeText(msg) }}</span>
+            </li>
+          </ul>
+        </template>
+        <template v-if="issueList.length">
+          <h3 :class="cap">Нарушения · {{ issueList.length }} {{ issueList.length === 1 ? 'строка' : 'строк' }}</h3>
+          <ul class="m-0 list-none p-0">
+            <li v-for="[line, msgs] in issueList" :key="line">
+              <button class="flex w-full items-start gap-2 px-3 py-1 text-left hover:bg-pl-raise" type="button" :aria-current="line === selectedLine" @click="goToLine(line)">
+                <span class="w-12 flex-none font-mono text-pl-muted">стр. {{ line }}</span>
+                <span class="min-w-0 truncate" :title="safeText(msgs.join('; '))">{{ safeText(msgs[0]) }}{{ msgs.length > 1 ? ` (+${msgs.length - 1})` : '' }}</span>
+              </button>
+            </li>
+          </ul>
+        </template>
 
         <h3 :class="cap">Выражения в when, check и тестах</h3>
         <dl class="pl-dl pt-0 [&_dt]:font-mono [&_dt]:text-pl-fg-strong">
