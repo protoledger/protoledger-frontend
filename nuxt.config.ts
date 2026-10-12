@@ -42,6 +42,9 @@ export default defineNuxtConfig({
       '/api': {
         target: 'http://127.0.0.1:8080/api',
         changeOrigin: true,
+        // Без движка прокси иначе ждёт бесконечно и интерфейс висит; с пределом отвечает ошибкой шлюза.
+        proxyTimeout: 5000,
+        timeout: 5000,
         headers: devToken ? { 'X-Protoledger-Token': devToken } : {},
       },
     },

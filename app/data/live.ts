@@ -1,4 +1,4 @@
-import { ApiError, apiClient, readSessionToken, unwrap } from '~/api/client'
+import { ApiError, apiClient, engineDownProblem, readSessionToken, unwrap } from '~/api/client'
 import type { Job, JobProgress } from '~/api/types'
 import { parseSseChunk } from '~/utils/sse'
 import type { ContractSource } from './source'
@@ -76,7 +76,7 @@ async function streamJob(id: string, onUpdate: (job: Job) => void, signal: Abort
   let last: Job | null = null
   try {
     const res = await fetch(`/api/jobs/${encodeURIComponent(id)}/events`, { headers, signal })
-    if (!res.ok || !res.body) throw new ApiError(res.status, null)
+    if (!res.ok || !res.body) throw new ApiError(res.status, engineDownProblem(res.status))
     const reader = res.body.pipeThrough(new TextDecoderStream()).getReader()
     let buffer = ''
     for (;;) {

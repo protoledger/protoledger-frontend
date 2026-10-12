@@ -47,7 +47,8 @@ let client: ReturnType<typeof createClient<paths>> | null = null
 export function apiClient() {
   if (!client) {
     // fetch берётся при каждом запросе, а не при создании клиента (подмена в тестах).
-    client = createClient<paths>({ baseUrl: '/', fetch: request => globalThis.fetch(request) })
+    // Сетевой обрыв (движок не запущен или упал) превращаем в ответ 502: дальше он идёт как обычная ошибка API.
+    client = createClient<paths>({ baseUrl: '/', fetch: request => globalThis.fetch(request).catch(() => new Response(null, { status: 502 })) })
     client.use(tokenMiddleware)
   }
   return client
@@ -57,7 +58,20 @@ export function apiClient() {
 export function unwrap<T>(result: { data?: T, error?: unknown, response: Response }): T {
   if (result.data !== undefined) return result.data
   const problem = isProblem(result.error) ? result.error : null
-  throw new ApiError(result.response.status, problem)
+  throw new ApiError(result.response.status, problem ?? engineDownProblem(result.response.status))
+}
+
+// Ответ без тела с 502/504 — до движка не дошли. В dev /api проксируется на :8080: движок или туннель не запущен.
+export function engineDownProblem(status: number): Problem | null {
+  if (status !== 502 && status !== 504) return null
+  return {
+    type: 'urn:protoledger:problem:engine-unavailable',
+    title: 'Движок не отвечает',
+    status,
+    detail: import.meta.dev
+      ? 'Движок на 127.0.0.1:8080 не отвечает: запустите его (serve --dev) или туннель к общему dev-серверу.'
+      : 'Движок не отвечает. Перезапустите приложение; данные проекта сохранены в его папке.',
+  }
 }
 
 function isProblem(value: unknown): value is Problem {
