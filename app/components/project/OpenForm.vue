@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { hasNativeFolderPicker, pickFolder } from '~/utils/desktop'
+
 const props = defineProps<{ title?: string }>()
 const emit = defineEmits<{ opened: [] }>()
 const project = useProjectStore()
@@ -6,6 +8,19 @@ const jobs = useJobsStore()
 const workspace = useWorkspaceStore()
 
 const path = ref('')
+const native = ref(false)
+onMounted(() => { native.value = hasNativeFolderPicker() })
+
+async function choose() {
+  error.value = null
+  try {
+    const picked = await pickFolder('Папка проекта')
+    if (picked) path.value = picked
+  }
+  catch (e) {
+    error.value = e instanceof Error ? e.message : 'Не удалось открыть выбор папки'
+  }
+}
 const busy = ref<'create' | 'open' | null>(null)
 const error = ref<string | null>(null)
 
@@ -42,14 +57,17 @@ async function submit(mode: 'create' | 'open') {
     </p>
     <label class="flex flex-col gap-1.5">
       <span class="pl-caption">Папка проекта</span>
-      <input
-        id="project-path"
-        v-model="path"
-        class="h-[30px] rounded border border-pl-line bg-pl-raise px-2.5 font-mono text-pl-fg-strong outline-none focus:border-pl-wine-text"
-        placeholder="stand.protoledger"
-        autocomplete="off"
-        spellcheck="false"
-      >
+      <span class="flex gap-2">
+        <input
+          id="project-path"
+          v-model="path"
+          class="h-[30px] min-w-0 flex-1 rounded border border-pl-line bg-pl-raise px-2.5 font-mono text-pl-fg-strong outline-none focus:border-pl-wine-text"
+          placeholder="stand.protoledger"
+          autocomplete="off"
+          spellcheck="false"
+        >
+        <button v-if="native" class="pl-btn h-[30px]" type="button" @click="choose">Выбрать папку…</button>
+      </span>
     </label>
     <div class="flex items-center gap-2.5">
       <button class="pl-btn pl-btn-primary" type="submit" :disabled="busy !== null">{{ busy === 'open' ? 'Открываю…' : 'Открыть' }}</button>
