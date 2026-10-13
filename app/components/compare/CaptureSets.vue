@@ -37,6 +37,9 @@ async function run() {
 const ms = (ns: number) => `${(ns / 1e6).toLocaleString('ru-RU', { maximumFractionDigits: 2 })} мс`
 const range = (v: { min: number | null, max: number | null, distinct: number }) => (v.min === null ? '—' : `${v.min}…${v.max} · ${v.distinct > 64 ? '>64' : v.distinct} знач.`)
 const CHANGE = { new: 'только во втором', missing: 'только в первом', same: 'в обоих' }
+const allSummary = ref(false)
+watch(result, () => { allSummary.value = false })
+const summary = computed(() => (allSummary.value ? result.value?.summary : result.value?.summary.slice(0, 8)) ?? [])
 const changedTypes = computed(() => result.value?.types.filter(t => t.change !== 'same') ?? [])
 </script>
 
@@ -79,8 +82,9 @@ const changedTypes = computed(() => result.value?.types.filter(t => t.change !==
       <h3 class="pl-caption m-0">Главное</h3>
       <p v-if="!result.summary.length" class="m-0 text-pl-muted">Отличий в типах, значениях полей и задержках не нашлось.</p>
       <ul v-else class="m-0 list-disc pl-5">
-        <li v-for="(l, i) in result.summary" :key="i">{{ safeText(l) }}</li>
+        <li v-for="(l, i) in summary" :key="i">{{ safeText(l) }}</li>
       </ul>
+      <button v-if="!allSummary && result.summary.length > 8" class="pl-btn pl-btn-ghost self-start" type="button" @click="allSummary = true">ещё {{ result.summary.length - 8 }}</button>
       <p v-if="result.incomplete" class="m-0 text-pl-st-hypothesis">Сравнение прервано по времени — показана часть отличий.</p>
 
       <template v-if="changedTypes.length">
