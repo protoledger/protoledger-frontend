@@ -87,6 +87,23 @@ describe('живые модели экранов', () => {
     expect(v.yaml).toEqual([])
   })
 
+  it('нарушения в редакторе — из последнего полного прогона ревизии', async () => {
+    const head = (id: string, corpus: object) => ({
+      id, revision: 3, interpretationDigest: SHA, settingsDigest: SHA, corpus, sources: [SHA], engineVersion: '0.1.0', stale: false, staleReasons: [],
+      summary: { streams: 1, outOfScopeStreams: 0, messages: 1, messageBytes: 1, unknownBytes: 0, counts: {}, byMessage: {}, counterexamples: 0, counterexamplesTruncated: false },
+    })
+    const refuted = (n: number) => [{ id: 'H6', test: 't', verdict: 'refuted', applicable: 24, held: 24 - n, counterexamples: n }]
+    stubApi({
+      '/api/interpretation': { rev: 3, yaml: 'messages: []', digest: SHA },
+      '/api/interpretation/preview': { items: [], total: 0, limit: 500, offset: 0 },
+      '/api/runs': { items: [head('run-3', { sources: [SHA] }), head('run-2', {})], total: 2, limit: 20, offset: 0 },
+      '/api/runs/run-2': { ...head('run-2', {}), streams: [], counterexamples: [], hypotheses: refuted(4) },
+      '/api/runs/run-3': { ...head('run-3', { sources: [SHA] }), streams: [], counterexamples: [], hypotheses: refuted(2) },
+    })
+    const v = await createLiveResearchSource(contractWithBytes(), createMockResearchSource()).getInterpretation()
+    expect(v.runIssues).toEqual([{ id: 'H6', label: 'опровергнута в run-2 · контрпримеров 4', runId: 'run-2' }])
+  })
+
   it('действия с одинаковым временем получают разные запросы по порядку', () => {
     const t = (ms: number) => new Date(Date.UTC(2026, 9, 10, 14, 0, 0, ms)).toISOString()
     const ex = {

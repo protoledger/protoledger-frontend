@@ -23,6 +23,23 @@ watchEffect(() => {
   if (!corpusSources.value.length && project.sources.length) corpusSources.value = project.sources.map(s => s.sha256)
 })
 
+// Записи с дефектами сборки отдельно от чистых: исследование обычно идёт по чистым.
+const corpusGroups = computed(() => {
+  const byName = [...project.sources].sort((a, b) => a.name.localeCompare(b.name, 'ru', { numeric: true }))
+  const clean = byName.filter(s => !project.issuesOf(s.sha256))
+  const flawed = byName.filter(s => project.issuesOf(s.sha256))
+  return [
+    { id: 'clean', title: 'Без замечаний', items: clean },
+    { id: 'flawed', title: 'С замечаниями к сборке', items: flawed },
+  ].filter(g => g.items.length)
+})
+
+function toggleGroup(items: { sha256: string }[]) {
+  const ids = items.map(s => s.sha256)
+  const all = ids.every(id => corpusSources.value.includes(id))
+  corpusSources.value = all ? corpusSources.value.filter(id => !ids.includes(id)) : [...new Set([...corpusSources.value, ...ids])]
+}
+
 // Кнопка «Запустить» берёт корпус из формы — показываем, если он не «всё».
 const corpusNote = computed(() => {
   const parts: string[] = []
@@ -105,12 +122,19 @@ const total = computed(() => view.value?.categories.reduce((n, c) => n + c.count
             <button class="pl-chip" type="button" @click="corpusSources = project.sources.map(x => x.sha256)">все</button>
             <button class="pl-chip" type="button" @click="corpusSources = []">ни одной</button>
           </div>
-          <div class="grid max-h-56 grid-cols-[auto_auto] items-center gap-x-3 gap-y-1 overflow-auto pr-1">
-            <template v-for="s in project.sources" :key="s.sha256">
-              <label class="flex items-center gap-1.5">
-                <input v-model="corpusSources" type="checkbox" :value="s.sha256"> {{ safeText(s.name) }}
-              </label>
-              <button class="text-left text-xs text-pl-muted underline-offset-2 hover:text-pl-fg-strong hover:underline" type="button" :aria-label="`Только ${s.name}`" @click="corpusSources = [s.sha256]">только эта</button>
+          <div class="grid max-h-72 grid-cols-[auto_auto] items-center gap-x-3 gap-y-1 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
+            <template v-for="g in corpusGroups" :key="g.id">
+              <div class="col-span-2 mt-1.5 flex items-center gap-2 first:mt-0">
+                <span class="pl-caption">{{ g.title }} · {{ g.items.length }}</span>
+                <button class="pl-chip" type="button" @click="toggleGroup(g.items)">{{ g.items.every(s => corpusSources.includes(s.sha256)) ? 'снять' : 'выбрать' }}</button>
+              </div>
+              <template v-for="s in g.items" :key="s.sha256">
+                <label class="flex items-center gap-1.5" :title="project.issuesOf(s.sha256)?.labels.join(', ')">
+                  <input v-model="corpusSources" type="checkbox" :value="s.sha256"> {{ safeText(s.name) }}
+                  <span v-if="project.issuesOf(s.sha256)" class="text-xs text-pl-muted">{{ project.issuesOf(s.sha256)!.labels.join(', ') }}</span>
+                </label>
+                <button class="text-left text-xs text-pl-muted underline-offset-2 hover:text-pl-fg-strong hover:underline" type="button" :aria-label="`Только ${s.name}`" @click="corpusSources = [s.sha256]">только эта</button>
+              </template>
             </template>
           </div>
         </fieldset>

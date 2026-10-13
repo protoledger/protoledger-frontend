@@ -1,12 +1,13 @@
 /**
  * Markdown отчёта движка → блоки для показа интерполяцией текста (без HTML в странице).
- * Поддержано то, что пишет движок: заголовки, абзацы, списки «- », таблицы, экранирование «\x».
+ * Поддержано то, что пишет движок: заголовки, абзацы, списки «- », таблицы, блоки кода ```, экранирование «\x».
  */
 export type ReportBlock =
   | { kind: 'heading', level: 1 | 2 | 3, text: string, id: string }
   | { kind: 'paragraph', text: string }
   | { kind: 'list', items: string[] }
   | { kind: 'table', head: string[], rows: string[][] }
+  | { kind: 'code', text: string }
 
 export function unescapeMd(text: string): string {
   return text.replace(/\\([\\`*_{}[\]()#+\-.!|>~])/g, '$1')
@@ -31,6 +32,15 @@ export function reportBlocks(markdown: string): ReportBlock[] {
   }
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] ?? ''
+    // Внутри блока кода текст как есть: без экранирования и разбора разметки.
+    if (/^\s*```/.test(line)) {
+      flush()
+      const code: string[] = []
+      i++
+      while (i < lines.length && !/^\s*```\s*$/.test(lines[i] ?? '')) code.push(lines[i++] ?? '')
+      out.push({ kind: 'code', text: code.join('\n') })
+      continue
+    }
     const h = /^(#{1,3})\s+(.*)$/.exec(line)
     if (h) {
       flush()
