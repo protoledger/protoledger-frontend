@@ -93,6 +93,26 @@ function corpusKey(c: S['CorpusFilter']) {
   return JSON.stringify([[...(c.sources ?? [])].sort(), c.direction ?? null, c.port ?? null])
 }
 
+// Сначала исправленные и ухудшенные, затем по номеру: H2 раньше H10.
+const CHANGE_ORDER: Record<string, number> = { fixed: 0, regressed: 1 }
+
+export function hypothesisChanges(items: S['RunHypothesisChange'][]): VerificationView['hypothesisChanges'] {
+  const num = (id: string) => Number(/\d+/.exec(id)?.[0] ?? Infinity)
+  return [...items]
+    .sort((a, b) => (CHANGE_ORDER[a.kind] ?? 2) - (CHANGE_ORDER[b.kind] ?? 2) || num(a.id) - num(b.id) || a.id.localeCompare(b.id))
+    .map((h) => {
+      const parts: string[] = []
+      if (h.from !== h.to) parts.push(`${verdictLabel(h.from)} → ${verdictLabel(h.to)}`)
+      if (h.counterexamplesFrom !== h.counterexamplesTo) parts.push(`контрпримеров ${formatCount(h.counterexamplesFrom)} → ${formatCount(h.counterexamplesTo)}`)
+      if (h.applicableFrom !== h.applicableTo) parts.push(`проверок ${formatCount(h.applicableFrom)} → ${formatCount(h.applicableTo)}`)
+      return {
+        id: h.id,
+        text: parts.join(', ') || (h.kind === 'added' ? 'добавлена' : h.kind === 'removed' ? 'удалена' : 'изменён тест'),
+        tone: h.kind === 'fixed' ? 'good' : h.kind === 'regressed' ? 'bad' : 'neutral',
+      }
+    })
+}
+
 function staleText(run: { stale: boolean, staleReasons: S['StaleReason'][] }) {
   return run.stale ? run.staleReasons.map(r => STALE_REASON[r]).join(', ') || 'устарел' : null
 }
@@ -557,11 +577,7 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
         })),
         diffWith: prev?.id ?? null,
         diffNote: prev ? null : runs.items.length > 1 ? 'Прошлых прогонов с таким же корпусом нет — сравнивать не с чем.' : null,
-        hypothesisChanges: (diff?.hypotheses ?? []).map(h => ({
-          id: h.id,
-          text: `${verdictLabel(h.from)} → ${verdictLabel(h.to)}, контрпримеров ${formatCount(h.counterexamplesFrom)} → ${formatCount(h.counterexamplesTo)}`,
-          tone: h.kind === 'fixed' ? 'good' : h.kind === 'regressed' ? 'bad' : 'neutral',
-        })),
+        hypothesisChanges: hypothesisChanges(diff?.hypotheses ?? []),
         hypotheses: (detail.hypotheses ?? []).map(h => ({
           id: h.id,
           test: h.test,
