@@ -116,22 +116,23 @@ const CHECKSUM = [['ignore', 'ignore'], ['warn', 'warn'], ['drop', 'drop']] as c
     <ShellSidePanel id="project-tree" title="Структура проекта" :width="270">
       <div class="pl-scroll flex-1">
         <ul v-if="project.project" class="m-0 list-none py-1.5">
-          <li class="flex items-center gap-1.5 py-1 pr-2.5 pl-3.5 whitespace-nowrap"><UIcon name="i-lucide-folder-open" aria-hidden="true" /> {{ safeText(project.project.name) }}.protoledger</li>
-          <li class="flex items-center gap-1.5 py-1 pr-2.5 pl-[30px] whitespace-nowrap"><UIcon name="i-lucide-folder" aria-hidden="true" /> Записи <span class="ml-auto text-[11px] text-pl-muted">{{ project.sources.length }}</span></li>
-          <li v-for="s in project.sources" :key="s.sha256" class="flex items-center gap-1.5 py-1 pr-2.5 pl-12 whitespace-nowrap">
-            <UIcon name="i-lucide-file" aria-hidden="true" /> {{ safeText(s.name) }}
-            <span v-if="s.status === 'importing'" class="ml-auto text-[11px] text-pl-muted">{{ percent(s) ?? '…' }}%</span>
+          <li class="flex items-center gap-1.5 py-1 pr-2.5 pl-3.5 whitespace-nowrap"><UIcon name="i-lucide-folder-open" class="shrink-0" aria-hidden="true" /> <span class="min-w-0 truncate">{{ safeText(project.project.name) }}.protoledger</span></li>
+          <li class="flex items-center gap-1.5 py-1 pr-2.5 pl-[30px] whitespace-nowrap"><UIcon name="i-lucide-folder" class="shrink-0" aria-hidden="true" /> Записи <span class="ml-auto text-[11px] text-pl-muted">{{ project.sources.length }}</span></li>
+          <li v-for="s in project.sources" :key="s.sha256" class="flex items-center gap-1.5 py-1 pr-2.5 pl-12 whitespace-nowrap" :title="s.name">
+            <UIcon name="i-lucide-file" class="shrink-0" aria-hidden="true" /> <span class="min-w-0 truncate">{{ safeText(s.name) }}</span>
+            <span v-if="s.status === 'importing'" class="ml-auto shrink-0 text-[11px] text-pl-muted">{{ percent(s) ?? '…' }}%</span>
+            <UIcon v-else-if="project.issuesOf(s.sha256)" name="i-lucide-triangle-alert" class="ml-auto shrink-0" :class="project.issuesOf(s.sha256)!.status === 'violation' ? 'text-pl-st-violation' : 'text-pl-st-ambiguous'" :aria-label="`Замечания: ${project.issuesOf(s.sha256)!.labels.join(', ')}`" />
           </li>
-          <li class="flex items-center gap-1.5 py-1 pr-2.5 pl-[30px] whitespace-nowrap"><UIcon name="i-lucide-folder" aria-hidden="true" /> Журналы <span class="ml-auto text-[11px] text-pl-muted">{{ logs.length }}</span></li>
-          <li v-for="l in logs" :key="l.name" class="flex items-center gap-1.5 py-1 pr-2.5 pl-12 whitespace-nowrap"><UIcon name="i-lucide-file" aria-hidden="true" /> {{ safeText(l.name) }}</li>
+          <li class="flex items-center gap-1.5 py-1 pr-2.5 pl-[30px] whitespace-nowrap"><UIcon name="i-lucide-folder" class="shrink-0" aria-hidden="true" /> Журналы <span class="ml-auto text-[11px] text-pl-muted">{{ logs.length }}</span></li>
+          <li v-for="l in logs" :key="l.name" class="flex items-center gap-1.5 py-1 pr-2.5 pl-12 whitespace-nowrap" :title="l.name"><UIcon name="i-lucide-file" class="shrink-0" aria-hidden="true" /> <span class="min-w-0 truncate">{{ safeText(l.name) }}</span></li>
           <template v-if="project.extras">
-            <li class="flex items-center gap-1.5 py-1 pr-2.5 pl-[30px] whitespace-nowrap"><UIcon name="i-lucide-folder" aria-hidden="true" /> Интерпретация <span class="ml-auto text-[11px] text-pl-muted">{{ project.extras.interpretationRevs.length }} rev</span></li>
+            <li class="flex items-center gap-1.5 py-1 pr-2.5 pl-[30px] whitespace-nowrap"><UIcon name="i-lucide-folder" class="shrink-0" aria-hidden="true" /> Интерпретация <span class="ml-auto text-[11px] text-pl-muted">{{ project.extras.interpretationRevs.length }} rev</span></li>
             <li v-for="r in project.extras.interpretationRevs" :key="r.rev" class="flex items-center gap-1.5 py-1 pr-2.5 pl-12 whitespace-nowrap">
-              <UIcon name="i-lucide-code-xml" aria-hidden="true" /> rev {{ r.rev }}<span v-if="r.current"> · текущая</span>
+              <UIcon name="i-lucide-code-xml" class="shrink-0" aria-hidden="true" /> rev {{ r.rev }}<span v-if="r.current"> · текущая</span>
             </li>
-            <li class="flex items-center gap-1.5 py-1 pr-2.5 pl-[30px] whitespace-nowrap"><UIcon name="i-lucide-folder" aria-hidden="true" /> Наблюдения <span class="ml-auto text-[11px] text-pl-muted">{{ project.extras.observationCount }}</span></li>
-            <li class="flex items-center gap-1.5 py-1 pr-2.5 pl-[30px] whitespace-nowrap"><UIcon name="i-lucide-folder" aria-hidden="true" /> Гипотезы <span class="ml-auto text-[11px] text-pl-muted">{{ project.extras.hypothesisCount }}</span></li>
-            <li class="flex items-center gap-1.5 py-1 pr-2.5 pl-[30px] whitespace-nowrap"><UIcon name="i-lucide-folder" aria-hidden="true" /> Прогоны <span class="ml-auto text-[11px] text-pl-muted">{{ project.extras.runCount }}</span></li>
+            <li class="flex items-center gap-1.5 py-1 pr-2.5 pl-[30px] whitespace-nowrap"><UIcon name="i-lucide-folder" class="shrink-0" aria-hidden="true" /> Наблюдения <span class="ml-auto text-[11px] text-pl-muted">{{ project.extras.observationCount }}</span></li>
+            <li class="flex items-center gap-1.5 py-1 pr-2.5 pl-[30px] whitespace-nowrap"><UIcon name="i-lucide-folder" class="shrink-0" aria-hidden="true" /> Гипотезы <span class="ml-auto text-[11px] text-pl-muted">{{ project.extras.hypothesisCount }}</span></li>
+            <li class="flex items-center gap-1.5 py-1 pr-2.5 pl-[30px] whitespace-nowrap"><UIcon name="i-lucide-folder" class="shrink-0" aria-hidden="true" /> Прогоны <span class="ml-auto text-[11px] text-pl-muted">{{ project.extras.runCount }}</span></li>
           </template>
         </ul>
       </div>
@@ -186,6 +187,7 @@ const CHECKSUM = [['ignore', 'ignore'], ['warn', 'warn'], ['drop', 'drop']] as c
                     <CommonStatusBadge v-else-if="s.status === 'ready'" status="rule" label="готово" />
                     <CommonStatusBadge v-else-if="s.status === 'damaged'" status="violation" label="копия повреждена" />
                     <CommonStatusBadge v-else status="violation" label="ошибка" />
+                    <CommonStatusBadge v-if="project.issuesOf(s.sha256)" :status="project.issuesOf(s.sha256)!.status" :label="project.issuesOf(s.sha256)!.labels.join(', ')" />
                     <span v-if="skipped(s).length" class="text-pl-muted">{{ skipped(s).length }} замеч.</span>
                   </div>
                 </td>
