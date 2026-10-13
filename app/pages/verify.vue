@@ -122,7 +122,7 @@ const total = computed(() => view.value?.categories.reduce((n, c) => n + c.count
             <button class="pl-chip" type="button" @click="corpusSources = project.sources.map(x => x.sha256)">все</button>
             <button class="pl-chip" type="button" @click="corpusSources = []">ни одной</button>
           </div>
-          <div class="grid max-h-72 grid-cols-[auto_auto] items-center gap-x-3 gap-y-1 overflow-auto pr-1">
+          <div class="grid max-h-72 grid-cols-[auto_auto] items-center gap-x-3 gap-y-1 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
             <template v-for="g in corpusGroups" :key="g.id">
               <div class="col-span-2 mt-1.5 flex items-center gap-2 first:mt-0">
                 <span class="pl-caption">{{ g.title }} · {{ g.items.length }}</span>
