@@ -42,4 +42,13 @@ describe('reportBlocks', () => {
   it('unescapeMd снимает только экранирование', () => {
     expect(unescapeMd('\\[0, 8) a\\_b \\\\ c')).toBe('[0, 8) a_b \\ c')
   })
+
+  it('блок кода — текст как есть, без разбора разметки', () => {
+    const b = reportBlocks('Команда:\n\n```\nprotoledger verify <папка>\n# не заголовок\n- не список\n```\n\nДальше.')
+    expect(b).toEqual([
+      { kind: 'paragraph', text: 'Команда:' },
+      { kind: 'code', text: 'protoledger verify <папка>\n# не заголовок\n- не список' },
+      { kind: 'paragraph', text: 'Дальше.' },
+    ])
+  })
 })

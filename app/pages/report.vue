@@ -78,6 +78,7 @@ const tableCls = 'mt-2.5 w-full border-collapse text-[12.5px] [&_td]:border-b [&
             <ul v-else-if="b.kind === 'list'" class="my-2 list-disc pl-5">
               <li v-for="(item, j) in b.items" :key="j">{{ safeText(item) }}</li>
             </ul>
+            <pre v-else-if="b.kind === 'code'" class="my-2 overflow-x-auto rounded border border-pl-line bg-pl-raise px-3 py-2 font-mono text-[12.5px]"><code><span v-for="(l, j) in b.text.split('\n')" :key="j" class="block min-h-[1lh]">{{ safeText(l) }}</span></code></pre>
             <div v-else-if="b.kind === 'table'" class="overflow-x-auto">
               <table :class="tableCls">
                 <thead><tr><th v-for="(h, j) in b.head" :key="j">{{ safeText(h) }}</th></tr></thead>

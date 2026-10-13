@@ -93,6 +93,8 @@ function corpusKey(c: S['CorpusFilter']) {
   return JSON.stringify([[...(c.sources ?? [])].sort(), c.direction ?? null, c.port ?? null])
 }
 
+const FULL_CORPUS = corpusKey({})
+
 // Сначала исправленные и ухудшенные, затем по номеру: H2 раньше H10.
 const CHANGE_ORDER: Record<string, number> = { fixed: 0, regressed: 1 }
 
@@ -388,13 +390,16 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       }
       const stream = await defaultStream()
       const { tree, preview, violations } = stream ? await previewOf(stream) : { tree: [], preview: { stream: '—', rows: [] }, violations: [] }
-      // Тесты гипотез выполняет прогон: берём последний прогон этой же ревизии.
+      // Тесты гипотез выполняет прогон: берём последний прогон этой ревизии по всему корпусу,
+      // а прогон по части записей — только если полного нет (и говорим об этом).
       const runs = unwrap(await api.GET('/api/runs', { params: { query: { limit: 20 } } })).items
-      const sameRev = runs.find(r => r.revision === doc.rev)
-      const detail = sameRev ? unwrap(await api.GET('/api/runs/{id}', { params: { path: { id: sameRev.id } } })) : null
+      const sameRev = runs.filter(r => r.revision === doc.rev)
+      const chosen = sameRev.find(r => corpusKey(r.corpus) === FULL_CORPUS) ?? sameRev[0]
+      const detail = chosen ? unwrap(await api.GET('/api/runs/{id}', { params: { path: { id: chosen.id } } })) : null
+      const partial = chosen && corpusKey(chosen.corpus) !== FULL_CORPUS ? ' (часть корпуса)' : ''
       const runIssues = (detail?.hypotheses ?? []).filter(h => h.verdict === 'refuted').map(h => ({
         id: h.id,
-        label: `опровергнута в ${detail!.id} · контрпримеров ${formatCount(h.counterexamples)}`,
+        label: `опровергнута в ${detail!.id}${partial} · контрпримеров ${formatCount(h.counterexamples)}`,
         runId: detail!.id,
       }))
       return {
