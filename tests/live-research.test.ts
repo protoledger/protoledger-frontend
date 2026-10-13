@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createLiveResearchSource, pickExchange } from '~/data/live-research'
+import { createLiveResearchSource, hypothesisChanges, pickExchange } from '~/data/live-research'
 import { createMockContractSource } from '~/data/mock/contract'
 import { createMockResearchSource } from '~/data/mock/research'
 import type { ContractSource } from '~/data/source'
@@ -144,5 +144,21 @@ describe('живые модели экранов', () => {
     expect(first.exchanges).toBeNull()
     expect(first.exchangeNote).toContain('после сохранения описания')
     expect(first.rows.every(r => r.exchange === 'unknown')).toBe(true)
+  })
+})
+
+describe('гипотезы в сравнении прогонов', () => {
+  const h = (id: string, kind: 'fixed' | 'changed', from: 'refuted' | 'no_counterexample', ce: [number, number], app: [number, number]) =>
+    ({ id, kind, from, to: 'no_counterexample' as const, counterexamplesFrom: ce[0], counterexamplesTo: ce[1], applicableFrom: app[0], applicableTo: app[1] })
+
+  it('исправленные первыми, дальше по номеру; в строке только то, что изменилось', () => {
+    const out = hypothesisChanges([
+      h('H10', 'changed', 'no_counterexample', [0, 0], [41, 44]),
+      h('H2', 'changed', 'no_counterexample', [0, 0], [34, 40]),
+      h('H6', 'fixed', 'refuted', [2, 0], [34, 40]),
+    ])
+    expect(out.map(c => c.id)).toEqual(['H6', 'H2', 'H10'])
+    expect(out[0]).toMatchObject({ tone: 'good', text: 'опровергнута → контрпримеров нет, контрпримеров 2 → 0, проверок 34 → 40' })
+    expect(out[1]!.text).toBe('проверок 34 → 40')
   })
 })
