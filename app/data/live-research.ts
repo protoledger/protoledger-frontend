@@ -880,6 +880,10 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       return unwrap(await api.POST('/api/hypotheses', { body: { statement: s.hypothesis.statement, basis: [obs.id], test: s.hypothesis.test } })).id
     },
 
+    async getClockOffset(logId) {
+      return unwrap(await api.GET('/api/action-logs/{id}/clock-offset', { params: { path: { id: logId } } }))
+    },
+
     async getDeviceConnections() {
       try {
         return unwrap(await api.POST('/api/analysis/device-connections', { body: {} }))

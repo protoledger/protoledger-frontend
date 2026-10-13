@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import type { ClockOffset } from '~/api/types'
 import type { ActionMessageRef, ActionRow, ExchangeView } from '~/data/views'
+import { formatCount } from '~/utils/bytes'
 
 const data = useData()
 const logId = ref<string | undefined>(undefined)
@@ -40,6 +42,21 @@ watch(selected, async (id) => {
     exchangeState.value = 'error'
   }
 }, { immediate: true })
+
+// Сдвиг часов журнала — предложение движка; применяется повторным импортом с поправкой.
+const clock = ref<ClockOffset | null>(null)
+watch(() => view.value?.log?.id, async (id) => {
+  clock.value = null
+  if (!id) return
+  try {
+    const c = await data.getClockOffset(id)
+    if (view.value?.log?.id === id) clock.value = c
+  }
+  catch {
+    // Оценка — подсказка: без неё экран работает как раньше.
+  }
+}, { immediate: true })
+const signed = (ms: number) => `${ms > 0 ? '+' : ms < 0 ? '−' : ''}${formatCount(Math.abs(ms))} мс`
 
 const BADGE = {
   paired: { status: 'rule' as const, label: 'запрос и ответ' },
@@ -82,6 +99,17 @@ const EVENT = {
         <span v-else-if="view?.log" class="text-pl-fg">{{ safeText(view.log.name) }}</span>
         <NuxtLink to="/project" class="pl-btn pl-btn-ghost h-7" title="Колонки сопоставляются при импорте журнала: импортируйте его заново на «Проекте»">Колонки…</NuxtLink>
       </CommonPanelHeader>
+      <div v-if="clock && clock.offsetMs !== null" class="mx-3 mt-3 flex flex-col gap-1 rounded border border-pl-st-hypothesis px-3 py-2.5" role="status">
+        <div class="flex flex-wrap items-center gap-2">
+          <CommonStatusBadge status="hypothesis" label="часы журнала" />
+          <b class="font-semibold text-pl-fg-strong">Похоже, часы журнала сдвинуты на {{ signed(clock.offsetMs) }}</b>
+        </div>
+        <p class="m-0">{{ safeText(clock.reason) }}.</p>
+        <p class="m-0 text-pl-muted">
+          Чтобы применить, импортируйте журнал на «Проекте» с полем «Сдвиг часов, мс» = {{ clock.currentOffsetMs + clock.offsetMs }}<template v-if="clock.currentOffsetMs"> (сейчас {{ clock.currentOffsetMs }})</template>.
+          <NuxtLink to="/project" class="text-pl-wine-text hover:underline">На «Проект»</NuxtLink>
+        </p>
+      </div>
       <p v-if="view?.exchangeNote" class="m-0 px-3 pt-3 text-pl-muted">{{ view.exchangeNote }}</p>
       <CommonAsyncState :pending="pending" :error="error?.message" :empty="!rows.length" empty-text="Журнала действий в проекте нет — импортируйте его на экране «Проект»." @retry="refresh()">
         <table

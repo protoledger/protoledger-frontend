@@ -437,6 +437,7 @@ export function createMockResearchSource(): ResearchSource {
         })),
       }
     },
+    getClockOffset: async () => null,
     getSuggestions: async () => {
       await delay()
       const obs = (start: number, comment: string) => ({ source: 'a'.repeat(64), stream: 'stand:c0001:ab', start, end: start + 2, comment })

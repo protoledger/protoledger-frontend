@@ -6,6 +6,7 @@ import type {
   FieldHints,
   ActionLogRecord,
   ByteExplanation,
+  ClockOffset,
   Connection,
   ConnectionFlag,
   Frame,
@@ -134,6 +135,8 @@ export interface ResearchSource {
   explainByte(stream: string, offset: number): Promise<ByteExplanation>
   /** Соединения устройства по журналу действий; null — журнала в проекте нет. */
   getDeviceConnections(): Promise<DeviceConnections | null>
+  /** Оценка сдвига часов журнала относительно записей; null — оценки нет (пример данных). */
+  getClockOffset(logId: string): Promise<ClockOffset | null>
   /** Заготовки наблюдений и гипотез по всем потокам проекта. */
   getSuggestions(): Promise<SuggestionsView>
   /** Принять заготовку: наблюдение на байтах и гипотеза на нём; id гипотезы или null — пример данных. */
