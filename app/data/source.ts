@@ -12,6 +12,7 @@ import type {
   ByteExplanation,
   ChecksumHints,
   ClockOffset,
+  Comparison,
   Connection,
   ConnectionFlag,
   Frame,
@@ -152,6 +153,8 @@ export interface ResearchSource {
   getExchangePairs(connection: string, offset?: number): Promise<ExchangePairPage>
   /** Граф обмена по всем соединениям: типы, ответы, переходы. */
   getExchangeGraph(): Promise<ExchangeGraph>
+  /** Одно описание на двух наборах записей (sha256): какие типы, значения полей и задержки отличаются. */
+  compareCaptures(a: string[], b: string[]): Promise<Comparison>
   /** Заготовки наблюдений и гипотез по всем потокам проекта. */
   getSuggestions(): Promise<SuggestionsView>
   /** Принять заготовку: наблюдение на байтах и гипотеза на нём; id гипотезы или null — пример данных. */
