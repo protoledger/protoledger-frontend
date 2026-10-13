@@ -10,6 +10,7 @@ function stubApi(routes: Record<string, unknown>) {
   vi.stubGlobal('fetch', vi.fn(async (input: Request | string) => {
     const url = new URL(typeof input === 'string' ? input : input.url, 'http://x')
     const body = routes[url.pathname]
+    if (body instanceof Response) return body.clone()
     if (body === undefined) return new Response(JSON.stringify({ title: 'нет', status: 404 }), { status: 404, headers: { 'Content-Type': 'application/problem+json' } })
     return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }))
@@ -105,5 +106,43 @@ describe('живые модели экранов', () => {
     const b = pickExchange(ex, used)
     expect([a.request?.start, a.response?.start]).toEqual([0, 0])
     expect([b.request?.start, b.response?.start]).toEqual([8, 12])
+  })
+
+  it('действия: выбранный журнал, обмены по строкам и пояснение без описания', async () => {
+    const t = new Date(Date.UTC(2026, 9, 10, 14, 0, 0, 0)).toISOString()
+    const logs = { items: [
+      { id: 'log-0001', sha256: SHA, name: 'main.actions.csv', rows: 16, skipped: 0, errors: [], mapping: { time: 'time', action: 'action' }, firstTime: t, lastTime: t },
+      { id: 'log-0002', sha256: SHA, name: 'extra.actions.csv', rows: 2, skipped: 0, errors: [], mapping: { time: 'time', action: 'action' }, firstTime: t, lastTime: t },
+    ] }
+    const actions = { items: [
+      { line: 2, time: t, action: 'set_param', params: { value: 70000 }, result: {}, resultRaw: 'ok' },
+      { line: 3, time: t, action: 'reset', params: {}, result: {}, resultRaw: '' },
+    ], total: 2, limit: 200, offset: 0 }
+    const msg = (stream: string) => ({ source: SHA, stream, start: 8, end: 16, messageId: 'set_param_req', category: 'matched', tsNs: 0 })
+    stubApi({
+      '/api/action-logs': logs,
+      '/api/action-logs/log-0002/actions': actions,
+      '/api/action-logs/log-0002/exchanges': { items: [
+        { line: 2, action: 'set_param', tsNs: 0, state: 'paired', request: msg('x:c0001:ab'), response: msg('x:c0001:ba'), delayNs: 3, candidates: 2 },
+        { line: 3, action: 'reset', tsNs: 0, state: 'not_found', request: null, response: null, delayNs: null, candidates: 0 },
+      ], total: 2, limit: 200, offset: 0, paired: 1, requestOnly: 0, notFound: 1 },
+    })
+    const src = createLiveResearchSource(contractWithBytes(), createMockResearchSource())
+    const v = await src.getActions('log-0002')
+    expect(v.logs.map(l => l.name)).toEqual(['main.actions.csv', 'extra.actions.csv'])
+    expect(v.log?.id).toBe('log-0002')
+    expect(v.rows.map(r => [r.exchange, r.request?.label ?? null, r.candidates])).toEqual([['paired', 'set_param_req', 2], ['not_found', null, 0]])
+    expect(v.exchanges).toEqual({ paired: 1, requestOnly: 0, notFound: 1, total: 2 })
+
+    stubApi({
+      '/api/action-logs': logs,
+      '/api/action-logs/log-0001/actions': actions,
+      '/api/action-logs/log-0001/exchanges': new Response(JSON.stringify({ title: 'нет интерпретации', status: 409 }), { status: 409, headers: { 'Content-Type': 'application/problem+json' } }),
+    })
+    const first = await src.getActions()
+    expect(first.log?.id).toBe('log-0001')
+    expect(first.exchanges).toBeNull()
+    expect(first.exchangeNote).toContain('после сохранения описания')
+    expect(first.rows.every(r => r.exchange === 'unknown')).toBe(true)
   })
 })

@@ -38,6 +38,8 @@ const COUNTER_REASON: Record<S['FramingCounter']['reason'], { status: KnowledgeS
   dissimilar: { status: 'unknown', note: 'начало не похоже на остальные' },
 }
 
+const ACTIONS_PAGE = 200
+
 const pct = (permille: number) => `${(permille / 10).toFixed(1).replace('.', ',')}%`
 
 function lengthType(h: S['LengthHint']) {
@@ -263,22 +265,46 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       }))
     },
 
-    async getActions() {
+    async getActions(logId, offset = 0) {
       const { items } = unwrap(await api.GET('/api/action-logs'))
-      const log = items[0]
-      if (!log) return { log: null, rows: [] }
-      const page = unwrap(await api.GET('/api/action-logs/{id}/actions', { params: { path: { id: log.id }, query: { limit: 500 } } }))
+      const logs = items.map(l => ({ id: l.id, name: l.name, rows: l.rows }))
+      const log = logs.find(l => l.id === logId) ?? logs[0] ?? null
+      if (!log) return { logs, log: null, rows: [], total: 0, offset: 0, exchanges: null, exchangeNote: null }
+      const page = unwrap(await api.GET('/api/action-logs/{id}/actions', { params: { path: { id: log.id }, query: { limit: ACTIONS_PAGE, offset } } }))
+      let exchanges: S['ActionExchangePage'] | null = null
+      let exchangeNote: string | null = null
+      try {
+        exchanges = unwrap(await api.GET('/api/action-logs/{id}/exchanges', { params: { path: { id: log.id }, query: { limit: ACTIONS_PAGE, offset } } }))
+      }
+      catch (e) {
+        // Без сохранённой интерпретации нет сообщений — обмены искать не по чему.
+        if (!(e instanceof ApiError && e.status === 409)) throw e
+        exchangeNote = 'Обмены появятся после сохранения описания: без границ сообщений их не найти.'
+      }
+      const byLine = new Map((exchanges?.items ?? []).map(x => [x.line, x]))
+      const ref = (m: S['ActionMessage'] | null) => (m ? { label: m.messageId ?? 'без типа', stream: m.stream, start: m.start, end: m.end } : null)
       return {
-        log: { name: log.name, rows: log.rows },
-        rows: page.items.map(a => ({
-          id: `${log.id}|${a.line}`,
-          time: clock(a.time),
-          action: a.action,
-          params: pairs(a.params),
-          result: a.resultRaw || pairs(a.result),
-          source: a.source ?? null,
-          exchange: 'unknown' as const,
-        })),
+        logs,
+        log,
+        rows: page.items.map((a) => {
+          const x = byLine.get(a.line)
+          return {
+            id: `${log.id}|${a.line}`,
+            time: clock(a.time),
+            action: a.action,
+            params: pairs(a.params),
+            result: a.resultRaw || pairs(a.result),
+            source: a.source ?? null,
+            exchange: x?.state ?? 'unknown',
+            request: ref(x?.request ?? null),
+            response: ref(x?.response ?? null),
+            candidates: x?.candidates ?? 0,
+          }
+        }),
+        total: page.total,
+        offset,
+        exchanges: exchanges ? { paired: exchanges.paired, requestOnly: exchanges.requestOnly, notFound: exchanges.notFound, total: exchanges.total } : null,
+        exchangeNote,
       }
     },
 

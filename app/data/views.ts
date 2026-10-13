@@ -68,8 +68,20 @@ export interface ActionRow {
   result: string
   /** Запись, к которой относится действие (колонка записи в журнале); null — не указана. */
   source: string | null
-  /** unknown — обмен ещё не искали (ищется при выборе действия). */
-  exchange: 'found' | 'none' | 'unknown'
+  /** Обмен по таблице движка; unknown — таблица недоступна (нет сохранённой интерпретации). */
+  exchange: 'paired' | 'request_only' | 'not_found' | 'unknown'
+  request: ActionMessageRef | null
+  response: ActionMessageRef | null
+  /** Сколько записей подходит по времени; больше одной — пара выбрана неоднозначно. */
+  candidates: number
+}
+
+/** Сообщение обмена в строке действия: тип и место в потоке для перехода к байтам. */
+export interface ActionMessageRef {
+  label: string
+  stream: string
+  start: number
+  end: number
 }
 
 export interface ExchangeSide {
@@ -80,8 +92,15 @@ export interface ExchangeSide {
 }
 
 export interface ActionsView {
-  log: { name: string, rows: number } | null
+  logs: { id: string, name: string, rows: number }[]
+  log: { id: string, name: string, rows: number } | null
   rows: ActionRow[]
+  /** Сколько строк журнала всего; rows — страница с offset. */
+  total: number
+  offset: number
+  /** Итог поиска обменов по всему журналу; null — недоступен, причина в exchangeNote. */
+  exchanges: { paired: number, requestOnly: number, notFound: number, total: number } | null
+  exchangeNote: string | null
 }
 
 export interface ExchangeView {
