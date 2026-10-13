@@ -27,9 +27,9 @@ const expanded = ref(false)
     class="border-b border-pl-line bg-pl-wine-soft/40"
     aria-label="Что дальше"
   >
-    <div class="flex items-center gap-3 px-3 py-1.5">
-      <span class="pl-caption flex-none">Что дальше</span>
-      <span class="min-w-0 truncate">
+    <div class="flex items-center gap-3 px-3 py-1.5 max-sm:flex-wrap max-sm:gap-x-2 max-sm:gap-y-1">
+      <span class="pl-caption flex-none max-sm:hidden">Что дальше</span>
+      <span class="min-w-0 truncate max-sm:order-first max-sm:w-full max-sm:whitespace-normal">
         <b class="text-pl-fg-strong">{{ safeText(first.title) }}</b>
         <span class="text-pl-muted"> — {{ safeText(first.detail) }}</span>
       </span>

@@ -1,17 +1,22 @@
 <script setup lang="ts">
 import type { Job } from '~/api/types'
-import { SCREENS, screenByPath } from '~/utils/screens'
+import { SCREENS } from '~/utils/screens'
 
 const route = useRoute()
 const workspace = useWorkspaceStore()
+const { phone, compact } = useViewport()
 const project = useProjectStore()
 const jobs = useJobsStore()
 const searchOpen = ref(false)
 
-watch(() => route.path, (path) => {
-  const screen = screenByPath(path)
-  if (screen) workspace.openTab(screen.path)
-}, { immediate: true })
+// Телефон: инструменты — нижней строкой вместо строки состояния. Узкий экран: панели выезжают поверх.
+// Выезжающая панель закрывается при переходе на другой экран.
+watch(() => route.path, () => { workspace.drawer = null })
+
+function toggleInspector() {
+  if (compact.value) workspace.drawer = workspace.drawer === 'inspector' ? null : 'inspector'
+  else workspace.inspector.collapsed = !workspace.inspector.collapsed
+}
 
 function onJobDone(job: Job) {
   const label = jobs.labels[job.id] ?? 'Импорт'
@@ -20,6 +25,8 @@ function onJobDone(job: Job) {
 }
 
 onMounted(async () => {
+  // На телефоне нижнее окно отнимает треть экрана — открывается по кнопке «Диагн.».
+  if (phone.value) workspace.bottomOpen = false
   await project.load()
   const importing = project.sources.find(s => s.status === 'importing')
   await jobs.load(onJobDone)
@@ -28,10 +35,10 @@ onMounted(async () => {
 
 defineShortcuts({
   meta_k: () => { searchOpen.value = true },
-  alt_0: () => { workspace.inspector.collapsed = !workspace.inspector.collapsed },
+  alt_0: () => toggleInspector(),
   alt_f12: () => { workspace.bottomOpen = !workspace.bottomOpen },
   meta_shift_f12: () => { workspace.focus = !workspace.focus },
-  escape: { usingInput: false, handler: () => { workspace.focus = false } },
+  escape: { usingInput: false, handler: () => { workspace.focus = false; workspace.drawer = null } },
   ...Object.fromEntries(SCREENS.map((s, i) => [`alt_${i + 1}`, () => navigateTo(s.path)])),
 })
 
@@ -49,13 +56,15 @@ onBeforeUnmount(() => window.removeEventListener('keyup', onKeyup))
 
 <template>
   <div
-    class="grid h-screen min-w-[1280px] grid-rows-[44px_minmax(0,1fr)_26px] overflow-hidden"
-    :class="workspace.focus ? 'grid-cols-[minmax(0,1fr)]' : 'grid-cols-[52px_minmax(0,1fr)]'"
+    class="grid h-dvh overflow-hidden"
+    :class="[
+      phone ? 'grid-rows-[44px_minmax(0,1fr)_56px]' : 'grid-rows-[44px_minmax(0,1fr)_26px]',
+      workspace.focus || phone ? 'grid-cols-[minmax(0,1fr)]' : 'grid-cols-[52px_minmax(0,1fr)]',
+    ]"
   >
-    <ShellTopBar class="col-span-full" @search="searchOpen = true" />
-    <ShellToolStrip v-if="!workspace.focus" />
-    <div class="flex min-h-0 flex-col">
-      <ShellScreenTabs v-if="!workspace.focus" />
+    <ShellTopBar class="col-span-full" @search="searchOpen = true" @inspector="toggleInspector" />
+    <ShellToolStrip v-if="!workspace.focus && !phone" />
+    <div class="flex min-h-0 min-w-0 flex-col">
       <ShellNextSteps />
       <div class="flex min-h-0 flex-1">
         <main class="min-h-0 min-w-0 flex-1 overflow-hidden">
@@ -69,7 +78,8 @@ onBeforeUnmount(() => window.removeEventListener('keyup', onKeyup))
       </div>
       <ShellBottomPanel v-if="!workspace.focus" />
     </div>
-    <ShellStatusBar class="col-span-full" />
+    <ShellToolStrip v-if="phone" horizontal class="col-span-full" />
+    <ShellStatusBar v-else class="col-span-full" />
     <ShellSearchPalette v-model:open="searchOpen" />
     <button
       v-if="workspace.focus"

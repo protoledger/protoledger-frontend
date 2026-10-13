@@ -148,14 +148,14 @@ const CHECKSUM = [['ignore', 'ignore'], ['warn', 'warn'], ['drop', 'drop']] as c
             <template v-if="project.extras?.createdAt"> · создан {{ new Date(project.extras.createdAt).toLocaleDateString('ru-RU') }}</template>
           </p>
 
-          <div class="grid grid-cols-4 gap-3">
+          <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <div class="pl-card flex flex-col gap-0.5 px-3.5 py-3 text-xs"><b class="font-display text-[22px] font-semibold">{{ formatCount(totals.sources) }}</b><span>записи трафика</span></div>
             <div class="pl-card flex flex-col gap-0.5 px-3.5 py-3 text-xs"><b class="font-display text-[22px] font-semibold">{{ formatCount(totals.frames) }}</b><span>кадров</span></div>
             <div class="pl-card flex flex-col gap-0.5 px-3.5 py-3 text-xs"><b class="font-display text-[22px] font-semibold">{{ formatCount(totals.connections) }}</b><span>TCP-соединений</span></div>
             <div class="pl-card flex flex-col gap-0.5 px-3.5 py-3 text-xs"><b class="font-display text-[22px] font-semibold">{{ formatCount(totals.actions) }}</b><span>действий в журнале</span></div>
           </div>
 
-          <div class="mt-4 mb-6 flex items-center gap-2.5">
+          <div class="mt-4 mb-6 flex flex-wrap items-center gap-2.5">
             <button class="pl-btn pl-btn-primary" type="button" @click="fileInput?.click()">+ Импорт записей</button>
             <button class="pl-btn" type="button" @click="logInput?.click()">+ Журнал действий</button>
             <input ref="logInput" type="file" accept=".csv,.tsv,.txt" class="hidden" @change="onLogFile">

@@ -16,7 +16,7 @@ const SEVERITY: Record<Severity, { status: KnowledgeStatus, label: string }> = {
 const diagnostics = computed(() =>
   Object.values(project.diagnostics).flatMap(d => d.items.map(item => ({ ...item, source: project.sourceName(d.sha256) }))))
 
-const tab = 'flex items-center gap-1.5 border-b-2 border-transparent px-3.5 font-semibold text-pl-muted aria-selected:border-pl-wine-text aria-selected:text-pl-fg-strong'
+const tab = 'flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 border-transparent px-3.5 font-semibold text-pl-muted aria-selected:border-pl-wine-text aria-selected:text-pl-fg-strong'
 const row = 'flex min-h-7 items-center gap-3 px-3.5'
 const text = 'min-w-0 flex-1 truncate'
 const empty = 'mx-3.5 my-2 text-pl-muted'
@@ -27,8 +27,8 @@ const JOB_STATE: Record<string, string> = {
 </script>
 
 <template>
-  <section class="flex flex-col border-t border-pl-line bg-pl-chrome" :class="workspace.bottomOpen ? 'h-40' : 'h-auto'" aria-label="Нижнее окно">
-    <div class="flex h-[30px] items-stretch border-b border-pl-line" role="tablist">
+  <section class="flex flex-col border-t border-pl-line bg-pl-chrome" :class="workspace.bottomOpen ? 'h-40 max-sm:h-[30vh]' : 'h-auto'" aria-label="Нижнее окно">
+    <div class="flex h-[30px] items-stretch overflow-x-auto overflow-y-hidden border-b border-pl-line" role="tablist">
       <button :class="tab" role="tab" type="button" :aria-selected="workspace.bottomTab === 'diagnostics'" @click="workspace.bottomTab = 'diagnostics'; workspace.bottomOpen = true">
         Диагностика <span class="rounded-[3px] border border-pl-st-violation px-1.5 text-[11px] text-pl-st-violation">{{ diagnostics.length }}</span>
       </button>

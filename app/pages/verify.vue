@@ -159,7 +159,7 @@ const total = computed(() => view.value?.categories.reduce((n, c) => n + c.count
             <span class="text-pl-muted">{{ view.filters.length ? 'Корпус прогона:' : 'Корпус прогона: все записи проекта' }}</span>
             <span v-for="f in view.filters" :key="f.label" class="pl-chip inline-flex items-center">{{ safeText(f.label) }}</span>
           </div>
-          <div class="mt-3.5 grid grid-cols-4 gap-3">
+          <div class="mt-3.5 grid grid-cols-2 gap-3 lg:grid-cols-4">
             <div v-for="t in view.totals" :key="t.label" class="pl-card flex flex-col px-3.5 py-2.5 text-xs">
               <b class="font-display text-[22px] font-semibold">{{ t.value }}</b><span>{{ t.label }}</span>
             </div>
@@ -178,7 +178,7 @@ const total = computed(() => view.value?.categories.reduce((n, c) => n + c.count
               {{ c.count / total > 0.04 ? c.count : '' }}
             </span>
           </div>
-          <div class="mt-2.5 grid grid-cols-4 gap-x-5 gap-y-1.5">
+          <div class="mt-2.5 grid grid-cols-2 gap-x-5 lg:grid-cols-4 gap-y-1.5">
             <div v-for="c in view.categories" :key="c.key" class="flex items-center gap-1.5">
               <i class="size-2.5" :class="COLOR[c.key]" /> <span class="flex-1">{{ c.label }}</span> <b>{{ c.count }}</b>
             </div>

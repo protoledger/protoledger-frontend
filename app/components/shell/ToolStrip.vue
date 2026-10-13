@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { SCREENS } from '~/utils/screens'
 
+// horizontal — нижняя строка инструментов на телефоне, с прокруткой вбок.
+defineProps<{ horizontal?: boolean }>()
+
 const route = useRoute()
 const workspace = useWorkspaceStore()
 const project = useProjectStore()
@@ -21,7 +24,11 @@ const on = 'bg-pl-wine text-white hover:bg-pl-wine hover:text-white'
 </script>
 
 <template>
-  <nav class="flex w-[52px] flex-col gap-0.5 border-r border-pl-line bg-pl-chrome px-1 py-1.5" aria-label="Окна инструментов">
+  <nav
+    class="flex gap-0.5 bg-pl-chrome"
+    :class="horizontal ? 'pl-scroll items-stretch overflow-x-auto overflow-y-hidden border-t border-pl-line px-1 py-1 [&>*]:min-w-[56px] [&>*]:shrink-0' : 'w-[52px] flex-col border-r border-pl-line px-1 py-1.5'"
+    aria-label="Окна инструментов"
+  >
     <NuxtLink
       v-for="(s, i) in SCREENS"
       :key="s.path"
@@ -34,7 +41,7 @@ const on = 'bg-pl-wine text-white hover:bg-pl-wine hover:text-white'
       <span>{{ s.short }}</span>
       <i v-if="s.path === '/verify' && hasErrors" class="absolute top-1 right-[9px] size-1.5 rounded-full bg-pl-st-violation" aria-label="есть замечания" />
     </NuxtLink>
-    <div class="flex-1" />
+    <div class="flex-1" :class="horizontal && 'min-w-2'" />
     <button :class="[btn, workspace.bottomOpen && workspace.bottomTab === 'diagnostics' && on]" type="button" title="Диагностика" @click="openBottom('diagnostics')">
       <UIcon name="i-lucide-triangle-alert" class="size-[18px]" aria-hidden="true" />
       <span>Диагн.</span>

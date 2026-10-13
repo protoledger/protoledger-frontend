@@ -1,6 +1,4 @@
 import { defineStore } from 'pinia'
-import { SCREENS } from '~/utils/screens'
-
 export interface PanelState {
   width: number
   collapsed: boolean
@@ -24,16 +22,17 @@ function readLayout(): Partial<Layout> {
   }
 }
 
-/** Открытые вкладки, раскладка панелей и режим фокуса. */
+/** Раскладка панелей, нижняя панель, журнал событий и режим фокуса. */
 export const useWorkspaceStore = defineStore('workspace', () => {
   const saved = readLayout()
-  const tabs = ref<string[]>(['/project', '/overview'])
   const bottomOpen = ref(saved.bottomOpen ?? true)
   const bottomTab = ref<'diagnostics' | 'jobs' | 'events'>('diagnostics')
   const events = ref<{ time: string, text: string }[]>([])
   const panels = ref<Record<string, PanelState>>(saved.panels ?? {})
   const inspector = ref<PanelState>(saved.inspector ?? { width: 360, collapsed: false })
   const focus = ref(false)
+  // На узком экране панель открывается поверх рабочей области; одновременно — одна (id панели или 'inspector').
+  const drawer = ref<string | null>(null)
   // Скрытая плашка «что дальше» возвращается при следующем открытии приложения.
   const nextStepsHidden = ref(false)
 
@@ -51,17 +50,6 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     return panels.value[id]
   }
 
-  function openTab(path: string) {
-    if (SCREENS.some(s => s.path === path) && !tabs.value.includes(path)) tabs.value.push(path)
-  }
-
-  function closeTab(path: string): string | undefined {
-    const i = tabs.value.indexOf(path)
-    if (i === -1) return
-    tabs.value.splice(i, 1)
-    return tabs.value[Math.min(i, tabs.value.length - 1)]
-  }
-
   function log(text: string) {
     const time = new Date().toLocaleTimeString('ru-RU')
     events.value.unshift({ time, text })
@@ -75,5 +63,5 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     focus.value = false
   }
 
-  return { nextStepsHidden, tabs, bottomOpen, bottomTab, events, panels, inspector, focus, panel, openTab, closeTab, log, resetLayout }
+  return { nextStepsHidden, drawer, bottomOpen, bottomTab, events, panels, inspector, focus, panel, log, resetLayout }
 })

@@ -31,7 +31,9 @@ async function runCheck() {
 }
 const colorMode = useColorMode()
 const workspace = useWorkspaceStore()
-const emit = defineEmits<{ search: [] }>()
+const emit = defineEmits<{ search: [], inspector: [] }>()
+const { compact } = useViewport()
+const inspectorOpen = computed(() => (compact.value ? workspace.drawer === 'inspector' : !workspace.inspector.collapsed))
 const projectDialog = ref(false)
 
 async function onProjectOpened() {
@@ -63,10 +65,10 @@ const icon = 'grid size-[30px] place-items-center rounded text-pl-fg hover:bg-pl
 
     <span class="mr-2 grid size-7 place-items-center rounded bg-pl-wine font-display text-sm font-semibold text-white" aria-label="protoledger">pl</span>
     <button :class="item" type="button" title="Открыть или создать проект" @click="projectDialog = true">
-      <span class="font-display font-semibold">{{ safeText(project.project?.name ?? 'нет проекта') }}</span>
+      <span class="max-w-[40vw] truncate font-display font-semibold">{{ safeText(project.project?.name ?? 'нет проекта') }}</span>
       <UIcon name="i-lucide-chevron-down" class="size-3.5" aria-hidden="true" />
     </button>
-    <NuxtLink v-if="project.extras" to="/interpretation" :class="item">
+    <NuxtLink v-if="project.extras" to="/interpretation" :class="[item, 'max-sm:hidden']">
       <span class="text-pl-muted">интерпретация</span>
       <b>{{ project.extras.interpretationRev ? `rev ${project.extras.interpretationRev}` : 'нет' }}</b>
       <span v-if="project.extras.interpretationDirty" class="rounded-[3px] border border-pl-st-hypothesis px-1.5 text-[11px] font-semibold text-pl-st-hypothesis">изменена</span>
@@ -75,7 +77,7 @@ const icon = 'grid size-[30px] place-items-center rounded text-pl-fg hover:bg-pl
     <div class="flex-1" />
 
     <div v-if="importJob" class="mr-2 flex max-w-[420px] items-center gap-2.5" aria-live="polite">
-      <span class="truncate">{{ safeText(jobs.labels[importJob.id] ?? 'Импорт записи') }}</span>
+      <span class="truncate max-md:hidden">{{ safeText(jobs.labels[importJob.id] ?? 'Импорт записи') }}</span>
       <span class="relative h-1 w-[90px] flex-none overflow-hidden rounded-sm bg-pl-raise" role="progressbar" :aria-valuenow="importPercent ?? undefined" aria-valuemin="0" aria-valuemax="100">
         <span class="absolute inset-y-0 left-0 bg-pl-wine-text transition-[width] duration-300" :style="{ width: `${importPercent ?? 0}%` }" />
       </span>
@@ -85,8 +87,8 @@ const icon = 'grid size-[30px] place-items-center rounded text-pl-fg hover:bg-pl
       </button>
     </div>
 
-    <div v-if="project.project" class="flex h-[30px] items-center gap-1.5 rounded bg-pl-raise pl-2.5 text-pl-fg-strong">
-      <NuxtLink to="/verify" class="hover:underline" title="Экран «Проверка»: корпус, сводка, контрпримеры"><span class="text-pl-muted">проверка:</span> <b>все записи</b></NuxtLink>
+    <div v-if="project.project" class="flex h-[30px] items-center gap-1.5 rounded bg-pl-raise pl-2.5 text-pl-fg-strong max-md:bg-transparent max-md:pl-0">
+      <NuxtLink to="/verify" class="hover:underline max-md:hidden" title="Экран «Проверка»: корпус, сводка, контрпримеры"><span class="text-pl-muted">проверка:</span> <b>все записи</b></NuxtLink>
       <button class="ml-1 grid h-[30px] w-8 place-items-center rounded-r bg-pl-wine text-white disabled:opacity-70" type="button" :disabled="running" :title="running ? 'Прогон идёт…' : 'Запустить проверку на всех записях'" @click="runCheck">
         <UIcon :name="running ? 'i-lucide-loader-circle' : 'i-lucide-play'" class="size-4" :class="running && 'animate-spin'" aria-hidden="true" />
       </button>
@@ -94,10 +96,10 @@ const icon = 'grid size-[30px] place-items-center rounded text-pl-fg hover:bg-pl
     <button :class="icon" type="button" title="Поиск везде (Ctrl+K, двойной Shift)" @click="emit('search')">
       <UIcon name="i-lucide-search" class="size-4" aria-hidden="true" />
     </button>
-    <button :class="[icon, !workspace.inspector.collapsed && 'text-pl-fg-strong']" type="button" :aria-pressed="!workspace.inspector.collapsed" title="Панель «Свойства» (Alt+0)" @click="workspace.inspector.collapsed = !workspace.inspector.collapsed">
+    <button :class="[icon, inspectorOpen && 'text-pl-fg-strong']" type="button" :aria-pressed="inspectorOpen" title="Панель «Свойства» (Alt+0)" @click="emit('inspector')">
       <UIcon name="i-lucide-panel-right" class="size-4" aria-hidden="true" />
     </button>
-    <button :class="icon" type="button" :aria-pressed="workspace.focus" title="Режим фокуса: только рабочая область (Ctrl+Shift+F12, Esc — выйти)" @click="workspace.focus = !workspace.focus">
+    <button :class="[icon, 'max-sm:hidden']" type="button" :aria-pressed="workspace.focus" title="Режим фокуса: только рабочая область (Ctrl+Shift+F12, Esc — выйти)" @click="workspace.focus = !workspace.focus">
       <UIcon :name="workspace.focus ? 'i-lucide-minimize-2' : 'i-lucide-maximize-2'" class="size-4" aria-hidden="true" />
     </button>
     <button :class="icon" type="button" :title="colorMode.value === 'dark' ? 'Светлая тема' : 'Тёмная тема'" @click="toggleTheme">
