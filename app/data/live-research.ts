@@ -661,7 +661,7 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       return unwrap(await api.PUT('/api/interpretation', { body: { yaml } })).rev
     },
 
-    async getCompare(action) {
+    async getCompare(action, logId) {
       const logs = unwrap(await api.GET('/api/action-logs')).items
       const obs = unwrap(await api.GET('/api/observations')).items
       const observations = obs.map(o => ({
@@ -671,11 +671,18 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
         label: o.anchorState === 'ok' ? 'якорь цел' : o.anchorState === 'broken' ? 'байты изменились' : 'байты недоступны',
         anchor: `${shortStream(o.anchor.stream)} [${o.anchor.start}, ${o.anchor.end})`,
       }))
-      const log = logs[0]
-      const empty = { actions: [], action: null, chips: [], requests: [], mask: [], responses: [], correlations: [], observations, observationTotal: obs.length }
+      const log = logs.find(l => l.id === logId) ?? logs[0]
+      const logRefs = logs.map(l => ({ id: l.id, name: l.name }))
+      const empty = { logs: logRefs, logId: log?.id ?? null, actions: [], action: null, chips: [], requests: [], mask: [], responses: [], correlations: [], observations, observationTotal: obs.length }
       if (!log) return { ...empty, notes: ['Журнала действий нет — сравнивать не по чему. Импортируйте журнал на экране «Проект».'] }
 
-      const all = unwrap(await api.GET('/api/action-logs/{id}/actions', { params: { path: { id: log.id }, query: { limit: 500 } } })).items
+      // Действия для выбора — со всего журнала, не только с первой страницы.
+      const all: S['Action'][] = []
+      for (let total = Infinity; all.length < total;) {
+        const page = unwrap(await api.GET('/api/action-logs/{id}/actions', { params: { path: { id: log.id }, query: { limit: 500, offset: all.length } } }))
+        all.push(...page.items)
+        total = page.items.length ? page.total : all.length
+      }
       const names = [...new Set(all.map(a => a.action))]
       const chosen = action && names.includes(action) ? action : (all.find(a => Object.keys(a.params).length)?.action ?? names[0] ?? null)
       const picked = all.filter(a => a.action === chosen).slice(0, 6)
@@ -741,6 +748,8 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       if (!rows.some(r => r.request)) notes.push('Для этих действий запросы не найдены в окне времени.')
       notes.push('Совпадение на примерах — основание для гипотезы, а не вывод: проверьте её тестом.')
       return {
+        logs: logRefs,
+        logId: log.id,
         actions: names,
         action: chosen,
         chips: picked.map(a => pairs(a.params)),

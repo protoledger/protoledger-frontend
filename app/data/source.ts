@@ -82,7 +82,8 @@ export interface ResearchSource {
   getActions(logId?: string, offset?: number): Promise<ActionsView>
   getExchange(actionId: string): Promise<ExchangeView | null>
   /** Сравнение сообщений одного действия журнала; без action — первое действие с параметрами. */
-  getCompare(action?: string): Promise<CompareView>
+  /** Без logId — первый журнал проекта. */
+  getCompare(action?: string, logId?: string): Promise<CompareView>
   /** Наблюдение на байтах потока; false — пример данных, не сохраняется. */
   createObservation(anchor: AnchorRef, comment: string): Promise<boolean>
   getInterpretation(): Promise<InterpretationView>
