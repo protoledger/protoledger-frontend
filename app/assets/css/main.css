@@ -17,7 +17,7 @@
   --pl-fg-strong: #ffffff;
   --pl-muted: #9f9f9f;
   --pl-wine: #6d071f;
-  --pl-wine-text: #d2324f;
+  --pl-wine-text: #e8546d;
   --pl-wine-soft: rgb(109 7 31 / 35%);
   --pl-focus: #e0663a;
   --pl-card: #e8e8e8;
@@ -26,7 +26,7 @@
   --pl-st-rule: #6fc28f;
   --pl-st-hypothesis: #e3b44f;
   --pl-st-unknown: #9f9f9f;
-  --pl-st-gap: #7c8288;
+  --pl-st-gap: #8d939a;
   --pl-st-ambiguous: #c58be0;
   --pl-st-stale: #8f96a0;
   --pl-st-violation: #ff6b7d;
@@ -50,12 +50,12 @@
   --pl-card: #ffffff;
   --pl-card-fg: #131516;
 
-  --pl-st-rule: #1f7a45;
-  --pl-st-hypothesis: #8a5d00;
+  --pl-st-rule: #17643a;
+  --pl-st-hypothesis: #704c00;
   --pl-st-unknown: #555a5e;
-  --pl-st-gap: #6b7177;
+  --pl-st-gap: #53585d;
   --pl-st-ambiguous: #7b3a9a;
-  --pl-st-stale: #6b7280;
+  --pl-st-stale: #555b66;
   --pl-st-violation: #b3122f;
 
   color-scheme: light;

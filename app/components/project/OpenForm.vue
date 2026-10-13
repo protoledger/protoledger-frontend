@@ -61,7 +61,7 @@ async function submit(mode: 'create' | 'open') {
         <input
           id="project-path"
           v-model="path"
-          class="h-[30px] min-w-0 flex-1 rounded border border-pl-line bg-pl-raise px-2.5 font-mono text-pl-fg-strong outline-none focus:border-pl-wine-text"
+          class="h-[30px] min-w-0 flex-1 rounded border border-pl-line bg-pl-raise px-2.5 font-mono text-pl-fg-strong focus:border-pl-wine-text"
           placeholder="stand.protoledger"
           autocomplete="off"
           spellcheck="false"

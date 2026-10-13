@@ -146,7 +146,7 @@ const total = computed(() => view.value?.categories.reduce((n, c) => n + c.count
             <span
               v-for="c in view.categories.filter(x => x.count)"
               :key="c.key"
-              class="grid min-w-1 place-items-center text-[11px] font-semibold text-[#131516]"
+              class="grid min-w-1 place-items-center text-[11px] font-semibold text-pl-bg"
               :class="COLOR[c.key]"
               :style="{ flexGrow: c.count }"
               :title="`${c.label}: ${c.count}`"

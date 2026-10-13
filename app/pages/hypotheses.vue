@@ -123,7 +123,12 @@ const BADGE: Record<Hypothesis['status'], { status: KnowledgeStatus, label: (h: 
       </CommonPanelHeader>
       <CommonAsyncState :pending="pending" :error="error?.message" :empty="!view" @retry="refresh()">
         <template v-if="view">
-          <table class="pl-table">
+          <table
+            class="pl-table"
+            :tabindex="view.items.length ? 0 : undefined"
+            aria-label="Гипотезы: стрелки вверх и вниз выбирают гипотезу"
+            @keydown="(e: KeyboardEvent) => { const i = stepIndex(e, view!.items.findIndex(h => h.id === selected), view!.items.length); if (i !== null) { selected = view!.items[i]!.id; revealSelected(e) } }"
+          >
             <tbody>
               <tr v-for="h in view.items" :key="h.id" :aria-selected="h.id === selected" @click="selected = h.id">
                 <td class="w-14 font-semibold">{{ h.id }}</td>
@@ -148,7 +153,7 @@ const BADGE: Record<Hypothesis['status'], { status: KnowledgeStatus, label: (h: 
               id="new-question"
               ref="questionInput"
               v-model="question"
-              class="h-7 min-w-0 flex-1 rounded border border-pl-line bg-pl-raise px-2 text-pl-fg-strong outline-none focus:border-pl-wine-text"
+              class="h-7 min-w-0 flex-1 rounded border border-pl-line bg-pl-raise px-2 text-pl-fg-strong focus:border-pl-wine-text"
               placeholder="Новый открытый вопрос…"
               aria-label="Новый открытый вопрос"
             >
@@ -217,11 +222,11 @@ const BADGE: Record<Hypothesis['status'], { status: KnowledgeStatus, label: (h: 
         <form id="hypothesis-form" class="flex flex-col gap-3" @submit.prevent="createHypothesis">
           <label class="flex flex-col gap-1">
             <span class="pl-caption">Утверждение *</span>
-            <textarea id="hyp-statement" v-model="form.statement" rows="2" class="rounded border border-pl-line bg-pl-raise px-2 py-1.5 text-pl-fg-strong outline-none focus:border-pl-wine-text" placeholder="value в запросе равно параметру действия" />
+            <textarea id="hyp-statement" v-model="form.statement" rows="2" class="rounded border border-pl-line bg-pl-raise px-2 py-1.5 text-pl-fg-strong focus:border-pl-wine-text" placeholder="value в запросе равно параметру действия" />
           </label>
           <label class="flex flex-col gap-1">
             <span class="pl-caption">Тест</span>
-            <input id="hyp-test" v-model="form.test" class="h-[30px] rounded border border-pl-line bg-pl-raise px-2 font-mono text-pl-fg-strong outline-none focus:border-pl-wine-text" placeholder="value == action.params.value" spellcheck="false">
+            <input id="hyp-test" v-model="form.test" class="h-[30px] rounded border border-pl-line bg-pl-raise px-2 font-mono text-pl-fg-strong focus:border-pl-wine-text" placeholder="value == action.params.value" spellcheck="false">
             <span class="text-xs text-pl-muted">Поля сообщения, <code class="font-mono">response.*</code>, <code class="font-mono">action.params.*</code>, <code class="font-mono">action.result.*</code>. Без теста гипотеза остаётся «не проверена».</span>
           </label>
           <fieldset class="m-0 flex flex-col gap-1 border-0 p-0">

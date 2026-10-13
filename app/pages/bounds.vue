@@ -75,7 +75,13 @@ const cap = 'pl-caption m-0 px-3 pt-3.5 pb-2'
         <CommonAsyncState :pending="!view && !error" :error="error" :empty="!view">
           <template v-if="view">
             <p v-for="n in view.notes" :key="n" class="px-3 pt-3 text-pl-muted">{{ n }}</p>
-            <table v-if="view.candidates.length" class="pl-table">
+            <table
+              v-if="view.candidates.length"
+              class="pl-table"
+              tabindex="0"
+              aria-label="Кандидаты поля длины: стрелки вверх и вниз выбирают кандидата"
+              @keydown="(e: KeyboardEvent) => { const i = stepIndex(e, selected, view!.candidates.length); if (i !== null) { selected = i; revealSelected(e) } }"
+            >
               <thead><tr><th>Смещ.</th><th>Тип</th><th>Попр.</th><th class="text-right">Доля</th></tr></thead>
               <tbody>
                 <tr v-for="(c, i) in view.candidates" :key="c.id" :aria-selected="i === selected" @click="selected = i">

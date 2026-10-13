@@ -84,7 +84,12 @@ const EVENT = {
       </CommonPanelHeader>
       <p v-if="view?.exchangeNote" class="m-0 px-3 pt-3 text-pl-muted">{{ view.exchangeNote }}</p>
       <CommonAsyncState :pending="pending" :error="error?.message" :empty="!rows.length" empty-text="Журнала действий в проекте нет — импортируйте его на экране «Проект»." @retry="refresh()">
-        <table class="pl-table">
+        <table
+          class="pl-table"
+          tabindex="0"
+          aria-label="Журнал действий: стрелки вверх и вниз выбирают действие"
+          @keydown="(e: KeyboardEvent) => { const i = stepIndex(e, rows.findIndex(r => r.id === selected), rows.length); if (i !== null) { selected = rows[i]!.id; revealSelected(e) } }"
+        >
           <thead><tr><th>Время</th><th v-if="withSource">Запись</th><th>Действие</th><th>Параметры</th><th>Результат</th><th>Запрос</th><th>Ответ</th><th>Обмен</th></tr></thead>
           <tbody>
             <tr v-for="r in rows" :key="r.id" :aria-selected="r.id === selected" @click="selected = r.id">

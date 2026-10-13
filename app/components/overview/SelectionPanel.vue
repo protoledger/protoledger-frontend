@@ -164,7 +164,7 @@ function time(iso: string) {
     </div>
     <form v-if="noting" class="flex flex-col gap-2 border-t border-pl-line px-3.5 py-2.5" @submit.prevent="saveObservation">
       <label for="obs-comment" class="pl-caption">Что замечено в байтах</label>
-      <input id="obs-comment" v-model="note" class="h-7 rounded border border-pl-line bg-pl-raise px-2 text-pl-fg-strong outline-none focus:border-pl-wine-text" placeholder="например: длина сообщения, u16 LE">
+      <input id="obs-comment" v-model="note" class="h-7 rounded border border-pl-line bg-pl-raise px-2 text-pl-fg-strong focus:border-pl-wine-text" placeholder="например: длина сообщения, u16 LE">
       <div class="flex gap-2">
         <button class="pl-btn pl-btn-primary h-7" type="submit">Сохранить</button>
         <button class="pl-btn h-7" type="button" @click="noting = false">Отмена</button>
