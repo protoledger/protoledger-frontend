@@ -437,6 +437,19 @@ export function createMockResearchSource(): ResearchSource {
         })),
       }
     },
+    getSuggestions: async () => {
+      await delay()
+      const obs = (start: number, comment: string) => ({ source: 'a'.repeat(64), stream: 'stand:c0001:ab', start, end: start + 2, comment })
+      return {
+        items: [
+          { messageId: 'set_param_req', param: 'params.value', matches: 11, samples: 12, observation: obs(4, 'value в set_param_req = params.value × 10 в 11 из 12 примеров'), hypothesis: { statement: 'value в set_param_req — уставка из журнала, умноженная на 10', test: 'value == action.params.value * 10' }, field: 'value' },
+          { messageId: 'measure_resp', param: 'result.temp', matches: 12, samples: 12, observation: obs(6, 'байты 6–7 measure_resp = result.temp × 100 в 12 из 12'), hypothesis: { statement: 'temp в measure_resp — температура в сотых долях градуса', test: 'temp == dec(action.result.temp, 2)' }, field: null, newField: { name: 'temp', at: 6, type: 'i16be' } },
+        ],
+        truncated: false,
+        note: null,
+      }
+    },
+    acceptSuggestion: async () => null,
     generateReport: async () => null,
     listRuns: async () => (await delay(), verification.runs.map(r => ({ id: r.id, label: r.label, stale: !r.current }))),
   }

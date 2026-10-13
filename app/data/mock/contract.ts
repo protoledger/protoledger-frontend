@@ -78,6 +78,9 @@ export function createMockContractSource(): ContractSource {
       sources.push(source)
       return startImport(source, Math.max(1000, Math.round(file.size / 180)))
     },
+    async guessActionLog() {
+      return null
+    },
     async importActionLog(file, mapping) {
       await delay()
       const rows = Math.max(0, (await file.text()).split(/\r?\n/).filter(Boolean).length - 1)

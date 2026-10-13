@@ -860,6 +860,26 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       return unwrap(await api.GET('/api/streams/{stream}/explain', { params: { path: { stream }, query: { offset } } }))
     },
 
+    async getSuggestions() {
+      const page = await contract.listConnections({ limit: 500 })
+      const streams = page.items.flatMap(c => c.streams.map(s => s.id))
+      if (!streams.length) return { items: [], truncated: false, note: 'В проекте нет потоков.' }
+      try {
+        const r = unwrap(await api.POST('/api/analysis/suggestions', { body: { streams } }))
+        return { items: r.items, truncated: r.truncated, note: r.items.length ? null : 'Связей байтов с журналом, сошедшихся на 90 % примеров, не нашлось.' }
+      }
+      catch (e) {
+        if (e instanceof ApiError && e.status === 409) return { items: [], truncated: false, note: 'Заготовки появятся, когда в проекте есть сохранённое описание и журнал действий.' }
+        throw e
+      }
+    },
+
+    async acceptSuggestion(s) {
+      const { source, stream, start, end, comment } = s.observation
+      const obs = unwrap(await api.POST('/api/observations', { body: { anchor: { source, stream, start, end }, comment } }))
+      return unwrap(await api.POST('/api/hypotheses', { body: { statement: s.hypothesis.statement, basis: [obs.id], test: s.hypothesis.test } })).id
+    },
+
     async getDeviceConnections() {
       try {
         return unwrap(await api.POST('/api/analysis/device-connections', { body: {} }))
