@@ -11,6 +11,7 @@ type Category = RunItemPage['items'][number]['category']
 const API_CATEGORIES: Category[] = ['matched', 'violated', 'incomplete', 'ambiguous', 'unmatched', 'limit_exceeded']
 
 const data = useData()
+const project = useProjectStore()
 const open = ref(false)
 const category = ref<Category | ''>('')
 const messageId = ref('')
@@ -52,9 +53,11 @@ function link(stream: string, start: number, end: number) {
   return { path: '/overview', query: { conn: stream.slice(0, cut), dir: stream.slice(cut + 1), from: String(start), to: String(end) } }
 }
 
+// Номер соединения повторяется в каждой записи: показываем и запись (её sha256 начинается с префикса потока).
 function where(stream: string) {
-  const [, conn, dir] = stream.split(':')
-  return `${conn} ${dir === 'ba' ? 'b→a' : 'a→b'}`
+  const [prefix = '', conn, dir] = stream.split(':')
+  const source = project.sources.length > 1 ? project.sources.find(s => s.sha256.startsWith(prefix))?.name : undefined
+  return `${source ? `${source} · ` : ''}${conn} ${dir === 'ba' ? 'b→a' : 'a→b'}`
 }
 </script>
 
@@ -75,7 +78,7 @@ function where(stream: string) {
       <thead><tr><th>Поток</th><th>Байты</th><th>Тип</th><th>Категория</th></tr></thead>
       <tbody>
         <tr v-for="it in page.items" :key="`${it.stream}-${it.start}`">
-          <td class="whitespace-nowrap">{{ where(it.stream) }}</td>
+          <td class="whitespace-nowrap">{{ safeText(where(it.stream)) }}</td>
           <td><NuxtLink :to="link(it.stream, it.start, it.end)" class="font-mono text-pl-wine-text hover:underline">[{{ it.start }}, {{ it.end }})</NuxtLink></td>
           <td class="font-mono">{{ it.messageId ? safeText(it.messageId) : 'тип не определён' }}</td>
           <td><CommonStatusBadge :status="STATUS[it.category]?.status ?? 'unknown'" :label="STATUS[it.category]?.label ?? it.category" /></td>
