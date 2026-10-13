@@ -46,6 +46,8 @@ function lengthType(h: S['LengthHint']) {
 
 interface ExchangePart { source: string, stream: string, start: number, end: number, time: number, frameNo?: number }
 
+const ACTIONS_PAGE = 500
+
 // Запрос — первое после действия в направлении a→b, ответ — первое после запроса в обратном.
 // used — уже занятые части: у действий с одинаковым временем запросы идут по порядку, а не один на всех.
 export function pickExchange(ex: S['Exchange'], used = new Set<string>()): { request?: ExchangePart, response?: ExchangePart } {
@@ -263,13 +265,17 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       }))
     },
 
-    async getActions() {
+    async getActions(logId, offset = 0) {
       const { items } = unwrap(await api.GET('/api/action-logs'))
-      const log = items[0]
-      if (!log) return { log: null, rows: [] }
-      const page = unwrap(await api.GET('/api/action-logs/{id}/actions', { params: { path: { id: log.id }, query: { limit: 500 } } }))
+      const logs = items.map(l => ({ id: l.id, name: l.name, rows: l.rows }))
+      const log = logs.find(l => l.id === logId) ?? logs[0]
+      if (!log) return { logs, log: null, rows: [], offset: 0, total: 0 }
+      const page = unwrap(await api.GET('/api/action-logs/{id}/actions', { params: { path: { id: log.id }, query: { limit: ACTIONS_PAGE, offset } } }))
       return {
-        log: { name: log.name, rows: log.rows },
+        logs,
+        log,
+        offset: page.offset,
+        total: page.total,
         rows: page.items.map(a => ({
           id: `${log.id}|${a.line}`,
           time: clock(a.time),

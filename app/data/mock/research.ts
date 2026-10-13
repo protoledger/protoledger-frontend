@@ -62,7 +62,10 @@ const framing: FramingView = {
 }
 
 const actions: ActionsView = {
-  log: { name: 'actions.csv', rows: 46 },
+  logs: [{ id: 'log-1', name: 'actions.csv', rows: 46 }],
+  log: { id: 'log-1', name: 'actions.csv', rows: 46 },
+  offset: 0,
+  total: 46,
   rows: [
     { id: 'a1', time: '14:02:11.200', action: 'set_param', params: 'value = 21', result: 'ok', source: null, exchange: 'found' },
     { id: 'a2', time: '14:02:12.900', action: 'read_measure', params: '—', result: '21,0', source: null, exchange: 'found' },

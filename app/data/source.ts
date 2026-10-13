@@ -74,7 +74,8 @@ export interface ResearchSource {
   getFramingDetail(stream: string, spec: FramingSpec): Promise<FramingDetail>
   /** Записывает фрейминг в интерпретацию новой ревизией; номер ревизии или null для примера данных. */
   applyFraming(spec: FramingSpec): Promise<number | null>
-  getActions(): Promise<ActionsView>
+  /** Страница действий журнала; без logId — первый журнал проекта. */
+  getActions(logId?: string | null, offset?: number): Promise<ActionsView>
   getExchange(actionId: string): Promise<ExchangeView | null>
   /** Сравнение сообщений одного действия журнала; без action — первое действие с параметрами. */
   getCompare(action?: string): Promise<CompareView>

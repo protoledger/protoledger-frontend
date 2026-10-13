@@ -79,9 +79,20 @@ export interface ExchangeSide {
   highlight: number[]
 }
 
+export interface ActionLogRef {
+  id: string
+  name: string
+  rows: number
+}
+
 export interface ActionsView {
-  log: { name: string, rows: number } | null
+  /** Все журналы проекта, для выбора. */
+  logs: ActionLogRef[]
+  log: ActionLogRef | null
+  /** Строки с offset; всего в журнале — total. */
   rows: ActionRow[]
+  offset: number
+  total: number
 }
 
 export interface ExchangeView {

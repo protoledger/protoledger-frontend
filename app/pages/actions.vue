@@ -1,17 +1,37 @@
 <script setup lang="ts">
-import type { ExchangeView } from '~/data/views'
+import type { ActionRow, ExchangeView } from '~/data/views'
 
 const data = useData()
-const { data: view, error, refresh, pending } = await useAsyncData('actions', () => data.getActions())
+const logId = ref<string | null>(null)
+const { data: view, error, refresh, pending } = await useAsyncData('actions', () => data.getActions(logId.value), { watch: [logId] })
+// Строки сверх первой страницы дописываются сюда; при смене журнала — сброс.
+const more = ref<ActionRow[]>([])
+const loadingMore = ref(false)
+const rows = computed(() => [...(view.value?.rows ?? []), ...more.value])
 const selected = ref<string | null>(null)
 const exchange = ref<ExchangeView | null>(null)
 const exchangeState = ref<'idle' | 'loading' | 'none' | 'error'>('idle')
 const found = ref<Record<string, 'found' | 'none'>>({})
-const withSource = computed(() => !!view.value?.rows.some(r => r.source))
+const withSource = computed(() => rows.value.some(r => r.source))
 
-watchEffect(() => {
-  if (!selected.value && view.value?.rows[0]) selected.value = view.value.rows[0].id
-})
+watch(view, (v) => {
+  more.value = []
+  selected.value = v?.rows[0]?.id ?? null
+}, { immediate: true })
+
+async function loadMore() {
+  if (!view.value?.log) return
+  loadingMore.value = true
+  try {
+    const page = await data.getActions(view.value.log.id, rows.value.length)
+    more.value.push(...page.rows)
+  }
+  finally {
+    loadingMore.value = false
+  }
+}
+
+const selectLog = 'h-7 max-w-64 rounded border border-pl-line bg-pl-raise px-2 text-pl-fg-strong outline-none focus:border-pl-wine-text'
 
 watch(selected, async (id) => {
   exchange.value = null
@@ -45,14 +65,23 @@ const EVENT = {
 <template>
   <div class="flex h-full">
     <section class="pl-scroll min-w-0 flex-1">
-      <CommonPanelHeader title="Журнал действий" :subtitle="view?.log ? `${view.log.name} · ${view.log.rows} строк` : ''">
+      <CommonPanelHeader title="Журнал действий" :subtitle="view?.log ? `${safeText(view.log.name)} · ${formatCount(view.total)} строк` : ''">
+        <select
+          v-if="(view?.logs.length ?? 0) > 1"
+          :class="selectLog"
+          :value="view?.log?.id"
+          aria-label="Журнал действий"
+          @change="logId = ($event.target as HTMLSelectElement).value"
+        >
+          <option v-for="l in view!.logs" :key="l.id" :value="l.id">{{ safeText(l.name) }} · {{ formatCount(l.rows) }}</option>
+        </select>
         <NuxtLink to="/project" class="pl-btn pl-btn-ghost h-7" title="Колонки сопоставляются при импорте журнала: импортируйте его заново на «Проекте»">Колонки…</NuxtLink>
       </CommonPanelHeader>
-      <CommonAsyncState :pending="pending" :error="error?.message" :empty="!view?.rows.length" empty-text="Журнала действий в проекте нет — импортируйте его на экране «Проект»." @retry="refresh()">
+      <CommonAsyncState :pending="pending" :error="error?.message" :empty="!rows.length" empty-text="Журнала действий в проекте нет — импортируйте его на экране «Проект»." @retry="refresh()">
         <table v-if="view" class="pl-table">
           <thead><tr><th>Время</th><th v-if="withSource">Запись</th><th>Действие</th><th>Параметры</th><th>Результат</th><th>Обмен</th></tr></thead>
           <tbody>
-            <tr v-for="r in view.rows" :key="r.id" :aria-selected="r.id === selected" @click="selected = r.id">
+            <tr v-for="r in rows" :key="r.id" :aria-selected="r.id === selected" @click="selected = r.id">
               <td>{{ r.time }}</td>
               <td v-if="withSource" class="whitespace-nowrap text-pl-muted">{{ safeText(r.source ?? '—') }}</td>
               <td>{{ safeText(r.action) }}</td>
@@ -65,6 +94,9 @@ const EVENT = {
             </tr>
           </tbody>
         </table>
+        <button v-if="view && rows.length < view.total" class="pl-btn pl-btn-ghost m-3" type="button" :disabled="loadingMore" @click="loadMore()">
+          Показать ещё ({{ formatCount(view.total - rows.length) }})
+        </button>
       </CommonAsyncState>
     </section>
 
