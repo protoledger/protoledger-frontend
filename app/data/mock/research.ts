@@ -363,6 +363,39 @@ export function createMockResearchSource(): ResearchSource {
       ],
       incomplete: false,
     }),
+    getFixHints: async hypothesis => (await delay(), {
+      hypothesis,
+      test: 'field.value == action.params.value',
+      before: 'контрпримеров 1 из 42',
+      fixes: [
+        { kind: 'width' as const, summary: 'value — 4 байта: u32be @4 вместо u16be @4', effect: 'контрпримеров 1 из 42 → 0', after: 0, edit: { hypothesis, field: 'value', messages: ['set_param'], fromType: 'u16be', toType: 'u32be' } },
+        { kind: 'sign' as const, summary: 'value со знаком: i16be', effect: 'контрпримеров 1 из 42 → 1', after: 1, edit: { hypothesis, field: 'value', messages: ['set_param'], fromType: 'u16be', toType: 'i16be' } },
+      ],
+    }),
+    getCoverage: async () => (await delay(), {
+      described: '91,4%',
+      totals: [
+        { status: 'rule' as const, label: 'правило', bytes: 3120 },
+        { status: 'hypothesis' as const, label: 'гипотеза', bytes: 1840 },
+        { status: 'unknown' as const, label: 'неизвестно', bytes: 210 },
+        { status: 'none' as const, label: 'не описано', bytes: 278 },
+      ],
+      types: [
+        { id: 'set_param', messages: 42, length: '7 байт', totals: { rule: 168, hypothesis: 126, unknown: 0, none: 0 }, truncated: false, regions: [
+          { start: 0, end: 2, status: 'rule' as const, label: 'magic', share: 1 },
+          { start: 2, end: 4, status: 'rule' as const, label: 'length · cmd', share: 1 },
+          { start: 4, end: 6, status: 'hypothesis' as const, label: 'value · H4', share: 1 },
+          { start: 6, end: 7, status: 'hypothesis' as const, label: 'crc · H3', share: 1 },
+        ] },
+        { id: 'measure_resp', messages: 12, length: '7–15 байт', totals: { rule: 48, hypothesis: 24, unknown: 30, none: 18 }, truncated: false, regions: [
+          { start: 0, end: 4, status: 'rule' as const, label: 'заголовок', share: 1 },
+          { start: 4, end: 6, status: 'hypothesis' as const, label: 'measure · H2', share: 1 },
+          { start: 6, end: 13, status: 'unknown' as const, label: 'tail', share: 0.5 },
+          { start: 13, end: 15, status: 'none' as const, label: 'не описано', share: 0.25 },
+        ] },
+      ],
+      incomplete: false,
+    }),
     getNextSteps: async () => (await delay(), {
       steps: [
         { id: 'verify', screen: 'verification' as const, title: 'Запустите проверку на всех записях', detail: 'Описание изменено после прогона run-4 — итоги устарели.' },

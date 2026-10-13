@@ -780,6 +780,48 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       }
     },
 
+    async getFixHints(hypothesis, yaml) {
+      const h = unwrap(await api.POST('/api/interpretation/fix-hints', { body: { hypothesis, ...(yaml ? { yaml } : {}) } }))
+      const res = (r: S['FixTestResult']) => `контрпримеров ${r.counterexamples} из ${r.applicable}`
+      return {
+        hypothesis: h.hypothesis,
+        test: h.test,
+        before: res(h.current),
+        fixes: h.fixes.map(f => ({
+          kind: f.kind,
+          summary: f.summary,
+          effect: `${res(h.current)} → ${f.result.counterexamples}${f.otherBefore || f.otherAfter ? `; у других гипотез с этим полем ${f.otherBefore} → ${f.otherAfter}` : ''}`,
+          after: f.result.counterexamples,
+          edit: { hypothesis: h.hypothesis, field: f.field, messages: f.messages, fromType: f.fromType, toType: f.toType, fromAt: f.fromAt, toAt: f.toAt, test: f.test },
+        })),
+      }
+    },
+
+    async getCoverage(yaml) {
+      const c = unwrap(await api.POST('/api/interpretation/coverage', { body: yaml ? { yaml } : {} }))
+      const LABEL = { rule: 'правило', hypothesis: 'гипотеза', unknown: 'неизвестно', none: 'не описано' } as const
+      const order = ['rule', 'hypothesis', 'unknown', 'none'] as const
+      return {
+        described: pct(c.describedPermille),
+        totals: order.map(st => ({ status: st, label: LABEL[st], bytes: c.bytes[st] })),
+        types: c.types.map(t => ({
+          id: t.messageId ?? 'без типа',
+          messages: t.messages,
+          length: t.minLen === t.maxLen ? `${t.minLen} байт` : `${t.minLen}–${t.maxLen} байт`,
+          totals: { rule: t.bytes.rule, hypothesis: t.bytes.hypothesis, unknown: t.bytes.unknown, none: t.bytes.none },
+          regions: t.regions.map(r => ({
+            start: r.start,
+            end: r.end,
+            status: r.status,
+            label: [r.field, r.hypothesis].filter(Boolean).join(' · ') || LABEL[r.status],
+            share: r.sharePermille / 1000,
+          })),
+          truncated: t.mapTruncated,
+        })),
+        incomplete: c.incomplete,
+      }
+    },
+
     async getNextSteps() {
       return { steps: unwrap(await api.GET('/api/project/next-steps')).steps }
     },

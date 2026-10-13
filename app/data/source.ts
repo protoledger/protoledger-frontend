@@ -19,7 +19,9 @@ import type {
   ActionLog,
   ActionsView,
   AnchorRef,
+  CoverageView,
   DraftView,
+  FixHintsView,
   NextStepsView,
   CompareView,
   ExchangeView,
@@ -116,6 +118,10 @@ export interface ResearchSource {
   getDraft(streams: string[], logId?: string): Promise<DraftView>
   /** «Что дальше»: следующие шаги исследования по состоянию проекта. */
   getNextSteps(): Promise<NextStepsView>
+  /** Подсказка исправления опровергнутой гипотезы; yaml — несохранённый текст. */
+  getFixHints(hypothesis: string, yaml?: string): Promise<FixHintsView>
+  /** Карта покрытия байтов описанием по типам сообщений. */
+  getCoverage(yaml?: string): Promise<CoverageView>
 }
 
 export type DataSourceKind = 'mock' | 'live'

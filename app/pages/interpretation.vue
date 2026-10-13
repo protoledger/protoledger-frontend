@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import type { DraftView, InterpretationView } from '~/data/views'
+import type { DraftView, FixHintsView, InterpretationView } from '~/data/views'
 import { STATUS } from '~/utils/status'
 import type { FieldHints } from '~/api/types'
 import { parseForm, setFieldAttr } from '~/utils/interp-form'
+import { applyFixEdit } from '~/utils/interp-fix'
 import { tokenizeYamlLine } from '~/utils/yaml-tokens'
 
 const data = useData()
@@ -289,7 +290,41 @@ function useDraft() {
 
 onMounted(() => {
   if (route.query.draft === '1') void makeDraft()
+  if (typeof route.query.fixFor === 'string') void loadFixes(route.query.fixFor)
 })
+
+// «Как исправить» гипотезу описания: движок перебирает знак, порядок байтов, ширину и масштаб;
+// правка вносится в текст несохранённой — проверка и сохранение за исследователем.
+const fixes = ref<FixHintsView | null>(null)
+const fixState = ref<'idle' | 'loading' | 'error'>('idle')
+const fixError = ref<string | null>(null)
+
+async function loadFixes(hypothesis: string) {
+  fixState.value = 'loading'
+  fixError.value = null
+  try {
+    fixes.value = await data.getFixHints(hypothesis, dirty.value ? text.value : undefined)
+    fixState.value = 'idle'
+  }
+  catch (e) {
+    fixState.value = 'error'
+    fixError.value = e instanceof Error ? e.message : 'Подсказка исправления недоступна'
+  }
+}
+
+function applySuggestedFix(index: number) {
+  const fix = fixes.value?.fixes[index]
+  if (!fix) return
+  const res = applyFixEdit(text.value, fix.edit)
+  if (!res.changed) {
+    problem.value = `Не нашла в тексте место для правки «${fix.summary}».`
+    return
+  }
+  text.value = res.text
+  mode.value = 'yaml'
+  workspace.log(`Исправление ${fixes.value!.hypothesis}: ${fix.summary}`)
+  notice.value = `Внесено: ${fix.summary}. Проверьте предпросмотр, сохраните ревизию и перепроверьте.`
+}
 
 const cap = 'pl-caption m-0 px-3 pt-3.5 pb-2'
 const TOKEN: Record<string, string> = {
@@ -376,6 +411,27 @@ const TOKEN: Record<string, string> = {
           <pre class="mt-2 mb-0 font-mono text-[11.5px] whitespace-pre-wrap text-pl-fg">{{ problem }}</pre>
         </div>
         <p v-if="notice" class="m-3 text-pl-st-rule" aria-live="polite">{{ notice }}</p>
+
+        <template v-if="fixState !== 'idle' || fixes">
+          <h3 :class="cap">Как исправить {{ fixes?.hypothesis ?? route.query.fixFor }}</h3>
+          <div class="flex flex-col gap-2 px-3 pb-2">
+            <p v-if="fixState === 'loading'" class="m-0 text-pl-muted" aria-live="polite">Перебираю знак, порядок байтов, ширину поля и масштаб…</p>
+            <p v-else-if="fixState === 'error'" class="m-0 text-pl-muted">{{ safeText(fixError) }}</p>
+            <template v-else-if="fixes">
+              <p class="m-0 font-mono text-xs break-all text-pl-muted">{{ safeText(fixes.test) }}</p>
+              <p class="m-0 text-pl-muted">Сейчас: {{ fixes.before }}.</p>
+              <p v-if="!fixes.fixes.length" class="m-0 text-pl-muted">Правка знака, порядка байтов, ширины или масштаба контрпримеры не убирает — дело в другом.</p>
+              <div v-for="(f, i) in fixes.fixes" :key="i" class="border border-pl-line p-2.5">
+                <div class="flex items-start justify-between gap-2">
+                  <b class="font-semibold text-pl-fg-strong">{{ safeText(f.summary) }}</b>
+                  <CommonStatusBadge :status="f.after === 0 ? 'rule' : 'hypothesis'" :label="f.after === 0 ? 'контрпримеров нет' : `осталось ${f.after}`" />
+                </div>
+                <p class="mt-1 mb-2 text-pl-muted">{{ safeText(f.effect) }}</p>
+                <button class="pl-btn" type="button" @click="applySuggestedFix(i)">Применить</button>
+              </div>
+            </template>
+          </div>
+        </template>
 
         <template v-if="draftState !== 'idle' || draftView">
           <h3 :class="cap">Черновик описания</h3>

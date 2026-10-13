@@ -169,7 +169,12 @@ const total = computed(() => view.value?.categories.reduce((n, c) => n + c.count
                 <tr v-for="h in view.hypotheses" :key="h.id">
                   <td class="font-semibold">{{ h.id }}</td>
                   <td class="font-mono text-xs break-all">{{ safeText(h.test) }}</td>
-                  <td><CommonStatusBadge :status="h.status" :label="h.label" /></td>
+                  <td>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <CommonStatusBadge :status="h.status" :label="h.label" />
+                      <NuxtLink v-if="h.status === 'violation'" :to="{ path: '/interpretation', query: { fixFor: h.id } }" class="text-pl-wine-text hover:underline">как исправить</NuxtLink>
+                    </div>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -196,6 +201,8 @@ const total = computed(() => view.value?.categories.reduce((n, c) => n + c.count
               </tr>
             </tbody>
           </table>
+
+          <VerifyCoverageMap :key="view.run?.id ?? 'none'" />
         </div>
       </CommonAsyncState>
     </section>

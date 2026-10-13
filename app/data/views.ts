@@ -1,6 +1,7 @@
 // Модели экранов исследования. Живой источник собирает их из ответов движка (live-research.ts),
 // пример данных — mock/research.ts; экраны зависят только от этих моделей.
 import type { FramingSpec } from '~/api/types'
+import type { FixEdit } from '~/utils/interp-fix'
 import type { KnowledgeStatus } from '~/utils/status'
 
 export interface ProjectExtras {
@@ -290,4 +291,39 @@ export type NextStepScreen = 'sources' | 'actions' | 'framing' | 'interpretation
 
 export interface NextStepsView {
   steps: { id: string, screen: NextStepScreen, title: string, detail: string }[]
+}
+
+/** Исправление опровергнутой гипотезы: что изменить и что это даёт на записях. */
+export interface FixSuggestion {
+  kind: 'sign' | 'byte_order' | 'scale' | 'width'
+  summary: string
+  /** «контрпримеров 2 → 0». */
+  effect: string
+  /** Сколько контрпримеров остаётся после правки — 0 значит гипотеза снова выдерживает записи. */
+  after: number
+  edit: FixEdit
+}
+
+export interface FixHintsView {
+  hypothesis: string
+  test: string
+  before: string
+  fixes: FixSuggestion[]
+}
+
+export type CoverageStatus = 'rule' | 'hypothesis' | 'unknown' | 'none'
+
+/** Карта покрытия: сколько байтов описано правилом, гипотезой, объявлено неизвестным или не описано. */
+export interface CoverageView {
+  described: string
+  totals: { status: CoverageStatus, label: string, bytes: number }[]
+  types: {
+    id: string
+    messages: number
+    length: string
+    totals: Record<CoverageStatus, number>
+    regions: { start: number, end: number, status: CoverageStatus, label: string, share: number }[]
+    truncated: boolean
+  }[]
+  incomplete: boolean
 }
