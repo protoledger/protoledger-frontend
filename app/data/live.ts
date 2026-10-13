@@ -32,6 +32,15 @@ export function createLiveSource(): ContractSource {
       })
       return unwrap(res).jobId
     },
+    async guessActionLog(file) {
+      const body = new FormData()
+      body.append('file', file)
+      const res = await api.POST('/api/action-logs/guess', {
+        body: body as unknown as { file: string },
+        bodySerializer: (b) => b as unknown as FormData,
+      })
+      return unwrap(res)
+    },
     async importActionLog(file, mapping) {
       const body = new FormData()
       body.append('file', file)

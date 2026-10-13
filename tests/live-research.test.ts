@@ -118,6 +118,31 @@ describe('живые модели экранов', () => {
     expect(new URL(fetch.mock.calls[0]![0].url).pathname + new URL(fetch.mock.calls[0]![0].url).search).toBe('/api/streams/x%3Ac0001%3Aab/explain?offset=12')
   })
 
+  it('заготовки: без описания или журнала — пояснение, а не ошибка', async () => {
+    stubApi({ '/api/analysis/suggestions': new Response(JSON.stringify({ title: 'нет описания', status: 409 }), { status: 409, headers: { 'Content-Type': 'application/problem+json' } }) })
+    const v = await createLiveResearchSource(contractWithBytes(), createMockResearchSource()).getSuggestions()
+    expect(v.items).toEqual([])
+    expect(v.note).toMatch(/сохранённое описание и журнал/)
+  })
+
+  it('принять заготовку: сначала наблюдение, затем гипотеза на нём', async () => {
+    const calls: { path: string, body: unknown }[] = []
+    vi.stubGlobal('fetch', vi.fn(async (input: Request) => {
+      const path = new URL(input.url).pathname
+      calls.push({ path, body: await input.clone().json() })
+      const body = path === '/api/observations' ? { id: 'obs-7' } : { id: 'H9' }
+      return new Response(JSON.stringify(body), { status: 201, headers: { 'Content-Type': 'application/json' } })
+    }))
+    const id = await createLiveResearchSource(contractWithBytes(), createMockResearchSource()).acceptSuggestion({
+      messageId: 'set_config_req', param: 'params.enabled', matches: 12, samples: 12, field: 'enabled',
+      observation: { source: SHA, stream: 'x:c0001:ab', start: 16, end: 17, comment: 'enabled = params.enabled' },
+      hypothesis: { statement: 'enabled — флаг из журнала', test: 'enabled == action.params.enabled' },
+    })
+    expect(id).toBe('H9')
+    expect(calls.map(c => c.path)).toEqual(['/api/observations', '/api/hypotheses'])
+    expect(calls[1]!.body).toEqual({ statement: 'enabled — флаг из журнала', basis: ['obs-7'], test: 'enabled == action.params.enabled' })
+  })
+
   it('действия с одинаковым временем получают разные запросы по порядку', () => {
     const t = (ms: number) => new Date(Date.UTC(2026, 9, 10, 14, 0, 0, ms)).toISOString()
     const ex = {

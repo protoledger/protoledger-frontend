@@ -64,6 +64,12 @@ async function createHypothesis() {
   }
 }
 
+const suggesting = ref(false)
+async function onSuggestionsAccepted(ids: string[]) {
+  await refresh()
+  selected.value = ids[0] ?? selected.value
+}
+
 // Статус — решение исследователя; тест его не меняет.
 const MARKS = [['supported', 'поддержана'], ['refuted', 'опровергнута'], ['untested', 'не проверена'], ['superseded', 'заменена']] as const
 const markError = ref<string | null>(null)
@@ -119,6 +125,7 @@ const BADGE: Record<Hypothesis['status'], { status: KnowledgeStatus, label: (h: 
   <div class="flex h-full">
     <section class="pl-scroll min-w-0 flex-1">
       <CommonPanelHeader title="Гипотезы" :subtitle="view ? String(view.items.length) : ''">
+        <button class="pl-btn pl-btn-ghost h-7" type="button" title="Наблюдения и гипотезы из байтов, совпавших со значениями журнала действий" @click="suggesting = true">Заготовки из журнала</button>
         <button class="pl-btn pl-btn-ghost h-7" type="button" @click="creating = true">+ гипотеза</button>
       </CommonPanelHeader>
       <CommonAsyncState :pending="pending" :error="error?.message" :empty="!view" @retry="refresh()">
@@ -216,6 +223,8 @@ const BADGE: Record<Hypothesis['status'], { status: KnowledgeStatus, label: (h: 
         </div>
       </div>
     </ShellInspectorContent>
+
+    <HypothesesSuggestions v-model:open="suggesting" :existing="view?.items.map(h => h.text) ?? []" @accepted="onSuggestionsAccepted" />
 
     <UModal v-model:open="creating" title="Новая гипотеза" description="Утверждение, тест и наблюдения, на которых оно основано">
       <template #body>

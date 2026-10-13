@@ -1,4 +1,5 @@
 import type {
+  ActionLogGuess,
   ActionLogMapping,
   CorpusFilter,
   DeviceConnections,
@@ -16,6 +17,7 @@ import type {
   Source,
   SourceDiagnostics,
   StreamBytes,
+  Suggestion,
 } from '~/api/types'
 import type {
   ActionLog,
@@ -36,6 +38,7 @@ import type {
   ProjectExtras,
   ReportView,
   SearchEntry,
+  SuggestionsView,
   VerificationView,
 } from './views'
 
@@ -58,6 +61,8 @@ export interface ContractSource {
   listSources(): Promise<Page<Source>>
   importSource(file: File): Promise<string>
   /** Импорт журнала действий: колонки CSV сопоставляются явно, формат журнала заранее неизвестен. */
+  /** Догадка движка о колонках журнала с причинами и пробным разбором; null — движка нет (пример данных). */
+  guessActionLog(file: File): Promise<ActionLogGuess | null>
   importActionLog(file: File, mapping: ActionLogMapping): Promise<ActionLogRecord>
   getDiagnostics(sha256: string): Promise<SourceDiagnostics>
   listConnections(query: ConnectionQuery): Promise<Page<Connection>>
@@ -129,6 +134,10 @@ export interface ResearchSource {
   explainByte(stream: string, offset: number): Promise<ByteExplanation>
   /** Соединения устройства по журналу действий; null — журнала в проекте нет. */
   getDeviceConnections(): Promise<DeviceConnections | null>
+  /** Заготовки наблюдений и гипотез по всем потокам проекта. */
+  getSuggestions(): Promise<SuggestionsView>
+  /** Принять заготовку: наблюдение на байтах и гипотеза на нём; id гипотезы или null — пример данных. */
+  acceptSuggestion(s: Suggestion): Promise<string | null>
 }
 
 export type DataSourceKind = 'mock' | 'live'

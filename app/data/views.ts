@@ -1,6 +1,6 @@
 // Модели экранов исследования. Живой источник собирает их из ответов движка (live-research.ts),
 // пример данных — mock/research.ts; экраны зависят только от этих моделей.
-import type { FramingSpec } from '~/api/types'
+import type { FramingSpec, Suggestion } from '~/api/types'
 import type { FixEdit } from '~/utils/interp-fix'
 import type { KnowledgeStatus } from '~/utils/status'
 
@@ -329,4 +329,11 @@ export interface CoverageView {
     truncated: boolean
   }[]
   incomplete: boolean
+}
+
+/** Заготовки наблюдений и гипотез из связей с журналом; note — почему список пуст. */
+export interface SuggestionsView {
+  items: Suggestion[]
+  truncated: boolean
+  note: string | null
 }

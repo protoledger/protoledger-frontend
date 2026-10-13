@@ -12,6 +12,9 @@ const mapping = reactive<ActionLogMapping>({ time: '', action: '', params: null,
 const busy = ref(false)
 const error = ref<string | null>(null)
 const done = ref<ActionLogRecord | null>(null)
+const reasons = ref<Record<string, string>>({})
+const trial = ref<{ rows: number, skipped: number } | null>(null)
+const guessing = ref(false)
 
 // Заголовок читаем из начала файла: весь журнал в память не грузим.
 watch(() => props.file, async (file) => {
@@ -24,6 +27,26 @@ watch(() => props.file, async (file) => {
   columns.value = header.columns
   Object.assign(mapping, guessMapping(header.columns, head), { delimiter: header.delimiter === ',' ? null : header.delimiter })
   if (!header.columns.length) error.value = 'В первой строке файла не найдены названия колонок'
+  // Затем догадка движка: он пробует разобрать весь файл и объясняет выбор каждой колонки.
+  reasons.value = {}
+  trial.value = null
+  guessing.value = true
+  try {
+    const g = await data.guessActionLog(file)
+    if (g && props.file === file) {
+      columns.value = g.columns
+      Object.assign(mapping, g.mapping)
+      reasons.value = g.reasons
+      trial.value = { rows: g.rows, skipped: g.skipped }
+      if (g.columns.length) error.value = null
+    }
+  }
+  catch {
+    // Догадка — подсказка: без неё остаётся разбор заголовка в браузере.
+  }
+  finally {
+    if (props.file === file) guessing.value = false
+  }
 }, { immediate: true })
 
 const TIME_FORMATS = [
@@ -64,10 +87,16 @@ const field = 'h-[30px] w-full rounded border border-pl-line bg-pl-raise px-2 te
         </ul>
       </div>
       <form v-else id="action-log-form" class="grid grid-cols-[140px_minmax(0,1fr)] items-center gap-x-3 gap-y-2" @submit.prevent="submit">
+        <p class="col-span-2 m-0 mb-1 text-pl-muted" aria-live="polite">
+          <template v-if="guessing">Движок подбирает колонки…</template>
+          <template v-else-if="trial">Колонки подобраны движком: пробный разбор — {{ trial.rows }} строк<template v-if="trial.skipped">, не разобрано {{ trial.skipped }}</template>. Проверьте и при необходимости поправьте.</template>
+          <template v-if="reasons.delimiter"> Разделитель {{ safeText(reasons.delimiter) }}.</template>
+        </p>
         <label for="al-time" class="text-pl-muted">Время *</label>
         <select id="al-time" v-model="mapping.time" :class="field" required>
           <option v-for="c in columns" :key="c" :value="c">{{ c }}</option>
         </select>
+        <p v-if="reasons.time" class="col-start-2 -mt-1 mb-0 text-xs text-pl-muted">{{ safeText(reasons.time) }}</p>
         <label for="al-format" class="text-pl-muted">Формат времени</label>
         <select id="al-format" v-model="mapping.timeFormat" :class="field">
           <option v-for="[v, l] in TIME_FORMATS" :key="v" :value="v">{{ l }}</option>
@@ -76,21 +105,25 @@ const field = 'h-[30px] w-full rounded border border-pl-line bg-pl-raise px-2 te
         <select id="al-action" v-model="mapping.action" :class="field" required>
           <option v-for="c in columns" :key="c" :value="c">{{ c }}</option>
         </select>
+        <p v-if="reasons.action" class="col-start-2 -mt-1 mb-0 text-xs text-pl-muted">{{ safeText(reasons.action) }}</p>
         <label for="al-params" class="text-pl-muted">Параметры</label>
         <select id="al-params" v-model="mapping.params" :class="field">
           <option :value="null">— нет —</option>
           <option v-for="c in columns" :key="c" :value="c">{{ c }}</option>
         </select>
+        <p v-if="reasons.params" class="col-start-2 -mt-1 mb-0 text-xs text-pl-muted">{{ safeText(reasons.params) }}</p>
         <label for="al-result" class="text-pl-muted">Результат</label>
         <select id="al-result" v-model="mapping.result" :class="field">
           <option :value="null">— нет —</option>
           <option v-for="c in columns" :key="c" :value="c">{{ c }}</option>
         </select>
+        <p v-if="reasons.result" class="col-start-2 -mt-1 mb-0 text-xs text-pl-muted">{{ safeText(reasons.result) }}</p>
         <label for="al-source" class="text-pl-muted">Колонка записи</label>
         <select id="al-source" v-model="mapping.source" :class="field" title="Если журнал описывает несколько записей: колонка с именем файла записи для каждого действия">
           <option :value="null">— нет —</option>
           <option v-for="c in columns" :key="c" :value="c">{{ c }}</option>
         </select>
+        <p v-if="reasons.source" class="col-start-2 -mt-1 mb-0 text-xs text-pl-muted">{{ safeText(reasons.source) }}</p>
         <label for="al-pformat" class="text-pl-muted">Формат параметров</label>
         <select id="al-pformat" v-model="mapping.paramsFormat" :class="field">
           <option value="kv">ключ=значение;…</option>

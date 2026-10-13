@@ -25,10 +25,12 @@ export type JobState = S['JobState']
 export type JobProgress = S['JobProgress']
 export type ActionLogMapping = S['ActionLogMapping']
 export type ActionLogRecord = S['ActionLog']
+export type ActionLogGuess = S['ActionLogGuess']
 export type CorpusFilter = S['CorpusFilter']
 export type FieldHints = S['FieldHints']
 export type ByteExplanation = S['ByteExplanation']
 export type DeviceConnections = S['DeviceConnections']
+export type Suggestion = S['Suggestions']['items'][number]
 
 export interface Page<T> {
   items: T[]
