@@ -226,6 +226,7 @@ const total = computed(() => view.value?.categories.reduce((n, c) => n + c.count
             </tbody>
           </table>
 
+          <VerifyRunItems v-if="view.run" :key="`items-${view.run.id}`" :run-id="view.run.id" :categories="view.categories" />
           <VerifyCoverageMap :key="view.run?.id ?? 'none'" />
           <VerifyExchangeGraph :key="`graph-${view.run?.id ?? 'none'}`" />
         </div>

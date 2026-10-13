@@ -21,6 +21,7 @@ import type {
   Page,
   Project,
   ProjectSettings,
+  RunItemPage,
   Source,
   SourceDiagnostics,
   StreamBytes,
@@ -121,6 +122,15 @@ export interface ResearchSource {
   /** Статус ставит исследователь: проверка теста сам статус не меняет. */
   setHypothesisStatus(id: string, status: Hypothesis['status']): Promise<boolean>
   createQuestion(text: string): Promise<boolean>
+  /** Изменить или закрыть вопрос; false — пример данных, не сохраняется. */
+  updateQuestion(id: string, edit: { text?: string, status?: 'open' | 'closed', answer?: string }): Promise<boolean>
+  deleteQuestion(id: string): Promise<boolean>
+  /** Изменить комментарий наблюдения; false — пример данных. */
+  updateObservation(id: string, comment: string): Promise<boolean>
+  /** Удалить наблюдение; движок отказывает (409), если на него ссылается гипотеза. */
+  deleteObservation(id: string): Promise<boolean>
+  /** Сообщения прогона с фильтрами; messageId «?» — без определённого типа. */
+  getRunItems(runId: string, filter: { category?: RunItemPage['items'][number]['category'], messageId?: string, offset?: number }): Promise<RunItemPage>
   /** Прогон по id; без id — последний. */
   getVerification(runId?: string): Promise<VerificationView>
   /** Запускает прогон на корпусе; id задачи или null, если запуск недоступен (пример данных). */

@@ -207,9 +207,9 @@ const hypotheses: HypothesesView = {
     { id: 'H5', text: 'text_cmd передаёт строку ASCII с \\n в конце', status: 'untested', support: '', run: null },
   ],
   questions: [
-    'Что означает байт 6 в measure_resp?',
-    'Почему reset не получает ответа?',
-    'Команда 0x40 встречается 1 раз — откуда?',
+    { id: 'q-1', text: 'Что означает байт 6 в measure_resp?' },
+    { id: 'q-2', text: 'Почему reset не получает ответа?' },
+    { id: 'q-3', text: 'Команда 0x40 встречается 1 раз — откуда?' },
   ],
 }
 
@@ -345,6 +345,17 @@ export function createMockResearchSource(): ResearchSource {
     createHypothesis: async () => null,
     setHypothesisStatus: async () => false,
     createQuestion: async () => false,
+    updateQuestion: async () => false,
+    deleteQuestion: async () => false,
+    updateObservation: async () => false,
+    deleteObservation: async () => false,
+    getRunItems: async (_runId, filter) => {
+      await delay()
+      const all = Array.from({ length: 40 }, (_, i) => ({ stream: '9f2c7e10:c0002:ab', start: i * 12, end: i * 12 + 12, category: (i === 7 ? 'violated' : 'matched') as 'violated' | 'matched', messageId: i % 2 ? 'measure_req' : 'set_param_req' }))
+      const items = all.filter(x => (!filter.category || x.category === filter.category) && (!filter.messageId || x.messageId === filter.messageId))
+      const offset = filter.offset ?? 0
+      return { items: items.slice(offset, offset + 100), total: items.length, limit: 100, offset }
+    },
     getVerification: async () => (await delay(), structuredClone(verification)),
     startRun: async () => null,
     getReport: async () => (await delay(), structuredClone(report)),
