@@ -140,7 +140,10 @@ const cap = 'pl-caption m-0 px-3 pt-3.5 pb-2'
       </div>
       <p v-else class="p-3 text-pl-muted">Кандидатов нет.</p>
       <footer class="flex flex-col items-start gap-2 border-t border-pl-line px-3 py-2.5">
-        <button class="pl-btn pl-btn-primary" type="button" :disabled="!candidate || applying" @click="applyFraming">Применить как фрейминг</button>
+        <div class="flex flex-wrap gap-2">
+          <button class="pl-btn pl-btn-primary" type="button" :disabled="!candidate || applying" @click="applyFraming">Применить как фрейминг</button>
+          <NuxtLink to="/interpretation?draft=1" class="pl-btn" title="Границы, типы, поля и связи с журналом одним запросом">Черновик описания</NuxtLink>
+        </div>
         <span v-if="applied" aria-live="polite">{{ applied }}</span>
       </footer>
     </ShellInspectorContent>

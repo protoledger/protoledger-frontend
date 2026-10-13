@@ -19,6 +19,8 @@ import type {
   ActionLog,
   ActionsView,
   AnchorRef,
+  DraftView,
+  NextStepsView,
   CompareView,
   ExchangeView,
   FramingDetail,
@@ -109,6 +111,10 @@ export interface ResearchSource {
   generateReport(format: 'md' | 'html', runId?: string): Promise<{ fileName: string, content: string } | null>
   /** Прогоны для выбора, новые первыми. */
   listRuns(): Promise<{ id: string, label: string, stale: boolean }[]>
+  /** Черновик описания по потокам (и журналам) одним запросом; результат — текст для редактора. */
+  getDraft(streams: string[], logId?: string): Promise<DraftView>
+  /** «Что дальше»: следующие шаги исследования по состоянию проекта. */
+  getNextSteps(): Promise<NextStepsView>
 }
 
 export type DataSourceKind = 'mock' | 'live'

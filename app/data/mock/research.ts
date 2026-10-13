@@ -341,6 +341,30 @@ export function createMockResearchSource(): ResearchSource {
     getVerification: async () => (await delay(), structuredClone(verification)),
     startRun: async () => null,
     getReport: async () => (await delay(), structuredClone(report)),
+    getDraft: async () => (await delay(400), {
+      yaml: interpretation.yaml.map(l => l.text).join('\n'),
+      steps: [
+        { title: 'Границы сообщений', detail: 'Поле длины u8 @2 + 4 — 412 из 417 сообщений, сигнатура AA 55.' },
+        { title: 'Типы сообщений', detail: 'Байт 3 различает команды: 0x10, 0x20, 0x21, 0x30.' },
+        { title: 'Связи с журналом', detail: 'Байты 4–5 запроса set_param = params.value (41 из 41) — гипотеза с тестом.' },
+        { title: 'Контрольная сумма', detail: 'Последний байт = xor8 всех предыдущих — проверка check.' },
+      ],
+      summary: [
+        { label: 'Потоков', value: '5' },
+        { label: 'Сообщений', value: '417' },
+        { label: 'Совпало', value: '412' },
+        { label: 'Типов сообщений', value: '4' },
+        { label: 'Гипотез с тестами', value: '3' },
+      ],
+      incomplete: false,
+    }),
+    getNextSteps: async () => (await delay(), {
+      steps: [
+        { id: 'verify', screen: 'verification' as const, title: 'Запустите проверку на всех записях', detail: 'Описание изменено после прогона run-4 — итоги устарели.' },
+        { id: 'refuted', screen: 'hypotheses' as const, title: 'Разберите опровергнутую гипотезу H4', detail: '1 контрпример: 70000 не помещается в u16.' },
+        { id: 'unknown', screen: 'interpretation' as const, title: 'Опишите неизвестные байты', detail: 'measure_resp.tail — 8,6% байтов без поля.' },
+      ],
+    }),
     generateReport: async () => null,
     listRuns: async () => (await delay(), verification.runs.map(r => ({ id: r.id, label: r.label, stale: !r.current }))),
   }

@@ -257,3 +257,18 @@ export interface ReportView {
   scope: string
   questions: string[]
 }
+
+/** Черновик описания, собранный движком из подсказок; ничего не сохранено. */
+export interface DraftView {
+  yaml: string
+  steps: { title: string, detail: string }[]
+  summary: { label: string, value: string }[]
+  incomplete: boolean
+}
+
+/** Экран, куда ведёт шаг «что дальше». */
+export type NextStepScreen = 'sources' | 'actions' | 'framing' | 'interpretation' | 'hypotheses' | 'verification' | 'questions' | 'report'
+
+export interface NextStepsView {
+  steps: { id: string, screen: NextStepScreen, title: string, detail: string }[]
+}

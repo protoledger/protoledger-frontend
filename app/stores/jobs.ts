@@ -27,6 +27,8 @@ export const useJobsStore = defineStore('jobs', () => {
         unsubscribe.get(id)?.()
         unsubscribe.delete(id)
         onDone?.(job)
+        // Импорт и прогон меняют состояние проекта — обновляем подсказку «что дальше».
+        void useProjectStore().refreshNextSteps()
       }
     }))
   }
