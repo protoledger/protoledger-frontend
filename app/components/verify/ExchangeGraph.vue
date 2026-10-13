@@ -82,20 +82,21 @@ const text = 'fill: var(--pl-fg-strong); font: 12px var(--font-mono, monospace)'
       </p>
       <p v-if="!graph.nodes.length" class="m-0 mt-2 text-pl-muted">Типов сообщений нет — сначала опишите их в «Интерпретации».</p>
       <div v-else class="mt-2 overflow-x-auto">
-        <svg :width="W" :height="layout.height" :viewBox="`0 0 ${W} ${layout.height}`" role="img" aria-label="Граф обмена: запросы слева, ответы справа, линии — чем отвечают">
-          <g v-for="e in layout.edges" :key="`${e.from}-${e.to}`">
-            <line :x1="e.x1" :y1="e.y1" :x2="e.x2" :y2="e.y2" stroke="var(--pl-st-rule)" :stroke-width="e.width" />
-            <text :x="(e.x1 + e.x2) / 2" :y="(e.y1 + e.y2) / 2 - 4" text-anchor="middle" style="fill: var(--pl-muted); font-size: 11px">×{{ e.count }}</text>
-          </g>
+        <svg :width="W" :height="layout.height" :viewBox="`0 0 ${W} ${layout.height}`" role="img" aria-label="Граф обмена: запросы слева, ответы справа, линии — чем отвечают; числа — в списке под графом">
+          <line v-for="e in layout.edges" :key="`${e.from}-${e.to}`" :x1="e.x1" :y1="e.y1" :x2="e.x2" :y2="e.y2" stroke="var(--pl-st-rule)" :stroke-width="e.width" stroke-opacity="0.8" />
           <g v-for="n in [...layout.left, ...layout.right]" :key="n.id">
             <rect :x="layout.pos.get(n.id)!.x" :y="layout.pos.get(n.id)!.y" :width="NODE_W" height="24" rx="3" fill="var(--pl-raise)" stroke="var(--pl-line)" />
             <text :x="layout.pos.get(n.id)!.x + 8" :y="layout.pos.get(n.id)!.y + 16" :style="text">
-              {{ safeText(name(n.id)).slice(0, 18) }}<tspan style="fill: var(--pl-muted)"> {{ n.requests >= n.responses ? n.requests : n.responses }}</tspan>
+              {{ safeText(name(n.id)).slice(0, 18) }}<tspan dx="6" style="fill: var(--pl-muted)">{{ n.requests >= n.responses ? n.requests : n.responses }}</tspan>
             </text>
           </g>
         </svg>
       </div>
-      <div v-if="graph.next.length || graph.starts.length" class="mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1">
+      <div v-if="graph.answers.length || graph.next.length || graph.starts.length" class="mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1">
+        <template v-if="graph.answers.length">
+          <span class="text-pl-muted">Ответы</span>
+          <span class="font-mono text-xs">{{ graph.answers.map(e => `${name(e.from)} → ${name(e.to)} ×${e.count}`).join(' · ') }}</span>
+        </template>
         <template v-if="graph.starts.length">
           <span class="text-pl-muted">Начало</span>
           <span class="font-mono text-xs">{{ graph.starts.map(e => `${name(e.to)} ×${e.count}`).join(' · ') }}</span>
