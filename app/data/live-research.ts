@@ -289,7 +289,7 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
 
     async getActions(logId, offset = 0) {
       const { items } = unwrap(await api.GET('/api/action-logs'))
-      const logs = items.map(l => ({ id: l.id, name: l.name, rows: l.rows }))
+      const logs = items.map(l => ({ id: l.id, name: l.name, rows: l.rows, clockOffsetMs: l.mapping.clockOffsetMs ?? 0 }))
       const log = logs.find(l => l.id === logId) ?? logs[0] ?? null
       if (!log) return { logs, log: null, rows: [], total: 0, offset: 0, exchanges: null, exchangeNote: null }
       const page = unwrap(await api.GET('/api/action-logs/{id}/actions', { params: { path: { id: log.id }, query: { limit: ACTIONS_PAGE, offset } } }))

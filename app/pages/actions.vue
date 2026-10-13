@@ -56,6 +56,11 @@ watch(() => view.value?.log?.id, async (id) => {
     // Оценка — подсказка: без неё экран работает как раньше.
   }
 }, { immediate: true })
+// Повторный импорт того же файла даёт журнал с тем же именем — различаем по номеру и поправке часов.
+function logLabel(l: { id: string, name: string, rows: number, clockOffsetMs: number }) {
+  const twin = (view.value?.logs ?? []).filter(x => x.name === l.name).length > 1
+  return [safeText(l.name), `${l.rows} строк`, twin ? l.id : '', l.clockOffsetMs ? `часы ${signed(l.clockOffsetMs)}` : ''].filter(Boolean).join(' · ')
+}
 const signed = (ms: number) => `${ms > 0 ? '+' : ms < 0 ? '−' : ''}${formatCount(Math.abs(ms))} мс`
 
 const BADGE = {
@@ -94,7 +99,7 @@ const EVENT = {
           :value="view.log?.id"
           @change="logId = ($event.target as HTMLSelectElement).value"
         >
-          <option v-for="l in view.logs" :key="l.id" :value="l.id">{{ safeText(l.name) }} · {{ l.rows }}</option>
+          <option v-for="l in view.logs" :key="l.id" :value="l.id">{{ logLabel(l) }}</option>
         </select>
         <span v-else-if="view?.log" class="text-pl-fg">{{ safeText(view.log.name) }}</span>
         <NuxtLink to="/project" class="pl-btn pl-btn-ghost h-7" title="Колонки сопоставляются при импорте журнала: импортируйте его заново на «Проекте»">Колонки…</NuxtLink>
