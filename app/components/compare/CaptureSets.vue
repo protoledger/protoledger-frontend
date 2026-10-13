@@ -55,9 +55,9 @@ const changedTypes = computed(() => result.value?.types.filter(t => t.change !==
         <tr v-for="s in project.sources" :key="s.sha256">
           <td>{{ safeText(s.name) }}</td>
           <td>
-            <span class="pl-seg" role="group" :aria-label="`Набор для ${s.name}`">
-              <button type="button" :aria-pressed="side[s.sha256] === 'a'" @click="put(s.sha256, 'a')">A</button>
-              <button type="button" :aria-pressed="side[s.sha256] === 'b'" @click="put(s.sha256, 'b')">B</button>
+            <span class="pl-seg" role="radiogroup" :aria-label="`Набор для ${s.name}`">
+              <button type="button" role="radio" :aria-checked="side[s.sha256] === 'a'" @click="put(s.sha256, 'a')">A</button>
+              <button type="button" role="radio" :aria-checked="side[s.sha256] === 'b'" @click="put(s.sha256, 'b')">B</button>
             </span>
           </td>
         </tr>
