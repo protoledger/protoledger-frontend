@@ -327,6 +327,8 @@ function applySuggestedFix(index: number) {
 }
 
 const cap = 'pl-caption m-0 px-3 pt-3.5 pb-2'
+// Подсказки полей и сумм отбирают сообщения по типу сохранённой ревизии.
+const savedTypes = computed(() => parseForm(original.value).map(m => m.id))
 const TOKEN: Record<string, string> = {
   key: 'text-pl-st-ambiguous',
   string: 'text-pl-st-rule',
@@ -521,6 +523,11 @@ const TOKEN: Record<string, string> = {
               </button>
             </li>
           </ul>
+        </template>
+
+        <template v-if="view.rev">
+          <h3 :class="cap">Подсказки движка</h3>
+          <InterpAnalysisHints :streams="draftStreams" :message-ids="savedTypes" />
         </template>
 
         <h3 :class="cap">Выражения в when, check и тестах</h3>
