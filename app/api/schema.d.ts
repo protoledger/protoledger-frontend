@@ -418,6 +418,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/action-logs/guess": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Угадать колонки журнала действий
+         * @description Предложение сопоставления колонок по заголовкам и содержимому: разделитель, колонка времени и её формат
+         *     (из нескольких — начало действия), действие, параметры и результат (JSON или `ключ=значение`), колонка записи.
+         *     Для каждой роли — причина в `reasons`; догадка сразу проверяется пробным разбором (`rows`, `skipped`).
+         *     Это предложение: пользователь принимает его или правит перед импортом. Проект не нужен; относительный
+         *     `path` — от каталога проектов.
+         */
+        post: operations["guessActionLogMapping"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/action-logs/{id}/actions": {
         parameters: {
             query?: never;
@@ -875,7 +899,8 @@ export interface paths {
          *     где значение — код действия (у разных действий разные значения, у одного — почти всегда одно). Это подсказки:
          *     совпадение на примерах не доказывает связь, у каждой есть число примеров и первый контрпример.
          *     Границы сообщений — из `framing` либо из сохранённой интерпретации; `messageId` оставляет сообщения одного
-         *     типа (нужна интерпретация). Без журнала действий — `409`.
+         *     типа (нужна интерпретация), `action` — сообщения, которым досталось действие с таким именем (описание
+         *     не нужно: так сравнивают примеры одного действия до того, как типы названы). Без журнала действий — `409`.
          */
         post: operations["findCorrelations"];
         delete?: never;
@@ -1045,6 +1070,30 @@ export interface paths {
          *     Журнал (`logId` или все журналы проекта) не обязателен: без него связей с действиями не будет.
          */
         post: operations["draftInterpretation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/analysis/device-connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Соединения устройства по журналу действий
+         * @description Для каждого соединения — сколько действий журнала его записи «ответили» в нём данными в течение
+         *     `windowMs` после начала действия (с допуском 50 мс на часы). Доля от половины и выше — `device`,
+         *     остальное — `background`. Подсказка для выбора соединения среди фона, не вывод о протоколе.
+         *     Устройство — первыми, затем по доле; в `items` не больше 500 соединений, `total` и `devices` — по всем.
+         *     Нужен импортированный журнал, иначе `409`.
+         */
+        post: operations["deviceConnections"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1828,6 +1877,19 @@ export interface components {
             /** @description Колонка с именем или путём записи: журнал на несколько записей, действия сопоставляются только со своей записью (по имени файла, без учёта регистра) */
             source?: string | null;
         };
+        ActionLogGuess: {
+            mapping: components["schemas"]["ActionLogMapping"];
+            /** @description Колонки файла в исходном порядке */
+            columns: string[];
+            /** @description Почему выбрана роль: ключи delimiter, time, action, params, result, source */
+            reasons: {
+                [key: string]: string;
+            };
+            /** @description Разобрано строк с этой догадкой */
+            rows: number;
+            /** @description Не разобрано строк */
+            skipped: number;
+        };
         ImportActionLogRequest: {
             /** @description Путь к файлу журнала на диске */
             path: string;
@@ -2443,6 +2505,8 @@ export interface components {
             logId?: string;
             /** @description Окно подбора действия, мс (по умолчанию 2000) */
             windowMs?: number;
+            /** @description Только сообщения, которым досталось действие с этим именем */
+            action?: string;
         };
         CorrelationValue: {
             /** @description params.<имя> или result.<имя> из журнала */
@@ -2490,6 +2554,26 @@ export interface components {
                 count: number;
                 /** @description Всех сообщений действия */
                 of: number;
+            }[];
+        };
+        DeviceConnections: {
+            windowMs: number;
+            /** @description Всего соединений в записях проекта */
+            total: number;
+            /** @description Из них с ролью device */
+            devices: number;
+            items: {
+                connection: string;
+                source: components["schemas"]["Sha256"];
+                a: string;
+                b: string;
+                /** @enum {string} */
+                role: "device" | "background";
+                actionsMatched: number;
+                actionsTotal: number;
+                sharePermille: number;
+                payloadFrames: number;
+                reason: string;
             }[];
         };
         Correlations: {
@@ -4453,6 +4537,88 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["NoProject"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
+            422: components["responses"]["Unprocessable"];
+        };
+    };
+    guessActionLogMapping: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "path": "thermostand/sample_protocol/action_journal.csv"
+                 *     }
+                 */
+                "application/json": {
+                    /** @description Путь к файлу журнала на диске */
+                    path: string;
+                };
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description CSV журнала
+                     */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Догадка с причинами и пробным разбором */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "mapping": {
+                     *         "time": "start_utc",
+                     *         "action": "action",
+                     *         "params": "parameters",
+                     *         "result": "observed_result",
+                     *         "timeFormat": "rfc3339",
+                     *         "paramsFormat": "json",
+                     *         "resultFormat": "json",
+                     *         "delimiter": null,
+                     *         "utcOffsetMinutes": 0,
+                     *         "clockOffsetMs": 0,
+                     *         "source": "capture"
+                     *       },
+                     *       "columns": [
+                     *         "capture",
+                     *         "session",
+                     *         "action_id",
+                     *         "start_utc",
+                     *         "end_utc",
+                     *         "action",
+                     *         "parameters",
+                     *         "observed_result"
+                     *       ],
+                     *       "reasons": {
+                     *         "delimiter": "«,»: при нём 8 колонок и строки с ним согласны",
+                     *         "time": "«start_utc»: 100 % значений читаются как время (Rfc3339)",
+                     *         "action": "«action»: 6 разных действий на 109 строк",
+                     *         "params": "«parameters»: 100 % значений — JSON-объект",
+                     *         "result": "«observed_result»: 100 % значений — JSON-объект",
+                     *         "source": "«capture»: 100 % значений — имена файлов записей; журнал на несколько записей"
+                     *       },
+                     *       "rows": 109,
+                     *       "skipped": 0
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ActionLogGuess"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             413: components["responses"]["TooLarge"];
             415: components["responses"]["UnsupportedMedia"];
             422: components["responses"]["Unprocessable"];
@@ -6632,6 +6798,63 @@ export interface operations {
             413: components["responses"]["TooLarge"];
             415: components["responses"]["UnsupportedMedia"];
             422: components["responses"]["Unprocessable"];
+        };
+    };
+    deviceConnections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /** @example {} */
+                "application/json": {
+                    /**
+                     * @description Окно после начала действия
+                     * @default 2000
+                     */
+                    windowMs?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Соединения с ролью и основанием */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "windowMs": 2000,
+                     *       "total": 1,
+                     *       "devices": 1,
+                     *       "items": [
+                     *         {
+                     *           "connection": "d05c6bf0:c0001",
+                     *           "source": "3f5a1c0d9e8b7a6f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a0f9e8d",
+                     *           "a": "10.77.0.10:42010",
+                     *           "b": "10.77.0.20:46123",
+                     *           "role": "device",
+                     *           "actionsMatched": 16,
+                     *           "actionsTotal": 16,
+                     *           "sharePermille": 1000,
+                     *           "payloadFrames": 32,
+                     *           "reason": "данные в течение 2000 мс после 16 из 16 действий записи"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["DeviceConnections"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            415: components["responses"]["UnsupportedMedia"];
         };
     };
     findExchanges: {

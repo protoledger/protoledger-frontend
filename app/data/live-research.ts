@@ -740,7 +740,7 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
         const streams = [...new Set(parts.map(p => p.stream))]
         const first = parts[0]
         if (!streams.length) return []
-        const cor = unwrap(await api.POST('/api/analysis/correlations', { body: { streams, logId: log.id } }))
+        const cor = unwrap(await api.POST('/api/analysis/correlations', { body: { streams, logId: log.id, ...(chosen ? { action: chosen } : {}) } }))
         if (cor.truncated) notes.push(`${title}: часть сообщений не вошла в анализ (предел).`)
         const anchorAt = (at: number, type: string) => (first ? { source: first.source, stream: first.stream, start: first.start + at, end: first.start + at + sizeOf(type) } : undefined)
         return [
