@@ -175,6 +175,11 @@
       @apply bg-pl-raise;
     }
 
+    /* Строки, выбираемые щелчком: двойной щелчок и протяжка не выделяют текст бордовым поверх строки. */
+    & tbody tr[aria-selected] {
+      @apply select-none;
+    }
+
     & tbody tr[aria-selected="true"] td {
       @apply bg-pl-wine-soft;
     }
