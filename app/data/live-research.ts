@@ -904,6 +904,10 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       return unwrap(await api.POST('/api/interpretation/graph', { body: {} }))
     },
 
+    async compareCaptures(a, b) {
+      return unwrap(await api.POST('/api/interpretation/compare', { body: { a, b } }))
+    },
+
     async getClockOffset(logId) {
       return unwrap(await api.GET('/api/action-logs/{id}/clock-offset', { params: { path: { id: logId } } }))
     },

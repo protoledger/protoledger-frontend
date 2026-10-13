@@ -438,6 +438,15 @@ export function createMockResearchSource(): ResearchSource {
       }
     },
     getClockOffset: async () => null,
+    compareCaptures: async () => (await delay(), {
+      a: { sources: 1, messages: 32, counts: { matched: 32 } },
+      b: { sources: 1, messages: 22, counts: { matched: 21, violated: 1 } },
+      types: [{ messageId: 'set_param_req', a: 6, b: 5, change: 'same' as const }, { messageId: 'diag_req', a: 0, b: 2, change: 'new' as const }],
+      fields: [{ messageId: 'set_param_req', field: 'value', change: 'values' as const, a: { samples: 6, distinct: 3, min: 21, max: 1000 }, b: { samples: 5, distinct: 3, min: -5, max: 123456 }, newValues: ['-5', '123456', '70000'], goneValues: ['1000', '21', '37'] }],
+      timing: [{ messageId: 'set_param_req', a: { pairs: 6, medianNs: 2_000_000, maxNs: 2_400_000 }, b: { pairs: 5, medianNs: 2_100_000, maxNs: 2_500_000 }, ratioPermille: 1050 }],
+      summary: ['set_param_req.value: во втором наборе новые значения — -5, 123456, 70000', 'diag_req: только во втором наборе (2)'],
+      incomplete: false,
+    }),
     getExchangePairs: async (connection) => {
       await delay()
       const msg = (dir: 'ab' | 'ba', i: number, id: string) => ({ stream: `${connection}:${dir}`, start: i * 12, end: i * 12 + 12, messageId: id, firstTsNs: 1_790_899_200_000_000_000 + i * 1_000_000_000, lastTsNs: 1_790_899_200_000_000_000 + i * 1_000_000_000 })

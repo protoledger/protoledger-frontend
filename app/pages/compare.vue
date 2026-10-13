@@ -3,6 +3,8 @@ const data = useData()
 const draft = useDraftAction()
 const workspace = useWorkspaceStore()
 const action = ref<string | undefined>(undefined)
+// Режим экрана: примеры одного действия рядом или два набора записей под одним описанием.
+const mode = ref<'actions' | 'sets'>('actions')
 const logId = ref<string | undefined>(undefined)
 const { data: view, error, refresh, pending } = await useAsyncData('compare', () => data.getCompare(action.value, logId.value), { watch: [action, logId] })
 
@@ -47,8 +49,15 @@ const hot = 'bg-pl-st-hypothesis/18 text-pl-st-hypothesis'
 
 <template>
   <div class="flex h-full">
-    <section class="pl-scroll min-w-0 flex-1">
+    <section v-if="mode === 'sets'" class="pl-scroll min-w-0 flex-1">
+      <CompareCaptureSets v-model:mode="mode" />
+    </section>
+    <section v-else class="pl-scroll min-w-0 flex-1">
       <CommonPanelHeader title="Сообщения рядом" :subtitle="view?.action ? `действие ${view.action} · выровнены по началу` : 'выровнены по началу'">
+        <div class="pl-seg" role="radiogroup" aria-label="Что сравнивать">
+          <button type="button" role="radio" :aria-checked="true">Действия</button>
+          <button type="button" role="radio" :aria-checked="false" @click="mode = 'sets'">Наборы записей</button>
+        </div>
         <select
           v-if="(view?.logs.length ?? 0) > 1"
           class="h-7 max-w-56 rounded border border-pl-line bg-pl-raise px-2 text-pl-fg-strong"
