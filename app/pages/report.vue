@@ -69,7 +69,7 @@ const tableCls = 'mt-2.5 w-full border-collapse text-[12.5px] [&_td]:border-b [&
     <section class="pl-scroll min-w-0 flex-1 px-6 py-[18px]">
       <!-- Отчёт движка: блоки выводятся только интерполяцией текста, HTML в страницу не попадает. -->
       <CommonAsyncState v-if="live" :pending="pending" :error="error?.message" :empty="!report" empty-text="Отчёта пока нет." @retry="refresh()">
-        <article v-if="report" class="light mx-auto max-w-[820px] border-t-4 border-pl-wine bg-pl-card px-11 py-10 text-sm leading-relaxed text-pl-card-fg">
+        <article v-if="report" class="light mx-auto max-w-[820px] border-t-4 border-pl-wine bg-pl-card px-5 py-6 sm:px-11 sm:py-10 text-sm leading-relaxed text-pl-card-fg">
           <template v-for="(b, i) in blocks" :key="i">
             <h1 v-if="b.kind === 'heading' && b.level === 1" :id="b.id" class="mt-0 mb-4 font-display text-2xl font-semibold">{{ b.text }}</h1>
             <h2 v-else-if="b.kind === 'heading' && b.level === 2" :id="b.id" :class="h2">{{ b.text }}</h2>
@@ -93,7 +93,7 @@ const tableCls = 'mt-2.5 w-full border-collapse text-[12.5px] [&_td]:border-b [&
 
       <CommonAsyncState v-else :pending="samplePending" :error="sampleError?.message" :empty="!view" @retry="refreshSample()">
         <!-- Предпросмотр — светлая карточка, как экспортированный HTML; статусы в светлой палитре. -->
-        <article v-if="view" class="light mx-auto max-w-[760px] border-t-4 border-pl-wine bg-pl-card px-11 py-10 text-sm leading-relaxed text-pl-card-fg">
+        <article v-if="view" class="light mx-auto max-w-[760px] border-t-4 border-pl-wine bg-pl-card px-5 py-6 sm:px-11 sm:py-10 text-sm leading-relaxed text-pl-card-fg">
           <p class="text-pl-muted">{{ view.meta }}</p>
           <h1 class="mt-1 mb-4 font-display text-2xl font-semibold">{{ safeText(view.title) }}</h1>
           <h2 id="sec-1" :class="h2">1. Итог</h2>

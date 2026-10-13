@@ -44,7 +44,10 @@ watch(() => route.query.conn, (conn) => {
   if (typeof conn === 'string' && conn !== connection.value?.id) void restoreFromQuery({ ...route.query })
 })
 
+const workspace = useWorkspaceStore()
 function select(c: Connection) {
+  // На узком экране список выезжает поверх потока: выбрали соединение — показываем поток.
+  if (workspace.drawer === 'overview-connections') workspace.drawer = null
   connection.value = c
   if (!c.streams.some(s => s.id.endsWith(`:${dir.value}`))) dir.value = 'ab'
   selection.selectStream(c.id, stream.value?.id ?? '')
