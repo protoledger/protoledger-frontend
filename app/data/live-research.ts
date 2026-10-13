@@ -458,7 +458,7 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
             run: r ? runVerdict(r, last!.id) : null,
           }
         }),
-        questions: questions.items.filter(q => q.status === 'open').map(q => q.text),
+        questions: questions.items.filter(q => q.status === 'open').map(q => ({ id: q.id, text: q.text })),
       }
     },
 
@@ -531,6 +531,34 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
     async createQuestion(text) {
       unwrap(await api.POST('/api/questions', { body: { text } }))
       return true
+    },
+
+    async updateQuestion(id, edit) {
+      unwrap(await api.PUT('/api/questions/{id}', { params: { path: { id } }, body: edit }))
+      return true
+    },
+
+    async deleteQuestion(id) {
+      // Удаление отвечает 204 без тела — ошибкой считаем только неуспешный статус.
+      const res = await api.DELETE('/api/questions/{id}', { params: { path: { id } } })
+      if (!res.response.ok) unwrap(res)
+      return true
+    },
+
+    async updateObservation(id, comment) {
+      unwrap(await api.PUT('/api/observations/{id}', { params: { path: { id } }, body: { comment } }))
+      return true
+    },
+
+    async deleteObservation(id) {
+      // Удаление отвечает 204 без тела — ошибкой считаем только неуспешный статус.
+      const res = await api.DELETE('/api/observations/{id}', { params: { path: { id } } })
+      if (!res.response.ok) unwrap(res)
+      return true
+    },
+
+    async getRunItems(runId, { category, messageId, offset = 0 }) {
+      return unwrap(await api.GET('/api/runs/{id}/items', { params: { path: { id: runId }, query: { limit: 100, offset, ...(category ? { category } : {}), ...(messageId ? { messageId } : {}) } } }))
     },
 
     async getVerification(runId) {

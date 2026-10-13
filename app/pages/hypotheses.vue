@@ -31,7 +31,7 @@ async function loadDetail(id: string | null) {
 watch(selected, loadDetail, { immediate: true })
 
 // Новая гипотеза: утверждение, тест-выражение и наблюдения-основания.
-const { data: observations } = await useAsyncData('hyp-observations', () => data.getObservations(), { default: () => [] as { id: string, text: string }[] })
+const { data: observations, refresh: refreshObservations } = await useAsyncData('hyp-observations', () => data.getObservations(), { default: () => [] as { id: string, text: string }[] })
 const creating = ref(false)
 const form = reactive({ statement: '', test: '', basis: [] as string[] })
 const formError = ref<string | null>(null)
@@ -106,6 +106,73 @@ async function addQuestion() {
   }
 }
 
+// Вопрос закрывают ответом; удалить — второе нажатие подтверждает.
+const answering = ref<string | null>(null)
+const answer = ref('')
+const confirmDelete = ref<string | null>(null)
+async function closeQuestion(id: string) {
+  questionError.value = null
+  try {
+    if (!await data.updateQuestion(id, { status: 'closed', ...(answer.value.trim() ? { answer: answer.value.trim() } : {}) })) return draft('Вопрос закрыт')
+    workspace.log(`Вопрос ${id} закрыт${answer.value.trim() ? `: ${answer.value.trim()}` : ''}`)
+    answering.value = null
+    answer.value = ''
+    await refresh()
+  }
+  catch (e) {
+    questionError.value = e instanceof Error ? e.message : 'Не удалось закрыть вопрос'
+  }
+}
+async function deleteQuestion(id: string) {
+  if (confirmDelete.value !== id) {
+    confirmDelete.value = id
+    return
+  }
+  confirmDelete.value = null
+  questionError.value = null
+  try {
+    if (!await data.deleteQuestion(id)) return draft('Вопрос удалён')
+    workspace.log(`Вопрос ${id} удалён`)
+    await refresh()
+  }
+  catch (e) {
+    questionError.value = e instanceof Error ? e.message : 'Не удалось удалить вопрос'
+  }
+}
+
+// Наблюдения: правка комментария и удаление; на которое ссылается гипотеза, движок удалить не даст.
+const editingObs = ref<string | null>(null)
+const obsComment = ref('')
+const obsError = ref<string | null>(null)
+async function saveObservation(id: string) {
+  obsError.value = null
+  try {
+    if (!await data.updateObservation(id, obsComment.value.trim())) return draft('Наблюдение изменено')
+    workspace.log(`Наблюдение ${id} изменено`)
+    editingObs.value = null
+    await refreshObservations()
+  }
+  catch (e) {
+    obsError.value = e instanceof Error ? e.message : 'Не удалось изменить наблюдение'
+  }
+}
+async function deleteObservation(id: string) {
+  if (confirmDelete.value !== id) {
+    confirmDelete.value = id
+    return
+  }
+  confirmDelete.value = null
+  obsError.value = null
+  try {
+    if (!await data.deleteObservation(id)) return draft('Наблюдение удалено')
+    workspace.log(`Наблюдение ${id} удалено`)
+    await refreshObservations()
+  }
+  catch (e) {
+    obsError.value = e instanceof Error ? e.message : 'Не удалось удалить наблюдение'
+  }
+}
+
 function openAnchor(a: AnchorRef | undefined) {
   if (!a) return navigateTo('/overview')
   const cut = a.stream.lastIndexOf(':')
@@ -152,8 +219,18 @@ const BADGE: Record<Hypothesis['status'], { status: KnowledgeStatus, label: (h: 
           <p v-if="!view.items.length" class="p-3 text-pl-muted">Гипотез пока нет.</p>
           <h3 class="pl-caption m-0 px-3 pt-3.5 pb-2">Открытые вопросы</h3>
           <p v-if="!view.questions.length" class="px-3 text-pl-muted">Открытых вопросов нет.</p>
-          <ul class="mx-3 mb-2 list-disc pl-5">
-            <li v-for="q in view.questions" :key="q" class="py-0.5">{{ safeText(q) }}</li>
+          <ul class="mx-3 mb-2 list-none p-0">
+            <li v-for="q in view.questions" :key="q.id" class="flex flex-col gap-1 border-b border-pl-line py-1.5">
+              <div class="flex items-start gap-2">
+                <span class="min-w-0 flex-1">{{ safeText(q.text) }}</span>
+                <button class="pl-btn pl-btn-ghost h-6 flex-none" type="button" :aria-expanded="answering === q.id" @click="answering = answering === q.id ? null : q.id; answer = ''">ответить</button>
+                <button class="pl-btn pl-btn-ghost h-6 flex-none" type="button" @click="deleteQuestion(q.id)">{{ confirmDelete === q.id ? 'точно удалить?' : 'удалить' }}</button>
+              </div>
+              <form v-if="answering === q.id" class="flex gap-2" @submit.prevent="closeQuestion(q.id)">
+                <input v-model="answer" class="h-7 min-w-0 flex-1 rounded border border-pl-line bg-pl-raise px-2 text-pl-fg-strong focus:border-pl-wine-text" placeholder="Ответ (необязательно)" :aria-label="`Ответ на вопрос: ${q.text}`">
+                <button class="pl-btn h-7" type="submit">Закрыть вопрос</button>
+              </form>
+            </li>
           </ul>
           <form class="mx-3 mb-4 flex gap-2" @submit.prevent="addQuestion">
             <input
@@ -167,6 +244,24 @@ const BADGE: Record<Hypothesis['status'], { status: KnowledgeStatus, label: (h: 
             <button class="pl-btn h-7" type="submit" :disabled="!question.trim()">Добавить</button>
           </form>
           <p v-if="questionError" class="mx-3 text-pl-st-violation" role="alert">{{ questionError }}</p>
+          <h3 class="pl-caption m-0 px-3 pt-3.5 pb-2">Наблюдения · {{ observations.length }}</h3>
+          <p v-if="!observations.length" class="px-3 text-pl-muted">Наблюдений пока нет — их создают из выделения байтов в «Обзоре» и «Сравнении».</p>
+          <ul class="mx-3 mb-4 list-none p-0">
+            <li v-for="o in observations" :key="o.id" class="flex flex-col gap-1 border-b border-pl-line py-1.5">
+              <div v-if="editingObs !== o.id" class="flex items-start gap-2">
+                <b class="flex-none font-semibold">{{ o.id }}</b>
+                <span class="min-w-0 flex-1">{{ safeText(o.text) }}</span>
+                <button class="pl-btn pl-btn-ghost h-6 flex-none" type="button" @click="editingObs = o.id; obsComment = o.text">изменить</button>
+                <button class="pl-btn pl-btn-ghost h-6 flex-none" type="button" @click="deleteObservation(o.id)">{{ confirmDelete === o.id ? 'точно удалить?' : 'удалить' }}</button>
+              </div>
+              <form v-else class="flex gap-2" @submit.prevent="saveObservation(o.id)">
+                <input v-model="obsComment" class="h-7 min-w-0 flex-1 rounded border border-pl-line bg-pl-raise px-2 text-pl-fg-strong focus:border-pl-wine-text" :aria-label="`Комментарий наблюдения ${o.id}`">
+                <button class="pl-btn h-7" type="submit">Сохранить</button>
+                <button class="pl-btn pl-btn-ghost h-7" type="button" @click="editingObs = null">Отмена</button>
+              </form>
+            </li>
+          </ul>
+          <p v-if="obsError" class="mx-3 text-pl-st-violation" role="alert">{{ safeText(obsError) }}</p>
         </template>
       </CommonAsyncState>
     </section>

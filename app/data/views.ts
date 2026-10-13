@@ -219,7 +219,7 @@ export interface SearchEntry {
 
 export interface HypothesesView {
   items: Hypothesis[]
-  questions: string[]
+  questions: { id: string, text: string }[]
 }
 
 export interface HypothesisDetail {
