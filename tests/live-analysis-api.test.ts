@@ -51,4 +51,10 @@ describe('новые запросы к движку', () => {
     expect(await live().updateQuestion('q-1', { status: 'closed', answer: 'режим работы' })).toBe(true)
     expect(calls[0]).toMatchObject({ method: 'PUT', url: '/api/questions/q-1', body: { status: 'closed', answer: 'режим работы' } })
   })
+
+  it('удаление отвечает 204 без тела — это успех', async () => {
+    record(() => new Response(null, { status: 204 }))
+    expect(await live().deleteQuestion('q-2')).toBe(true)
+    expect(await live().deleteObservation('obs-3')).toBe(true)
+  })
 })

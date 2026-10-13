@@ -539,7 +539,9 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
     },
 
     async deleteQuestion(id) {
-      unwrap(await api.DELETE('/api/questions/{id}', { params: { path: { id } } }))
+      // Удаление отвечает 204 без тела — ошибкой считаем только неуспешный статус.
+      const res = await api.DELETE('/api/questions/{id}', { params: { path: { id } } })
+      if (!res.response.ok) unwrap(res)
       return true
     },
 
@@ -549,7 +551,9 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
     },
 
     async deleteObservation(id) {
-      unwrap(await api.DELETE('/api/observations/{id}', { params: { path: { id } } }))
+      // Удаление отвечает 204 без тела — ошибкой считаем только неуспешный статус.
+      const res = await api.DELETE('/api/observations/{id}', { params: { path: { id } } })
+      if (!res.response.ok) unwrap(res)
       return true
     },
 
