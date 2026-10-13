@@ -62,17 +62,22 @@ const framing: FramingView = {
 }
 
 const actions: ActionsView = {
-  log: { name: 'actions.csv', rows: 46 },
+  logs: [{ id: 'log-0001', name: 'actions.csv', rows: 46 }],
+  log: { id: 'log-0001', name: 'actions.csv', rows: 46 },
   rows: [
-    { id: 'a1', time: '14:02:11.200', action: 'set_param', params: 'value = 21', result: 'ok', source: null, exchange: 'found' },
-    { id: 'a2', time: '14:02:12.900', action: 'read_measure', params: '—', result: '21,0', source: null, exchange: 'found' },
-    { id: 'a3', time: '14:02:19.410', action: 'set_param', params: 'value = 37', result: 'ok', source: null, exchange: 'found' },
-    { id: 'a4', time: '14:02:21.050', action: 'read_measure', params: '—', result: '37,0', source: null, exchange: 'found' },
-    { id: 'a5', time: '14:02:30.770', action: 'set_param', params: 'value = 1000', result: 'ok', source: null, exchange: 'found' },
-    { id: 'a6', time: '14:02:32.300', action: 'read_measure', params: '—', result: '1000,0', source: null, exchange: 'found' },
-    { id: 'a7', time: '14:02:40.010', action: 'reset', params: '—', result: 'ok', source: null, exchange: 'none' },
-    { id: 'a8', time: '15:12:04.600', action: 'set_param', params: 'value = 70000', result: 'ok', source: null, exchange: 'found' },
+    { id: 'a1', time: '14:02:11.200', action: 'set_param', params: 'value = 21', result: 'ok', candidates: 1, source: null, exchange: 'paired', request: { label: 'set_param', stream: '9f2c7e10:c0002:ab', start: 0, end: 7 }, response: { label: 'set_param_resp', stream: '9f2c7e10:c0002:ba', start: 0, end: 6 } },
+    { id: 'a2', time: '14:02:12.900', action: 'read_measure', params: '—', result: '21,0', candidates: 1, source: null, exchange: 'paired', request: { label: 'read_measure', stream: '9f2c7e10:c0002:ab', start: 14, end: 21 }, response: { label: 'read_measure_resp', stream: '9f2c7e10:c0002:ba', start: 12, end: 18 } },
+    { id: 'a3', time: '14:02:19.410', action: 'set_param', params: 'value = 37', result: 'ok', candidates: 1, source: null, exchange: 'paired', request: { label: 'set_param', stream: '9f2c7e10:c0002:ab', start: 28, end: 35 }, response: { label: 'set_param_resp', stream: '9f2c7e10:c0002:ba', start: 24, end: 30 } },
+    { id: 'a4', time: '14:02:21.050', action: 'read_measure', params: '—', result: '37,0', candidates: 1, source: null, exchange: 'paired', request: { label: 'read_measure', stream: '9f2c7e10:c0002:ab', start: 42, end: 49 }, response: { label: 'read_measure_resp', stream: '9f2c7e10:c0002:ba', start: 36, end: 42 } },
+    { id: 'a5', time: '14:02:30.770', action: 'set_param', params: 'value = 1000', result: 'ok', candidates: 1, source: null, exchange: 'paired', request: { label: 'set_param', stream: '9f2c7e10:c0002:ab', start: 56, end: 63 }, response: { label: 'set_param_resp', stream: '9f2c7e10:c0002:ba', start: 48, end: 54 } },
+    { id: 'a6', time: '14:02:32.300', action: 'read_measure', params: '—', result: '1000,0', candidates: 1, source: null, exchange: 'paired', request: { label: 'read_measure', stream: '9f2c7e10:c0002:ab', start: 70, end: 77 }, response: { label: 'read_measure_resp', stream: '9f2c7e10:c0002:ba', start: 60, end: 66 } },
+    { id: 'a7', time: '14:02:40.010', action: 'reset', params: '—', result: 'ok', candidates: 1, source: null, exchange: 'request_only', request: { label: 'reset', stream: '9f2c7e10:c0002:ab', start: 84, end: 91 }, response: null },
+    { id: 'a8', time: '15:12:04.600', action: 'set_param', params: 'value = 70000', result: 'ok', candidates: 1, source: null, exchange: 'not_found', request: null, response: null },
   ],
+  total: 8,
+  offset: 0,
+  exchanges: { paired: 6, requestOnly: 1, notFound: 1, total: 8 },
+  exchangeNote: null,
 }
 
 const exchange: ExchangeView = {
