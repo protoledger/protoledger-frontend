@@ -438,6 +438,27 @@ export function createMockResearchSource(): ResearchSource {
       }
     },
     getClockOffset: async () => null,
+    getTypeHints: async () => (await delay(), {
+      messages: 46, truncated: false, incomplete: false, rare: 0,
+      keys: [{ kind: 'byte' as const, at: 3, values: 3, lengthExplainedPermille: 920, constantGainPermille: 410, scorePermille: 665 }],
+      fields: [{ name: 'b3', at: 3, type: 'u8' as const }],
+      types: [
+        { id: 'msg_req_01', when: 'dst_port == 5020 && b3 == 0x01', key: [{ kind: 'byte' as const, at: 3, value: 1 }], count: 24, sharePermille: 522, minLen: 8, maxLen: 8, lengths: 1, constant: [{ start: 3, end: 4, bytes: '01' }], example: null },
+        { id: 'msg_req_02', when: 'dst_port == 5020 && b3 == 0x02', key: [{ kind: 'byte' as const, at: 3, value: 2 }], count: 22, sharePermille: 478, minLen: 12, maxLen: 12, lengths: 1, constant: [{ start: 3, end: 4, bytes: '02' }], example: null },
+      ],
+    }),
+    getFieldBehavior: async () => (await delay(), {
+      messages: 46, truncated: false, incomplete: false,
+      hints: [{ kind: 'counter' as const, at: 4, type: 'u16be', size: 2, summary: 'растёт на единицу с каждым сообщением потока', matches: 46, samples: 46, sharePermille: 1000, equivalent: [] }],
+    }),
+    getChecksumHints: async () => (await delay(), {
+      messages: 46, truncated: false, skippedLong: 0, incomplete: false,
+      hints: [{ algorithm: 'crc16_modbus', title: 'CRC-16/MODBUS', at: 'end-2', type: 'u16le' as const, from: 0, to: 'message.len - 2', expr: 'checksum == crc16_modbus(0, message.len - 2)', matches: 46, samples: 46, sharePermille: 1000, distinct: 40, equivalent: [] }],
+      checked: [],
+    }),
+    getEntropy: async (streams) => (await delay(), {
+      streams: streams.slice(0, 1).map(stream => ({ stream, length: 2100, bytes: 2048, highBytes: 0, textBytes: 0, lowBytes: 0, regions: [], truncated: false, summary: 'Участков, похожих на сжатие, шифрование или заполнение, нет.' })),
+    }),
     getSuggestions: async () => {
       await delay()
       const obs = (start: number, comment: string) => ({ source: 'a'.repeat(64), stream: 'stand:c0001:ab', start, end: start + 2, comment })

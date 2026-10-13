@@ -880,6 +880,22 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       return unwrap(await api.POST('/api/hypotheses', { body: { statement: s.hypothesis.statement, basis: [obs.id], test: s.hypothesis.test } })).id
     },
 
+    async getTypeHints(streams) {
+      return unwrap(await api.POST('/api/analysis/types', { body: { streams } }))
+    },
+
+    async getFieldBehavior(streams, messageId) {
+      return unwrap(await api.POST('/api/analysis/fields', { body: { streams, ...(messageId ? { messageId } : {}) } }))
+    },
+
+    async getChecksumHints(streams, messageId) {
+      return unwrap(await api.POST('/api/analysis/checksums', { body: { streams, ...(messageId ? { messageId } : {}) } }))
+    },
+
+    async getEntropy(streams) {
+      return unwrap(await api.POST('/api/analysis/entropy', { body: { streams } }))
+    },
+
     async getClockOffset(logId) {
       return unwrap(await api.GET('/api/action-logs/{id}/clock-offset', { params: { path: { id: logId } } }))
     },

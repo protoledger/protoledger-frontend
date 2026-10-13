@@ -3,9 +3,12 @@ import type {
   ActionLogMapping,
   CorpusFilter,
   DeviceConnections,
+  EntropyPage,
+  FieldBehaviorHints,
   FieldHints,
   ActionLogRecord,
   ByteExplanation,
+  ChecksumHints,
   ClockOffset,
   Connection,
   ConnectionFlag,
@@ -19,6 +22,7 @@ import type {
   SourceDiagnostics,
   StreamBytes,
   Suggestion,
+  TypeHints,
 } from '~/api/types'
 import type {
   ActionLog,
@@ -137,6 +141,11 @@ export interface ResearchSource {
   getDeviceConnections(): Promise<DeviceConnections | null>
   /** Оценка сдвига часов журнала относительно записей; null — оценки нет (пример данных). */
   getClockOffset(logId: string): Promise<ClockOffset | null>
+  /** Подсказки для описания по сохранённым границам сообщений: типы, поведение полей, контрольные суммы, энтропия. */
+  getTypeHints(streams: string[]): Promise<TypeHints>
+  getFieldBehavior(streams: string[], messageId?: string): Promise<FieldBehaviorHints>
+  getChecksumHints(streams: string[], messageId?: string): Promise<ChecksumHints>
+  getEntropy(streams: string[]): Promise<EntropyPage>
   /** Заготовки наблюдений и гипотез по всем потокам проекта. */
   getSuggestions(): Promise<SuggestionsView>
   /** Принять заготовку: наблюдение на байтах и гипотеза на нём; id гипотезы или null — пример данных. */
