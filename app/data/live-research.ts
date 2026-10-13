@@ -736,6 +736,28 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
     // Структурный вид отчёта — только в примере данных; в live экран показывает отчёт движка.
     getReport: () => sample.getReport(),
 
+    async getDraft(streams, logId) {
+      const d = unwrap(await api.POST('/api/analysis/draft', { body: { streams, ...(logId ? { logId } : {}) } }))
+      const total = Object.values(d.summary.counts).reduce((n, c) => n + c, 0)
+      return {
+        yaml: d.yaml,
+        steps: d.steps,
+        summary: [
+          { label: 'Потоков', value: formatCount(d.summary.streams) },
+          { label: 'Сообщений', value: formatCount(d.summary.messages || total) },
+          ...Object.entries(d.summary.counts).filter(([, c]) => c > 0).map(([k, c]) => ({ label: CATEGORY[k]?.label ?? k, value: formatCount(c) })),
+          { label: 'Типов сообщений', value: formatCount(d.summary.types) },
+          { label: 'Гипотез с тестами', value: formatCount(d.summary.hypotheses) },
+          { label: 'Неизвестных байтов', value: formatCount(d.summary.unknownBytes) },
+        ],
+        incomplete: d.incomplete,
+      }
+    },
+
+    async getNextSteps() {
+      return { steps: unwrap(await api.GET('/api/project/next-steps')).steps }
+    },
+
     async generateReport(format, runId) {
       const r = unwrap(await api.POST('/api/reports', { body: { format, ...(runId ? { runId } : {}) } }))
       return { fileName: r.fileName, content: r.content }

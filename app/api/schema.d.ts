@@ -45,6 +45,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/project/next-steps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Что дальше — следующие шаги исследования
+         * @description По состоянию проекта подсказывает, что делать дальше, и объясняет почему: нет записей — импортировать;
+         *     нет описания — искать границы или собрать черновик; нет прогона или он устарел — запустить проверку;
+         *     есть опровергнутые гипотезы или контрпримеры — разобрать их; у гипотез нет тестов — добавить; остались
+         *     неизвестные зоны и открытые вопросы — вернуться к ним; всё сошлось — сформировать отчёт. `steps` идут
+         *     по убыванию пользы, у каждого `screen` — экран, где шаг делается. `state` — числа, по которым шаги
+         *     выбраны. Подсказка ничего не делает сама.
+         */
+        get: operations["getNextSteps"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/project/settings": {
         parameters: {
             query?: never;
@@ -146,6 +171,110 @@ export interface paths {
          *     Целые числа за пределами \`±2^53\` отдаются десятичной строкой (`valueType: int`).
          */
         post: operations["previewInterpretation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/interpretation/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Сравнение поведения в двух наборах записей
+         * @description Применяет одно описание к наборам записей `a` и `b` и показывает отличия: типы сообщений, которые есть
+         *     только в одном наборе; поля, у которых изменились значения (у перечислений до 16 значений — какие
+         *     появились и пропали, у остальных числовых — стал ли шире диапазон); время от запроса до ответа по типам
+         *     запросов (медиана и максимум, `ratioPermille` — отношение медиан). `summary` — главное словами, по строке
+         *     на отличие. Сценарии: до и после обновления прошивки, штатная работа и сбой, два экземпляра устройства.
+         *     `yaml` — несохранённый текст описания; без него берётся текущая ревизия.
+         */
+        post: operations["compareCaptures"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/interpretation/graph": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Граф обмена — типы сообщений, ответы и переходы
+         * @description По всем соединениям записей: `nodes` — типы сообщений и сколько раз их отправила каждая сторона;
+         *     `answers` — чем отвечают на запрос (только пары, где ответ определён однозначно или по порядку);
+         *     `next` — какой запрос той же стороны идёт следом в соединении; `starts` — с чего соединения
+         *     начинаются; счётчики запросов без ответа и сообщений без запроса. `dot` — тот же граф в формате
+         *     Graphviz DOT: сплошные стрелки — ответы, пунктирные — следующий запрос. Это наблюдаемое поведение
+         *     на записях, а не заявленный автомат состояний. `yaml` — несохранённый текст описания; `sources` —
+         *     только эти записи.
+         */
+        post: operations["getExchangeGraph"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/interpretation/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Карта покрытия — что в сообщениях описано, а что ещё нет
+         * @description Применяет описание к записям проекта и для каждого типа сообщений считает байты: описанные полем со
+         *     статусом «правило» (`rule`), полем-гипотезой (`hypothesis`), объявленные неизвестными (`unknown`) и не
+         *     описанные вовсе (`none`). `regions` — карта первых 256 байт сообщения: подряд идущие смещения с одним
+         *     описанием, имя поля, гипотеза и доля сообщений, где эти байты описаны именно так (сообщения одного типа
+         *     бывают разной длины). При наложении полей (битовые поля одного байта) байт считается один раз, по самому
+         *     твёрдому описанию. `messageId: null` — сообщения, тип которых не определён. `describedPermille` — доля
+         *     байтов под правилом или гипотезой: честная граница знания о протоколе. `yaml` — несохранённый текст
+         *     описания; `sources` — только эти записи.
+         */
+        post: operations["getCoverage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/interpretation/fix-hints": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Подсказка исправления опровергнутой гипотезы
+         * @description Для гипотезы описания с тестом ищет простую правку, после которой контрпримеров становится меньше.
+         *     Перебираются: знак и порядок байтов целых полей из теста (`sign`, `byte_order`), ширина поля — 1, 2 или
+         *     4 байта с тем же началом или тем же младшим байтом (`width`), число знаков после запятой у значения из
+         *     журнала — `x == action.params.t` ↔ `x == dec(action.params.t, 2)` (`scale`). Каждая правка проверяется на
+         *     записях проекта: в ответе итог теста после неё и контрпримеры остальных гипотез с тем же полем до и после.
+         *     Правка не применяется: `fixes[]` — предложения, лучшее первым; пустой список — простой правки нет или
+         *     контрпримеров нет. `yaml` — несохранённый текст описания; без него берётся текущая ревизия.
+         */
+        post: operations["getHypothesisFixHints"];
         delete?: never;
         options?: never;
         head?: never;
@@ -298,6 +427,34 @@ export interface paths {
         };
         /** Действия журнала */
         get: operations["listActions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/action-logs/{id}/exchanges": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Обмены для всех действий журнала разом
+         * @description По строке на каждое действие журнала: запрос стороны, начавшей соединение, найденный в окне времени
+         *     действия, и ответ на него. Сопоставление то же, что в тестах гипотез: действие получает ближайший
+         *     следующий запрос, ответ берётся по ходам обмена. `state`: `paired` — есть запрос и ответ;
+         *     `request_only` — ответ определить нельзя (его нет или пара неоднозначна); `not_found` — запроса в окне
+         *     нет. `candidates` больше 1 — по времени подошли запросы в нескольких соединениях, показан первый.
+         *     Журнал без колонки записи относится к той записи, где сообщение в окне времени нашлось для
+         *     наибольшего числа его действий: запросы других записей не предлагаются и в `candidates` не входят.
+         *     При равенстве записей выбора нет, и подходят запросы каждой.
+         *     Нужна сохранённая интерпретация (`409`).
+         */
+        get: operations["listActionExchanges"];
         put?: never;
         post?: never;
         delete?: never;
@@ -552,6 +709,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/streams/{stream}/explain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Объясни байт — всё известное о байте потока
+         * @description Один ответ о байте по смещению `offset`: его значение и вид (`data`, `gap` — не записан, `ambiguous` —
+         *     кадры расходятся); кадры, которые его принесли, с номерами и временем; сообщение и поля по текущей
+         *     сохранённой интерпретации — от внешнего к внутреннему, со статусом, прочитанным значением и гипотезой
+         *     описания (формулировка и тест); наблюдения с якорем на этот байт и гипотезы исследователя, которые на них
+         *     опираются; последние прогоны, в корпус которых входил поток: категория сообщения, нарушения и признак,
+         *     что прогон выполнен на том же тексте описания. Без сохранённой интерпретации `message` — `null`.
+         */
+        get: operations["explainByte"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/streams/{stream}/bytes": {
         parameters: {
             query?: never;
@@ -696,6 +878,173 @@ export interface paths {
          *     типа (нужна интерпретация). Без журнала действий — `409`.
          */
         post: operations["findCorrelations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/analysis/checksums": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Поиск контрольной суммы в сообщениях
+         * @description Ищет поле, значение которого равно контрольной сумме остальных байтов сообщения. Перебираются: место поля
+         *     (в конце сообщения, в том числе перед одним-двумя завершающими байтами, или в заголовке по смещению до 16),
+         *     порядок байтов, начало диапазона (первые 0–8 байт могут не входить в сумму) и функции из `checked` —
+         *     суммы, XOR, LRC, Fletcher-16, контрольная сумма Интернета, CRC-8, CRC-16 и CRC-32 с распространёнными
+         *     параметрами. Подсказка даётся, только если значение сходится не меньше чем на 8 сообщениях и в 80 % случаев,
+         *     а значения поля различаются; несошедшееся сообщение — первый контрпример. `expr` — готовая проверка для
+         *     описания (`checks`), `checksum` в ней — имя поля, которое нужно объявить по `at` и `type`. Границы сообщений —
+         *     из `framing` или из сохранённой интерпретации; оборванные и неоднозначные сообщения не учитываются.
+         *     Пустой список — ни одна из проверенных функций не подошла; это не значит, что контрольной суммы нет.
+         */
+        post: operations["findChecksums"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/analysis/types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Типы сообщений — байт-различитель и условие when для каждого типа
+         * @description Ищет, чем сообщения делятся на типы. Сначала — сторона обмена: запрос и ответ считаются разными
+         *     сообщениями. Если в сообщениях есть байт, который повторяет сторону, условие пишется по нему, иначе —
+         *     по порту (`dst_port`/`src_port`), когда принимающий порт у всех потоков один. Затем среди байтов общего
+         *     заголовка ищется различитель: внутри его групп сообщения ближе по длине и у них больше постоянных байтов.
+         *     Оценка считается по каждой стороне отдельно. Не предлагаются: поле длины, счётчики (растут на единицу
+         *     внутри потока), байты, с которыми размер сообщения растёт по прямой (число элементов), и байты с более чем
+         *     24 значениями. В ответе: `keys` — различители с оценками, `fields` — поля, которые нужно объявить в описании,
+         *     `types` — группы с готовым `when`, числом сообщений, разбросом длин, собственными постоянными байтами,
+         *     примером и сообщением нетипичной длины. Группы меньше трёх сообщений в оценке не участвуют (`rare`).
+         *     Границы сообщений — из `framing` или из сохранённой интерпретации. Это подсказка: передавайте потоки
+         *     обеих сторон, по одной стороне результат слабее.
+         */
+        post: operations["findMessageTypes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/analysis/fields": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Подсказки полей по поведению значений
+         * @description Ищет в сообщениях поля с узнаваемым поведением. **`counter`** — целое, которое растёт на единицу с каждым
+         *     сообщением потока (ищется по всем сообщениям потоков, фильтры на него не действуют: среди сообщений одного
+         *     типа номер идёт с пропусками). **`time`** — целое 4 или 8 байт, прирост которого от первого сообщения потока
+         *     совпадает с приростом времени записи в секундах, милли- или микросекундах; `epoch: true` — значение
+         *     совпадает с часами записи, то есть это время от эпохи Unix. **`string`** — длина (u8 или u16) и сразу за ней
+         *     печатный текст UTF-8 этой длины. **`text`** — печатный текст на постоянном месте, не короче 4 байт.
+         *     **`tlv`** — записи «метка, длина, значение» подряд до конца сообщения. Подсказка даётся при совпадении не
+         *     меньше чем на 5 примерах и в 80 % случаев; первое несовпавшее сообщение — `firstCounterexample`.
+         *     Сообщения должны быть одного вида: передавайте потоки одной стороны и отбирайте тип — `messageId`
+         *     (нужна сохранённая интерпретация) или `match` — значения байтов-различителей из `/api/analysis/types`.
+         *     Границы сообщений — из `framing` или из сохранённой интерпретации. Это подсказки, не выводы.
+         */
+        post: operations["findFieldHints"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/analysis/suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Заготовки наблюдений и гипотез из связей с журналом
+         * @description Для каждого типа сообщений сохранённой интерпретации ищет байты, равные значениям из журнала действий
+         *     (как `/api/analysis/correlations`), и каждую связь, сошедшуюся не меньше чем в 90 % примеров, превращает в
+         *     заготовки: `observation` — якорь на эти байты в примере сообщения и комментарий с числом совпадений;
+         *     `hypothesis` — формулировка и готовый тест (`x == action.params.y`, для дробных — `dec(…, n)`).
+         *     Если на этих байтах уже есть поле описания, тест опирается на него (`field`); если нет — в `newField`
+         *     поле, которое нужно добавить в описание. Ничего не создаётся: заготовки принимаются обычными
+         *     `POST /api/observations` и `POST /api/hypotheses` (в `basis` — идентификатор созданного наблюдения).
+         *     Нужны сохранённая интерпретация и журнал действий (`409`).
+         */
+        post: operations["getResearchSuggestions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/analysis/entropy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Энтропия участков потока — похоже ли на сжатие или шифрование
+         * @description Проходит известные байты потока окнами по 256 байт и отмечает участки: `high` — байты распределены почти
+         *     равномерно (7 бит на байт и больше), так выглядят сжатые и зашифрованные данные; `text` — не меньше 90 %
+         *     печатных символов; `low` — почти одно значение, заполнение. Остальное — обычные структурированные данные,
+         *     в `regions` не попадает. Окна не перекидываются через дыры; на данных короче окна судить не о чем.
+         *     Это подсказка, почему участок не раскладывается на поля, а не вывод: шифрование — вне области продукта.
+         */
+        post: operations["getEntropy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/analysis/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Черновик описания протокола, собранный из подсказок
+         * @description Собирает текст интерпретации по потокам обеих сторон обмена. Шаги: границы сообщений (лучший кандидат поля
+         *     длины и сигнатура начала) → типы сообщений (`/api/analysis/types`) → поля по поведению (счётчик, строки) и
+         *     связи с журналом действий по каждому типу → контрольная сумма. Все поля получают статус `hypothesis` и
+         *     гипотезу с основанием; связи с журналом — гипотезу с тестом (`period_ms == action.params.period_ms`),
+         *     контрольная сумма — проверку в `checks`. Из равнозначных чтений берётся самое узкое, о возможной большей
+         *     ширине сказано в гипотезе. Черновик не сохраняется: `yaml` проходит ту же проверку, что
+         *     `PUT /api/interpretation`, и его можно сохранить как есть. `steps` — что найдено на каждом шаге и на чём
+         *     основано; `summary` — что черновик даёт на этих же потоках. `422` — границы сообщений не найдены.
+         *     Журнал (`logId` или все журналы проекта) не обязателен: без него связей с действиями не будет.
+         */
+        post: operations["draftInterpretation"];
         delete?: never;
         options?: never;
         head?: never;
@@ -864,6 +1213,304 @@ export interface components {
          * @enum {string}
          */
         ResultCategory: "matched" | "violated" | "incomplete" | "ambiguous" | "unmatched" | "limit_exceeded";
+        ByteExplanation: {
+            stream: string;
+            offset: number;
+            /** @enum {string} */
+            kind: "data" | "gap" | "ambiguous";
+            value: number | null;
+            frames: {
+                frame: number;
+                tsNs: number;
+                start: number;
+                end: number;
+                duplicate: boolean;
+            }[];
+            message: {
+                start: number;
+                end: number;
+                messageId: string | null;
+                category: string;
+                /** @description Смещение байта от начала сообщения */
+                offset: number;
+            } | null;
+            /** @description Поля с этим байтом, от внешнего к внутреннему */
+            fields: {
+                name: string;
+                start: number;
+                end: number;
+                /** @enum {string} */
+                status: "rule" | "hypothesis" | "unknown";
+                state: string;
+                value: string | null;
+                hypothesis: {
+                    id: string;
+                    statement: string;
+                    test: string | null;
+                } | null;
+            }[];
+            observations: {
+                id: string;
+                comment: string;
+                start: number;
+                end: number;
+            }[];
+            /** @description Гипотезы исследователя, основанные на этих наблюдениях */
+            hypotheses: {
+                id: string;
+                statement: string;
+                status: string;
+            }[];
+            /** @description Прогоны с этим потоком, от нового к старому (до 20) */
+            runs: {
+                id: string;
+                revision: number | null;
+                sameInterpretation: boolean;
+                category: string | null;
+                messageId: string | null;
+                violations: {
+                    kind: string;
+                    id: string;
+                    detail: string;
+                    status: string;
+                }[];
+            }[];
+        };
+        CompareRequest: {
+            /** @description sha256 записей первого набора */
+            a: string[];
+            /** @description sha256 записей второго набора */
+            b: string[];
+            /** @description Несохранённый текст описания; без него — текущая ревизия */
+            yaml?: string;
+        };
+        CompareSide: {
+            sources: number;
+            messages: number;
+            /** @description Сообщений по категориям */
+            counts: {
+                [key: string]: number;
+            };
+        };
+        CompareValues: {
+            samples: number;
+            /** @description Разных значений; больше 64 не считается */
+            distinct: number;
+            min: number | null;
+            max: number | null;
+        };
+        CompareTiming: {
+            pairs: number;
+            medianNs: number;
+            maxNs: number;
+        };
+        Comparison: {
+            a: components["schemas"]["CompareSide"];
+            b: components["schemas"]["CompareSide"];
+            types: {
+                /** @description null — тип не определён */
+                messageId: string | null;
+                a: number;
+                b: number;
+                /** @enum {string} */
+                change: "new" | "missing" | "same";
+            }[];
+            /** @description Только поля с отличиями, до 100 */
+            fields: {
+                messageId: string;
+                field: string;
+                /** @enum {string} */
+                change: "values" | "range";
+                a: components["schemas"]["CompareValues"];
+                b: components["schemas"]["CompareValues"];
+                /** @description Есть только во втором наборе, до 8 */
+                newValues: string[];
+                /** @description Есть только в первом наборе, до 8 */
+                goneValues: string[];
+            }[];
+            timing: {
+                /** @description Тип запроса */
+                messageId: string;
+                a: components["schemas"]["CompareTiming"];
+                b: components["schemas"]["CompareTiming"];
+                /** @description Медиана второго набора к первому, в тысячных */
+                ratioPermille: number;
+            }[];
+            /** @description Главное словами */
+            summary: string[];
+            incomplete: boolean;
+        };
+        GraphEdge: {
+            from: string;
+            to: string;
+            count: number;
+        };
+        ExchangeGraph: {
+            connections: number;
+            messages: number;
+            nodes: {
+                /** @description Тип сообщения; ? — тип не определён */
+                id: string;
+                /** @description Отправлено стороной, начавшей соединение */
+                requests: number;
+                /** @description Отправлено встречной стороной */
+                responses: number;
+            }[];
+            /** @description Запрос → ответ */
+            answers: components["schemas"]["GraphEdge"][];
+            /** @description Запрос → следующий запрос */
+            next: components["schemas"]["GraphEdge"][];
+            /** @description Первый запрос соединения */
+            starts: components["schemas"]["GraphEdge"][];
+            unanswered: number;
+            unsolicited: number;
+            /** @description Граф в формате Graphviz DOT */
+            dot: string;
+            /** @description Рёбер больше 200: показаны самые частые */
+            truncated: boolean;
+            incomplete: boolean;
+        };
+        ActionMessage: {
+            source: string;
+            stream: string;
+            start: number;
+            end: number;
+            messageId: string | null;
+            category: string;
+            tsNs: number;
+        };
+        ActionExchangePage: {
+            items: {
+                line: number;
+                action: string;
+                tsNs: number;
+                /** @enum {string} */
+                state: "paired" | "request_only" | "not_found";
+                request: components["schemas"]["ActionMessage"] | null;
+                response: components["schemas"]["ActionMessage"] | null;
+                delayNs: number | null;
+                candidates: number;
+            }[];
+            total: number;
+            limit: number;
+            offset: number;
+            paired: number;
+            requestOnly: number;
+            notFound: number;
+        };
+        NextSteps: {
+            steps: {
+                /** @description Устойчивый идентификатор шага */
+                id: string;
+                /** @enum {string} */
+                screen: "sources" | "actions" | "framing" | "interpretation" | "hypotheses" | "verification" | "questions" | "report";
+                title: string;
+                detail: string;
+            }[];
+            state: {
+                sources: number;
+                actionLogs: number;
+                hasInterpretation: boolean;
+                messageTypes: number;
+                hypotheses: number;
+                hypothesesWithoutTest: number;
+                unknownFields: number;
+                runs: number;
+                lastRun: string | null;
+                lastRunStale: boolean;
+                counterexamples: number;
+                refuted: string[];
+                untested: string[];
+                openQuestions: number;
+            };
+        };
+        CoverageRequest: {
+            /** @description Несохранённый текст описания; без него — текущая ревизия */
+            yaml?: string;
+            /** @description sha256 записей; по умолчанию все записи проекта */
+            sources?: string[];
+        };
+        CoverageBytes: {
+            total: number;
+            rule: number;
+            hypothesis: number;
+            /** @description Зоны, объявленные неизвестными */
+            unknown: number;
+            /** @description Байты без описания */
+            none: number;
+        };
+        CoverageType: {
+            /** @description null — тип сообщения не определён */
+            messageId: string | null;
+            messages: number;
+            minLen: number;
+            maxLen: number;
+            bytes: components["schemas"]["CoverageBytes"];
+            hypotheses: string[];
+            regions: {
+                start: number;
+                end: number;
+                /** @enum {string} */
+                status: "rule" | "hypothesis" | "unknown" | "none";
+                field?: string;
+                hypothesis?: string;
+                sharePermille: number;
+            }[];
+            /** @description Сообщения длиннее 256 байт или областей больше 128 */
+            mapTruncated: boolean;
+        };
+        Coverage: {
+            sources: number;
+            messages: number;
+            bytes: components["schemas"]["CoverageBytes"];
+            describedPermille: number;
+            types: components["schemas"]["CoverageType"][];
+            /** @description Разбор прерван по времени: посчитана часть записей */
+            incomplete: boolean;
+        };
+        FixHintsRequest: {
+            /** @description Идентификатор гипотезы описания (H6) */
+            hypothesis: string;
+            /** @description Несохранённый текст описания; без него — текущая ревизия */
+            yaml?: string;
+            /** @description Окно подбора действия журнала, мс (по умолчанию 2000) */
+            windowMs?: number;
+        };
+        FixTestResult: {
+            id: string;
+            verdict: string;
+            applicable: number;
+            held: number;
+            counterexamples: number;
+        };
+        Fix: {
+            /** @enum {string} */
+            kind: "sign" | "byte_order" | "scale" | "width";
+            /** @description Что изменить и что это даёт */
+            summary: string;
+            /** @description Поле, которое меняется; нет у правки теста */
+            field?: string;
+            /** @description Сообщения, где поле меняется вместе */
+            messages?: string[];
+            fromType?: string;
+            toType?: string;
+            /** @description Смещение поля сейчас, если правка его сдвигает */
+            fromAt?: number;
+            toAt?: number;
+            /** @description Новый текст теста (kind = scale) */
+            test?: string;
+            result: components["schemas"]["FixTestResult"];
+            /** @description Контрпримеры остальных гипотез с этим полем сейчас */
+            otherBefore: number;
+            /** @description То же после правки */
+            otherAfter: number;
+        };
+        FixHints: {
+            hypothesis: string;
+            test: string;
+            current: components["schemas"]["FixTestResult"];
+            fixes: components["schemas"]["Fix"][];
+        };
         FieldHintsRequest: {
             /** @description Тип сообщения из описания */
             messageId: string;
@@ -1368,8 +2015,11 @@ export interface components {
             kind: "length_prefixed" | "delimiter" | "fixed" | "magic";
             length?: {
                 at: number;
-                /** @enum {string} */
-                type: "u8" | "u16be" | "u16le" | "u32be" | "u32le" | "u64be" | "u64le" | "i8" | "i16be" | "i16le" | "i32be" | "i32le" | "i64be" | "i64le";
+                /**
+                 * @description varint — по 7 бит в байте, младшие первыми; длина считается от конца поля
+                 * @enum {string}
+                 */
+                type: "u8" | "u16be" | "u16le" | "u32be" | "u32le" | "u64be" | "u64le" | "i8" | "i16be" | "i16le" | "i32be" | "i32le" | "i64be" | "i64le" | "varint";
                 /** @description Длина сообщения = значение поля + adjust */
                 adjust?: number;
             };
@@ -1398,8 +2048,11 @@ export interface components {
         };
         LengthHint: {
             at: number;
-            /** @enum {integer} */
-            width: 1 | 2 | 4;
+            /**
+             * @description 0 — поле переменного размера (varint)
+             * @enum {integer}
+             */
+            width: 0 | 1 | 2 | 4;
             bigEndian: boolean;
             adjust: number;
             messages: number;
@@ -1477,6 +2130,268 @@ export interface components {
             /** @description Длина сообщений для анализа; по умолчанию самая частая */
             length?: number;
         };
+        Suggestions: {
+            items: {
+                messageId: string;
+                /** @description params.<имя> или result.<имя> из журнала */
+                param: string;
+                matches: number;
+                samples: number;
+                observation: {
+                    source: string;
+                    stream: string;
+                    start: number;
+                    end: number;
+                    comment: string;
+                };
+                hypothesis: {
+                    statement: string;
+                    test: string;
+                };
+                /** @description Поле описания на этих байтах; null — его нужно добавить */
+                field: string | null;
+                newField?: {
+                    name: string;
+                    at: number;
+                    type: string;
+                    len?: number;
+                    mask?: number;
+                };
+            }[];
+            truncated: boolean;
+        };
+        EntropyPage: {
+            streams: {
+                stream: string;
+                length: number;
+                /** @description Просмотрено окнами */
+                bytes: number;
+                highBytes: number;
+                textBytes: number;
+                lowBytes: number;
+                regions: {
+                    start: number;
+                    end: number;
+                    /** @enum {string} */
+                    kind: "high" | "text" | "low";
+                    entropyMillibits: number;
+                }[];
+                /** @description Поток длиннее 16 МиБ или участков больше 256 */
+                truncated: boolean;
+                summary: string;
+            }[];
+        };
+        DraftRequest: {
+            streams: string[];
+            /** @description Журнал действий; по умолчанию все журналы проекта */
+            logId?: string;
+        };
+        Draft: {
+            /** @description Текст интерпретации */
+            yaml: string;
+            steps: {
+                title: string;
+                detail: string;
+            }[];
+            summary: {
+                streams: number;
+                messages: number;
+                /** @description Сообщений по категориям результата */
+                counts: {
+                    [key: string]: number;
+                };
+                unknownBytes: number;
+                types: number;
+                hypotheses: number;
+            };
+            /** @description Часть шагов не успела выполниться */
+            incomplete: boolean;
+        };
+        FieldsRequest: {
+            streams: string[];
+            framing?: components["schemas"]["FramingSpec"];
+            /** @description Только сообщения этого типа (нужна сохранённая интерпретация) */
+            messageId?: string;
+            /** @description Только сообщения с этими значениями байтов */
+            match?: {
+                at: number;
+                value: number;
+            }[];
+        };
+        FieldBehaviorHint: {
+            /** @enum {string} */
+            kind: "counter" | "time" | "string" | "text" | "tlv";
+            /** @description Смещение поля; у строки и записей — смещение длины или первой записи */
+            at: number;
+            /** @description Тип поля; у строки и записей — тип длины */
+            type: string;
+            /** @description Размер в байтах: счётчик, время, текст */
+            size?: number;
+            /**
+             * @description Единица времени
+             * @enum {string}
+             */
+            unit?: "s" | "ms" | "us";
+            /** @description Время от эпохи Unix: совпадает с часами записи */
+            epoch?: boolean;
+            /** @description Строка или записи доходят до конца сообщения */
+            toEnd?: boolean;
+            /** @description Пример текста, до 32 символов */
+            example?: string;
+            /** @description Разных меток у записей */
+            tags?: number;
+            /** @description Что это значит, одной фразой */
+            summary: string;
+            matches: number;
+            samples: number;
+            sharePermille: number;
+            firstCounterexample?: components["schemas"]["MessagePlace"];
+            /** @description То же поле, прочитанное иначе; на этих данных неотличимо */
+            equivalent: {
+                at: number;
+                type: string;
+            }[];
+        };
+        FieldBehaviorHints: {
+            /** @description Сколько сообщений отобрано фильтром */
+            messages: number;
+            /** @description Сообщений больше 20 000: взяты первые */
+            truncated: boolean;
+            /** @description Поиск прерван по времени */
+            incomplete: boolean;
+            hints: components["schemas"]["FieldBehaviorHint"][];
+        };
+        TypesRequest: {
+            streams: string[];
+            framing?: components["schemas"]["FramingSpec"];
+        };
+        TypeKey: {
+            /**
+             * @description byte — байт сообщения, side — сторона обмена
+             * @enum {string}
+             */
+            kind: "byte" | "side";
+            /** @description Смещение байта (для kind = byte) */
+            at?: number;
+        };
+        MessagePlace: {
+            stream: string;
+            start: number;
+            end: number;
+        };
+        TypeGroup: {
+            /** @description Предлагаемый идентификатор сообщения */
+            id: string;
+            /** @description Условие для описания */
+            when: string;
+            key: {
+                /** @enum {string} */
+                kind: "byte" | "side";
+                at?: number;
+                /** @description Значение байта; для стороны 0 — начавшая соединение, 1 — вторая */
+                value: number;
+            }[];
+            count: number;
+            sharePermille: number;
+            minLen: number;
+            maxLen: number;
+            /** @description Сколько разных длин у сообщений группы */
+            lengths: number;
+            /** @description Постоянные байты группы, которые меняются между группами */
+            constant: {
+                start: number;
+                end: number;
+                /** @description hex */
+                bytes: string;
+            }[];
+            example: components["schemas"]["MessagePlace"] | null;
+            lengthOutlier?: components["schemas"]["MessagePlace"];
+        };
+        TypeHints: {
+            messages: number;
+            /** @description Сообщений больше 20 000: взяты первые */
+            truncated: boolean;
+            /** @description Поиск прерван по времени */
+            incomplete: boolean;
+            /** @description Различители; пусто — сообщения на типы не делятся */
+            keys: (components["schemas"]["TypeKey"] & {
+                values: number;
+                /** @description Доля разнообразия длин, объяснённая различителями до этого включительно */
+                lengthExplainedPermille: number;
+                /** @description Доля меняющихся байтов, ставших постоянными внутри групп */
+                constantGainPermille: number;
+                scorePermille: number;
+            })[];
+            /** @description Поля-различители для описания; на них ссылаются условия when */
+            fields: {
+                name: string;
+                at: number;
+                /** @enum {string} */
+                type: "u8";
+            }[];
+            types: components["schemas"]["TypeGroup"][];
+            /** @description Сообщений в группах меньше трёх */
+            rare: number;
+        };
+        ChecksumRequest: {
+            streams: string[];
+            framing?: components["schemas"]["FramingSpec"];
+            /** @description Только сообщения этого типа (нужна сохранённая интерпретация) */
+            messageId?: string;
+        };
+        ChecksumHint: {
+            /** @description Имя функции в выражениях описания */
+            algorithm: string;
+            title: string;
+            /** @description Место поля в записи описания: смещение от начала или end-N */
+            at: string;
+            /** @enum {string} */
+            type: "u8" | "u16be" | "u16le" | "u32be" | "u32le";
+            /** @description Первый байт диапазона под функцией */
+            from: number;
+            /** @description Конец диапазона: выражение над message.len */
+            to: string;
+            /** @description Готовая проверка; checksum — имя поля */
+            expr: string;
+            matches: number;
+            samples: number;
+            sharePermille: number;
+            /** @description Разных значений поля среди совпавших сообщений (считается до 64) */
+            distinct: number;
+            firstCounterexample?: {
+                stream: string;
+                start: number;
+                end: number;
+                got: number;
+                expected: number;
+            };
+            /** @description Другие функции и начала диапазона, дающие то же поле на этих данных */
+            equivalent: {
+                algorithm: string;
+                from: number;
+            }[];
+        };
+        ChecksumHints: {
+            /** @description Сколько сообщений проверено */
+            messages: number;
+            /** @description Часть сообщений не вошла: больше 2000 или больше 16 МиБ */
+            truncated: boolean;
+            /** @description Сообщений длиннее 64 КиБ пропущено */
+            skippedLong: number;
+            /** @description Поиск прерван по времени */
+            incomplete: boolean;
+            hints: components["schemas"]["ChecksumHint"][];
+            /** @description Какие функции проверялись */
+            checked: {
+                name: string;
+                title: string;
+                /**
+                 * @description Размер результата в байтах
+                 * @enum {integer}
+                 */
+                width: 1 | 2 | 4;
+            }[];
+        };
         VariabilityColumn: {
             offset: number;
             samples: number;
@@ -1533,8 +2448,15 @@ export interface components {
             /** @description params.<имя> или result.<имя> из журнала */
             param: string;
             at: number;
-            /** @enum {string} */
-            type: "u8" | "i8" | "u16be" | "u16le" | "i16be" | "i16le" | "u32be" | "u32le" | "i32be" | "i32le";
+            /**
+             * @description Тип поля в описании; у bcd длина — size
+             * @enum {string}
+             */
+            type: "u8" | "i8" | "u16be" | "u16le" | "i16be" | "i16le" | "u32be" | "u32le" | "i32be" | "i32le" | "bcd" | "f32be" | "f32le" | "f64be" | "f64le";
+            /** @description Размер поля в байтах */
+            size?: number;
+            /** @description Битовое поле байта: значение — биты маски, сдвинутые к младшему */
+            mask?: number;
             /**
              * @description Прочитанное значение = параметр × scale
              * @enum {integer}
@@ -2245,7 +3167,61 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
             413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
             422: components["responses"]["Unprocessable"];
+        };
+    };
+    getNextSteps: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Шаги и состояние проекта */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "steps": [
+                     *         {
+                     *           "id": "fix_refuted",
+                     *           "screen": "hypotheses",
+                     *           "title": "Разберите опровергнутые гипотезы",
+                     *           "detail": "В последнем прогоне опровергнуты: H6. Посмотрите контрпримеры и подсказку исправления."
+                     *         }
+                     *       ],
+                     *       "state": {
+                     *         "sources": 12,
+                     *         "actionLogs": 1,
+                     *         "hasInterpretation": true,
+                     *         "messageTypes": 7,
+                     *         "hypotheses": 12,
+                     *         "hypothesesWithoutTest": 1,
+                     *         "unknownFields": 1,
+                     *         "runs": 1,
+                     *         "lastRun": "run-0001",
+                     *         "lastRunStale": false,
+                     *         "counterexamples": 0,
+                     *         "refuted": [
+                     *           "H6"
+                     *         ],
+                     *         "untested": [],
+                     *         "openQuestions": 2
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["NextSteps"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["NoProject"];
         };
     };
     updateProjectSettings: {
@@ -2513,6 +3489,362 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["PreviewPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
+            422: components["responses"]["Unprocessable"];
+        };
+    };
+    compareCaptures: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "a": [
+                 *         "3f5a1c0d9e2b47a1b6c8d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5"
+                 *       ],
+                 *       "b": [
+                 *         "7c11e02a9e2b47a1b6c8d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5"
+                 *       ]
+                 *     }
+                 */
+                "application/json": components["schemas"]["CompareRequest"];
+            };
+        };
+        responses: {
+            /** @description Отличия */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "a": {
+                     *         "sources": 1,
+                     *         "messages": 32,
+                     *         "counts": {
+                     *           "matched": 32
+                     *         }
+                     *       },
+                     *       "b": {
+                     *         "sources": 1,
+                     *         "messages": 22,
+                     *         "counts": {
+                     *           "matched": 22
+                     *         }
+                     *       },
+                     *       "types": [
+                     *         {
+                     *           "messageId": "set_param_req",
+                     *           "a": 6,
+                     *           "b": 5,
+                     *           "change": "same"
+                     *         }
+                     *       ],
+                     *       "fields": [
+                     *         {
+                     *           "messageId": "set_param_req",
+                     *           "field": "value",
+                     *           "change": "values",
+                     *           "a": {
+                     *             "samples": 6,
+                     *             "distinct": 3,
+                     *             "min": 21,
+                     *             "max": 1000
+                     *           },
+                     *           "b": {
+                     *             "samples": 5,
+                     *             "distinct": 3,
+                     *             "min": -5,
+                     *             "max": 123456
+                     *           },
+                     *           "newValues": [
+                     *             "-5",
+                     *             "123456",
+                     *             "70000"
+                     *           ],
+                     *           "goneValues": [
+                     *             "1000",
+                     *             "21",
+                     *             "37"
+                     *           ]
+                     *         }
+                     *       ],
+                     *       "timing": [
+                     *         {
+                     *           "messageId": "set_param_req",
+                     *           "a": {
+                     *             "pairs": 6,
+                     *             "medianNs": 2000000,
+                     *             "maxNs": 2400000
+                     *           },
+                     *           "b": {
+                     *             "pairs": 5,
+                     *             "medianNs": 2100000,
+                     *             "maxNs": 2500000
+                     *           },
+                     *           "ratioPermille": 1050
+                     *         }
+                     *       ],
+                     *       "summary": [
+                     *         "set_param_req.value: во втором наборе новые значения — -5, 123456, 70000"
+                     *       ],
+                     *       "incomplete": false
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Comparison"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
+            422: components["responses"]["Unprocessable"];
+        };
+    };
+    getExchangeGraph: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /** @example {} */
+                "application/json": components["schemas"]["CoverageRequest"];
+            };
+        };
+        responses: {
+            /** @description Граф обмена */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "connections": 1,
+                     *       "messages": 32,
+                     *       "nodes": [
+                     *         {
+                     *           "id": "set_param_req",
+                     *           "requests": 6,
+                     *           "responses": 0
+                     *         },
+                     *         {
+                     *           "id": "set_param_resp",
+                     *           "requests": 0,
+                     *           "responses": 6
+                     *         }
+                     *       ],
+                     *       "answers": [
+                     *         {
+                     *           "from": "set_param_req",
+                     *           "to": "set_param_resp",
+                     *           "count": 6
+                     *         }
+                     *       ],
+                     *       "next": [
+                     *         {
+                     *           "from": "set_param_req",
+                     *           "to": "set_param_req",
+                     *           "count": 5
+                     *         }
+                     *       ],
+                     *       "starts": [
+                     *         {
+                     *           "from": "начало",
+                     *           "to": "set_param_req",
+                     *           "count": 1
+                     *         }
+                     *       ],
+                     *       "unanswered": 0,
+                     *       "unsolicited": 0,
+                     *       "dot": "digraph exchange {\n  rankdir=LR;\n}\n",
+                     *       "truncated": false,
+                     *       "incomplete": false
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ExchangeGraph"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
+            422: components["responses"]["Unprocessable"];
+        };
+    };
+    getCoverage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /** @example {} */
+                "application/json": components["schemas"]["CoverageRequest"];
+            };
+        };
+        responses: {
+            /** @description Карта покрытия */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "sources": 1,
+                     *       "messages": 32,
+                     *       "bytes": {
+                     *         "total": 420,
+                     *         "rule": 96,
+                     *         "hypothesis": 250,
+                     *         "unknown": 40,
+                     *         "none": 34
+                     *       },
+                     *       "describedPermille": 823,
+                     *       "types": [
+                     *         {
+                     *           "messageId": "set_param_req",
+                     *           "messages": 6,
+                     *           "minLen": 12,
+                     *           "maxLen": 12,
+                     *           "bytes": {
+                     *             "total": 72,
+                     *             "rule": 30,
+                     *             "hypothesis": 36,
+                     *             "unknown": 0,
+                     *             "none": 6
+                     *           },
+                     *           "hypotheses": [
+                     *             "H1",
+                     *             "H2"
+                     *           ],
+                     *           "regions": [
+                     *             {
+                     *               "start": 0,
+                     *               "end": 2,
+                     *               "status": "rule",
+                     *               "field": "magic",
+                     *               "sharePermille": 1000
+                     *             },
+                     *             {
+                     *               "start": 7,
+                     *               "end": 11,
+                     *               "status": "hypothesis",
+                     *               "field": "value",
+                     *               "hypothesis": "H2",
+                     *               "sharePermille": 1000
+                     *             },
+                     *             {
+                     *               "start": 11,
+                     *               "end": 12,
+                     *               "status": "none",
+                     *               "sharePermille": 1000
+                     *             }
+                     *           ],
+                     *           "mapTruncated": false
+                     *         }
+                     *       ],
+                     *       "incomplete": false
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Coverage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
+            422: components["responses"]["Unprocessable"];
+        };
+    };
+    getHypothesisFixHints: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "hypothesis": "H6"
+                 *     }
+                 */
+                "application/json": components["schemas"]["FixHintsRequest"];
+            };
+        };
+        responses: {
+            /** @description Предложения правок */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "hypothesis": "H6",
+                     *       "test": "threshold_centi_c == dec(action.params.threshold_c, 2)",
+                     *       "current": {
+                     *         "id": "H6",
+                     *         "verdict": "refuted",
+                     *         "applicable": 12,
+                     *         "held": 10,
+                     *         "counterexamples": 2
+                     *       },
+                     *       "fixes": [
+                     *         {
+                     *           "kind": "sign",
+                     *           "summary": "threshold_centi_c: u16be → i16be (знак): контрпримеров 0 вместо 2, тест выполняется на 12 из 12",
+                     *           "field": "threshold_centi_c",
+                     *           "messages": [
+                     *             "set_config_req"
+                     *           ],
+                     *           "fromType": "u16be",
+                     *           "toType": "i16be",
+                     *           "result": {
+                     *             "id": "H6",
+                     *             "verdict": "no_counterexample",
+                     *             "applicable": 12,
+                     *             "held": 12,
+                     *             "counterexamples": 0
+                     *           },
+                     *           "otherBefore": 0,
+                     *           "otherAfter": 0
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["FixHints"];
                 };
             };
             400: components["responses"]["BadRequest"];
@@ -3179,6 +4511,76 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["ActionPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+        };
+    };
+    listActionExchanges: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+                /** @description Окно подбора запроса, мс */
+                windowMs?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Таблица действие → запрос и ответ */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "line": 2,
+                     *           "action": "set_param",
+                     *           "tsNs": 1791190809001270000,
+                     *           "state": "paired",
+                     *           "request": {
+                     *             "source": "3f5a1c0d9e2b47a1b6c8d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5",
+                     *             "stream": "3f5a1c0d:c0001:ab",
+                     *             "start": 0,
+                     *             "end": 12,
+                     *             "messageId": "set_param_req",
+                     *             "category": "matched",
+                     *             "tsNs": 1791190809001270000
+                     *           },
+                     *           "response": {
+                     *             "source": "3f5a1c0d9e2b47a1b6c8d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5",
+                     *             "stream": "3f5a1c0d:c0001:ba",
+                     *             "start": 0,
+                     *             "end": 13,
+                     *             "messageId": "set_param_resp",
+                     *             "category": "matched",
+                     *             "tsNs": 1791190809003870000
+                     *           },
+                     *           "delayNs": 2600000,
+                     *           "candidates": 1
+                     *         }
+                     *       ],
+                     *       "total": 16,
+                     *       "limit": 50,
+                     *       "offset": 0,
+                     *       "paired": 15,
+                     *       "requestOnly": 0,
+                     *       "notFound": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ActionExchangePage"];
                 };
             };
             400: components["responses"]["BadRequest"];
@@ -3948,6 +5350,7 @@ export interface operations {
                     "application/json": components["schemas"]["SourcePage"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["NoProject"];
@@ -4152,6 +5555,101 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            409: components["responses"]["NoProject"];
+        };
+    };
+    explainByte: {
+        parameters: {
+            query: {
+                /** @description Смещение байта от начала потока */
+                offset: number;
+            };
+            header?: never;
+            path: {
+                /** @description Идентификатор направленного потока */
+                stream: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Что известно о байте */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "stream": "3f5a1c0d:c0001:ab",
+                     *       "offset": 9,
+                     *       "kind": "data",
+                     *       "value": 21,
+                     *       "frames": [
+                     *         {
+                     *           "frame": 4,
+                     *           "tsNs": 1791190809001270000,
+                     *           "start": 0,
+                     *           "end": 12,
+                     *           "duplicate": false
+                     *         }
+                     *       ],
+                     *       "message": {
+                     *         "start": 0,
+                     *         "end": 12,
+                     *         "messageId": "set_param_req",
+                     *         "category": "matched",
+                     *         "offset": 9
+                     *       },
+                     *       "fields": [
+                     *         {
+                     *           "name": "value",
+                     *           "start": 7,
+                     *           "end": 11,
+                     *           "status": "hypothesis",
+                     *           "state": "decoded",
+                     *           "value": "21",
+                     *           "hypothesis": {
+                     *             "id": "H2",
+                     *             "statement": "value — значение параметра",
+                     *             "test": "value == action.params.value"
+                     *           }
+                     *         }
+                     *       ],
+                     *       "observations": [
+                     *         {
+                     *           "id": "obs-1",
+                     *           "comment": "меняется вместе с уставкой",
+                     *           "start": 7,
+                     *           "end": 11
+                     *         }
+                     *       ],
+                     *       "hypotheses": [
+                     *         {
+                     *           "id": "H1",
+                     *           "statement": "значение — уставка",
+                     *           "status": "supported"
+                     *         }
+                     *       ],
+                     *       "runs": [
+                     *         {
+                     *           "id": "run-0001",
+                     *           "revision": 1,
+                     *           "sameInterpretation": true,
+                     *           "category": "matched",
+                     *           "messageId": "set_param_req",
+                     *           "violations": []
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ByteExplanation"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             409: components["responses"]["NoProject"];
         };
     };
@@ -4629,6 +6127,501 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["Correlations"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
+            422: components["responses"]["Unprocessable"];
+        };
+    };
+    findChecksums: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "streams": [
+                 *         "3f5a1c0d:c0001:ab"
+                 *       ],
+                 *       "framing": {
+                 *         "kind": "length_prefixed",
+                 *         "length": {
+                 *           "at": 4,
+                 *           "type": "u16le",
+                 *           "adjust": 7
+                 *         },
+                 *         "status": "hypothesis"
+                 *       }
+                 *     }
+                 */
+                "application/json": components["schemas"]["ChecksumRequest"];
+            };
+        };
+        responses: {
+            /** @description Найденные контрольные суммы */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "messages": 32,
+                     *       "truncated": false,
+                     *       "skippedLong": 0,
+                     *       "incomplete": false,
+                     *       "hints": [
+                     *         {
+                     *           "algorithm": "sum8",
+                     *           "title": "сумма байтов по модулю 256",
+                     *           "at": "end-1",
+                     *           "type": "u8",
+                     *           "from": 0,
+                     *           "to": "message.len - 1",
+                     *           "expr": "checksum == sum8(0, message.len - 1)",
+                     *           "matches": 32,
+                     *           "samples": 32,
+                     *           "sharePermille": 1000,
+                     *           "distinct": 27,
+                     *           "equivalent": []
+                     *         }
+                     *       ],
+                     *       "checked": [
+                     *         {
+                     *           "name": "sum8",
+                     *           "title": "сумма байтов по модулю 256",
+                     *           "width": 1
+                     *         },
+                     *         {
+                     *           "name": "crc16_modbus",
+                     *           "title": "CRC-16/MODBUS",
+                     *           "width": 2
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ChecksumHints"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
+            422: components["responses"]["Unprocessable"];
+        };
+    };
+    findMessageTypes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "streams": [
+                 *         "3f5a1c0d:c0001:ab",
+                 *         "3f5a1c0d:c0001:ba"
+                 *       ],
+                 *       "framing": {
+                 *         "kind": "length_prefixed",
+                 *         "length": {
+                 *           "at": 4,
+                 *           "type": "u16le",
+                 *           "adjust": 7
+                 *         },
+                 *         "status": "hypothesis"
+                 *       }
+                 *     }
+                 */
+                "application/json": components["schemas"]["TypesRequest"];
+            };
+        };
+        responses: {
+            /** @description Различители и типы сообщений */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "messages": 54,
+                     *       "truncated": false,
+                     *       "incomplete": false,
+                     *       "keys": [
+                     *         {
+                     *           "kind": "side",
+                     *           "values": 2,
+                     *           "lengthExplainedPermille": 0,
+                     *           "constantGainPermille": 0,
+                     *           "scorePermille": 0
+                     *         },
+                     *         {
+                     *           "kind": "byte",
+                     *           "at": 2,
+                     *           "values": 6,
+                     *           "lengthExplainedPermille": 870,
+                     *           "constantGainPermille": 277,
+                     *           "scorePermille": 573
+                     *         }
+                     *       ],
+                     *       "fields": [
+                     *         {
+                     *           "name": "b2",
+                     *           "at": 2,
+                     *           "type": "u8"
+                     *         }
+                     *       ],
+                     *       "types": [
+                     *         {
+                     *           "id": "msg_req_02",
+                     *           "when": "dst_port == 4710 && b2 == 0x02",
+                     *           "key": [
+                     *             {
+                     *               "kind": "side",
+                     *               "value": 0
+                     *             },
+                     *             {
+                     *               "kind": "byte",
+                     *               "at": 2,
+                     *               "value": 2
+                     *             }
+                     *           ],
+                     *           "count": 10,
+                     *           "sharePermille": 185,
+                     *           "minLen": 12,
+                     *           "maxLen": 12,
+                     *           "lengths": 1,
+                     *           "constant": [
+                     *             {
+                     *               "start": 4,
+                     *               "end": 6,
+                     *               "bytes": "0500"
+                     *             }
+                     *           ],
+                     *           "example": {
+                     *             "stream": "3f5a1c0d:c0001:ab",
+                     *             "start": 0,
+                     *             "end": 12
+                     *           }
+                     *         }
+                     *       ],
+                     *       "rare": 0
+                     *     }
+                     */
+                    "application/json": components["schemas"]["TypeHints"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
+            422: components["responses"]["Unprocessable"];
+        };
+    };
+    findFieldHints: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "streams": [
+                 *         "3f5a1c0d:c0001:ab"
+                 *       ],
+                 *       "framing": {
+                 *         "kind": "length_prefixed",
+                 *         "length": {
+                 *           "at": 2,
+                 *           "type": "u16be",
+                 *           "adjust": 8
+                 *         },
+                 *         "status": "hypothesis"
+                 *       },
+                 *       "match": [
+                 *         {
+                 *           "at": 7,
+                 *           "value": 32
+                 *         }
+                 *       ]
+                 *     }
+                 */
+                "application/json": components["schemas"]["FieldsRequest"];
+            };
+        };
+        responses: {
+            /** @description Подсказки полей */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "messages": 14,
+                     *       "truncated": false,
+                     *       "incomplete": false,
+                     *       "hints": [
+                     *         {
+                     *           "kind": "counter",
+                     *           "at": 4,
+                     *           "type": "u16be",
+                     *           "size": 2,
+                     *           "summary": "растёт на единицу с каждым сообщением потока",
+                     *           "matches": 80,
+                     *           "samples": 80,
+                     *           "sharePermille": 1000,
+                     *           "equivalent": [
+                     *             {
+                     *               "at": 5,
+                     *               "type": "u8"
+                     *             }
+                     *           ]
+                     *         },
+                     *         {
+                     *           "kind": "string",
+                     *           "at": 13,
+                     *           "type": "u8",
+                     *           "toEnd": true,
+                     *           "example": "Lab",
+                     *           "summary": "длина и сразу за ней текст этой длины, до конца сообщения",
+                     *           "matches": 13,
+                     *           "samples": 14,
+                     *           "sharePermille": 928,
+                     *           "firstCounterexample": {
+                     *             "stream": "3f5a1c0d:c0001:ab",
+                     *             "start": 120,
+                     *             "end": 134
+                     *           },
+                     *           "equivalent": []
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["FieldBehaviorHints"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
+            422: components["responses"]["Unprocessable"];
+        };
+    };
+    getResearchSuggestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "streams": [
+                 *         "3f5a1c0d:c0001:ab",
+                 *         "3f5a1c0d:c0001:ba"
+                 *       ]
+                 *     }
+                 */
+                "application/json": components["schemas"]["DraftRequest"];
+            };
+        };
+        responses: {
+            /** @description Заготовки */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "messageId": "set_param_req",
+                     *           "param": "params.value",
+                     *           "matches": 6,
+                     *           "samples": 6,
+                     *           "observation": {
+                     *             "source": "3f5a1c0d9e2b47a1b6c8d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5",
+                     *             "stream": "3f5a1c0d:c0001:ab",
+                     *             "start": 31,
+                     *             "end": 35,
+                     *             "comment": "Байты 7–10 сообщения set_param_req (i32be) равны значению «params.value» из журнала действий: совпало в 6 из 6 сообщений."
+                     *           },
+                     *           "hypothesis": {
+                     *             "statement": "value в сообщении set_param_req — значение «params.value» из журнала действий",
+                     *             "test": "value == action.params.value"
+                     *           },
+                     *           "field": "value"
+                     *         }
+                     *       ],
+                     *       "truncated": false
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Suggestions"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
+            422: components["responses"]["Unprocessable"];
+        };
+    };
+    getEntropy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "streams": [
+                 *         "3f5a1c0d:c0001:ab"
+                 *       ]
+                 *     }
+                 */
+                "application/json": components["schemas"]["FramingRequest"];
+            };
+        };
+        responses: {
+            /** @description Карта энтропии по потокам */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "streams": [
+                     *         {
+                     *           "stream": "3f5a1c0d:c0001:ab",
+                     *           "length": 2100,
+                     *           "bytes": 2048,
+                     *           "highBytes": 1024,
+                     *           "textBytes": 0,
+                     *           "lowBytes": 256,
+                     *           "regions": [
+                     *             {
+                     *               "start": 512,
+                     *               "end": 1536,
+                     *               "kind": "high",
+                     *               "entropyMillibits": 7168
+                     *             },
+                     *             {
+                     *               "start": 1792,
+                     *               "end": 2048,
+                     *               "kind": "low",
+                     *               "entropyMillibits": 0
+                     *             }
+                     *           ],
+                     *           "truncated": false,
+                     *           "summary": "50 % просмотренных байтов похожи на сжатые или зашифрованные: полей в них не найти."
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["EntropyPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMedia"];
+            422: components["responses"]["Unprocessable"];
+        };
+    };
+    draftInterpretation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "streams": [
+                 *         "3f5a1c0d:c0001:ab",
+                 *         "3f5a1c0d:c0001:ba"
+                 *       ]
+                 *     }
+                 */
+                "application/json": components["schemas"]["DraftRequest"];
+            };
+        };
+        responses: {
+            /** @description Черновик описания */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "yaml": "format: protoledger/interpretation@1\nframing: {\"kind\":\"length_prefixed\",\"length\":{\"at\":4,\"type\":\"u16le\",\"adjust\":7},\"status\":\"hypothesis\"}\nmessages:\n  - id: message\n    fields:\n      - { name: length, at: 4, type: u16le, status: hypothesis, hypothesis: H1 }\nhypotheses:\n  - { id: H1, statement: \"length — длина\" }\n",
+                     *       "steps": [
+                     *         {
+                     *           "title": "Границы сообщений",
+                     *           "detail": "Поле длины u16le по смещению 4: размер сообщения = значение + 7. Сообщений: 32, контрпримеров нет."
+                     *         },
+                     *         {
+                     *           "title": "Контрольная сумма",
+                     *           "detail": "сумма байтов по модулю 256: поле u8 по смещению end-1, сошлась в 32 из 32 сообщений."
+                     *         }
+                     *       ],
+                     *       "summary": {
+                     *         "streams": 2,
+                     *         "messages": 32,
+                     *         "counts": {
+                     *           "matched": 32
+                     *         },
+                     *         "unknownBytes": 61308,
+                     *         "types": 6,
+                     *         "hypotheses": 11
+                     *       },
+                     *       "incomplete": false
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Draft"];
                 };
             };
             400: components["responses"]["BadRequest"];

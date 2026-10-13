@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import type { Project, Source, SourceDiagnostics } from '~/api/types'
-import type { ProjectExtras } from '~/data/views'
+import type { NextStepsView, ProjectExtras } from '~/data/views'
 
 /** Текущий проект, его записи и замечания к записям. */
 export const useProjectStore = defineStore('project', () => {
@@ -12,6 +12,21 @@ export const useProjectStore = defineStore('project', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
   const loaded = ref(false)
+  const nextSteps = ref<NextStepsView['steps']>([])
+
+  // «Что дальше» — подсказка, а не данные проекта: её ошибка не мешает работе.
+  async function refreshNextSteps() {
+    if (!project.value) {
+      nextSteps.value = []
+      return
+    }
+    try {
+      nextSteps.value = (await data.getNextSteps()).steps
+    }
+    catch {
+      nextSteps.value = []
+    }
+  }
 
   async function load() {
     loading.value = true
@@ -24,6 +39,7 @@ export const useProjectStore = defineStore('project', () => {
         extras.value = null
         sources.value = []
         diagnostics.value = {}
+        nextSteps.value = []
         loaded.value = true
         return
       }
@@ -34,6 +50,7 @@ export const useProjectStore = defineStore('project', () => {
       const diags = await Promise.all(ready.map(src => data.getDiagnostics(src.sha256)))
       diagnostics.value = Object.fromEntries(diags.map(d => [d.sha256, d]))
       loaded.value = true
+      void refreshNextSteps()
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Не удалось загрузить проект'
@@ -56,5 +73,5 @@ export const useProjectStore = defineStore('project', () => {
     return sources.value.find(s => s.sha256 === sha256)?.name ?? `${sha256.slice(0, 8)}…`
   }
 
-  return { project, extras, sources, diagnostics, loading, error, loaded, load, open, refreshSources, sourceName }
+  return { project, extras, sources, diagnostics, loading, error, loaded, nextSteps, load, open, refreshSources, refreshNextSteps, sourceName }
 })

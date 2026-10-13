@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { InterpretationView } from '~/data/views'
+import type { DraftView, InterpretationView } from '~/data/views'
 import { STATUS } from '~/utils/status'
 import type { FieldHints } from '~/api/types'
 import { parseForm, setFieldAttr } from '~/utils/interp-form'
@@ -239,6 +239,58 @@ const subtitle = computed(() => {
   return `ревизия ${view.value.rev}`
 })
 
+// Черновик описания: движок собирает текст из подсказок, в редактор он попадает несохранённым.
+const route = useRoute()
+const draftState = ref<'idle' | 'loading' | 'error'>('idle')
+const draftView = ref<DraftView | null>(null)
+const draftError = ref<string | null>(null)
+const draftStreams = ref<string[]>([])
+const confirmReplace = ref(false)
+watch(streams, (list) => {
+  if (!draftStreams.value.length) draftStreams.value = list.map(s => s.id)
+}, { immediate: true })
+
+async function makeDraft() {
+  if (draftState.value === 'loading') return
+  if (!draftStreams.value.length) {
+    draftState.value = 'error'
+    draftError.value = 'Выберите хотя бы один поток.'
+    return
+  }
+  draftState.value = 'loading'
+  draftError.value = null
+  confirmReplace.value = false
+  try {
+    draftView.value = await data.getDraft(draftStreams.value)
+    draftState.value = 'idle'
+    workspace.log(`Черновик описания по ${draftStreams.value.length} потокам`)
+  }
+  catch (e) {
+    draftState.value = 'error'
+    draftError.value = e instanceof Error ? e.message : 'Не удалось собрать черновик'
+  }
+}
+
+function useDraft() {
+  const d = draftView.value
+  if (!d) return
+  // Стартовый шаблон — не правки исследователя: заменяем его без вопроса.
+  const edited = text.value !== (view.value?.rev ? original.value : TEMPLATE)
+  if (edited && !confirmReplace.value) {
+    confirmReplace.value = true
+    return
+  }
+  text.value = d.yaml
+  basedOn.value = null
+  mode.value = 'yaml'
+  confirmReplace.value = false
+  notice.value = 'Черновик в редакторе: проверьте предпросмотр и сохраните ревизию.'
+}
+
+onMounted(() => {
+  if (route.query.draft === '1') void makeDraft()
+})
+
 const cap = 'pl-caption m-0 px-3 pt-3.5 pb-2'
 const TOKEN: Record<string, string> = {
   key: 'text-pl-st-ambiguous',
@@ -271,6 +323,10 @@ const TOKEN: Record<string, string> = {
           <option value="" disabled>ревизии…</option>
           <option v-for="r in revisions" :key="r" :value="r">rev {{ r }}{{ r === view?.rev ? ' · текущая' : '' }}</option>
         </select>
+        <button class="pl-btn h-7" type="button" :disabled="draftState === 'loading'" title="Собрать описание из подсказок движка: границы, типы, поля, связи с журналом" @click="makeDraft">
+          <UIcon name="i-lucide-wand-sparkles" class="size-4" aria-hidden="true" />
+          {{ draftState === 'loading' ? 'Собираю черновик…' : 'Черновик описания' }}
+        </button>
         <div class="pl-seg" role="radiogroup" aria-label="Вид">
           <button type="button" role="radio" :aria-checked="mode === 'yaml'" @click="mode = 'yaml'">YAML</button>
           <button type="button" role="radio" :aria-checked="mode === 'form'" @click="mode = 'form'">Форма</button>
@@ -320,6 +376,45 @@ const TOKEN: Record<string, string> = {
           <pre class="mt-2 mb-0 font-mono text-[11.5px] whitespace-pre-wrap text-pl-fg">{{ problem }}</pre>
         </div>
         <p v-if="notice" class="m-3 text-pl-st-rule" aria-live="polite">{{ notice }}</p>
+
+        <template v-if="draftState !== 'idle' || draftView">
+          <h3 :class="cap">Черновик описания</h3>
+          <div class="flex flex-col gap-2 px-3 pb-2">
+            <details class="text-pl-muted">
+              <summary class="cursor-pointer">Потоки: {{ draftStreams.length }} из {{ streams.length }}</summary>
+              <div class="mt-1 flex gap-3">
+                <button class="text-pl-wine-text hover:underline" type="button" @click="draftStreams = streams.map(s => s.id)">все</button>
+                <button class="text-pl-wine-text hover:underline" type="button" @click="draftStreams = []">снять все</button>
+              </div>
+              <label v-for="s in streams" :key="s.id" class="flex items-center gap-2 py-0.5 text-pl-fg">
+                <input v-model="draftStreams" type="checkbox" :value="s.id">
+                {{ safeText(s.label) }}
+              </label>
+            </details>
+            <p v-if="draftState === 'loading'" class="m-0 text-pl-muted" aria-live="polite">Движок ищет границы, типы, поля, связи с журналом и контрольную сумму…</p>
+            <p v-else-if="draftState === 'error'" class="m-0 text-pl-st-violation" role="alert">{{ draftError }}</p>
+            <template v-if="draftView && draftState !== 'loading'">
+              <dl class="pl-dl p-0">
+                <template v-for="r in draftView.summary" :key="r.label">
+                  <dt>{{ r.label }}</dt><dd>{{ r.value }}</dd>
+                </template>
+              </dl>
+              <p v-if="draftView.incomplete" class="m-0 text-pl-st-hypothesis">Часть шагов не успела выполниться — черновик неполный.</p>
+              <ol class="m-0 flex list-decimal flex-col gap-1 pl-5">
+                <li v-for="(st, i) in draftView.steps" :key="i">
+                  <b class="font-semibold text-pl-fg-strong">{{ safeText(st.title) }}</b>
+                  <span class="text-pl-muted"> — {{ safeText(st.detail) }}</span>
+                </li>
+              </ol>
+              <p class="m-0 text-pl-muted">Каждое поле черновика — гипотеза с основанием. Это подсказки по данным: проверка и сохранение — за вами.</p>
+              <div class="flex flex-wrap gap-2">
+                <button class="pl-btn pl-btn-primary" type="button" @click="useDraft">{{ confirmReplace ? 'Заменить текст в редакторе' : 'Подставить в редактор' }}</button>
+                <button class="pl-btn" type="button" @click="makeDraft">Пересобрать</button>
+              </div>
+              <p v-if="confirmReplace" class="m-0 text-pl-st-hypothesis" role="alert">В редакторе несохранённые правки — они заменятся черновиком.</p>
+            </template>
+          </div>
+        </template>
 
         <h3 :class="cap">Предпросмотр</h3>
         <div class="px-3">

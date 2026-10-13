@@ -34,6 +34,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   const panels = ref<Record<string, PanelState>>(saved.panels ?? {})
   const inspector = ref<PanelState>(saved.inspector ?? { width: 360, collapsed: false })
   const focus = ref(false)
+  // Скрытая плашка «что дальше» возвращается при следующем открытии приложения.
+  const nextStepsHidden = ref(false)
 
   watch([panels, inspector, bottomOpen], () => {
     try {
@@ -73,5 +75,5 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     focus.value = false
   }
 
-  return { tabs, bottomOpen, bottomTab, events, panels, inspector, focus, panel, openTab, closeTab, log, resetLayout }
+  return { nextStepsHidden, tabs, bottomOpen, bottomTab, events, panels, inspector, focus, panel, openTab, closeTab, log, resetLayout }
 })

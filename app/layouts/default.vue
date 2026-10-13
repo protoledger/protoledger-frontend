@@ -56,6 +56,7 @@ onBeforeUnmount(() => window.removeEventListener('keyup', onKeyup))
     <ShellToolStrip v-if="!workspace.focus" />
     <div class="flex min-h-0 flex-col">
       <ShellScreenTabs v-if="!workspace.focus" />
+      <ShellNextSteps />
       <div class="flex min-h-0 flex-1">
         <main class="min-h-0 min-w-0 flex-1 overflow-hidden">
           <div v-if="project.error" class="p-4" role="alert">
