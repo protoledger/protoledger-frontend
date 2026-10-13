@@ -72,6 +72,16 @@ function jump(offset: number) {
   selection.range = { start: offset, end: offset + 1 }
   hex.value?.scrollIntoView(offset)
 }
+
+// Вид потока: байты или пары запрос→ответ соединения.
+const mode = ref<'bytes' | 'exchanges'>('bytes')
+async function jumpToMessage(id: string, start: number, end: number) {
+  mode.value = 'bytes'
+  dir.value = id.endsWith(':ba') ? 'ba' : 'ab'
+  await nextTick()
+  selection.range = { start, end }
+  hex.value?.scrollIntoView(start)
+}
 </script>
 
 <template>
@@ -85,11 +95,16 @@ function jump(offset: number) {
         :title="connection ? `Поток ${connection.id.split(':')[1]}${project.sources.length > 1 ? ` · ${safeText(project.sourceName(connection.source))}` : ''}` : 'Поток'"
         :subtitle="stream ? `собран по seq · ${formatCount(stream.length)} байт${stream.startAvailable ? '' : ' · начало не захвачено'}` : ''"
       >
-        <div v-if="connection" class="pl-seg" role="radiogroup" aria-label="Направление">
+        <div v-if="connection" class="pl-seg" role="radiogroup" aria-label="Вид">
+          <button type="button" role="radio" :aria-checked="mode === 'bytes'" @click="mode = 'bytes'">Байты</button>
+          <button type="button" role="radio" :aria-checked="mode === 'exchanges'" @click="mode = 'exchanges'">Обмены</button>
+        </div>
+        <div v-if="connection && mode === 'bytes'" class="pl-seg" role="radiogroup" aria-label="Направление">
           <button v-for="d in (['ab', 'ba'] as const)" :key="d" type="button" role="radio" :aria-checked="dir === d" @click="dir = d">{{ roleLabel[d] }}</button>
         </div>
       </CommonPanelHeader>
-      <template v-if="stream">
+      <OverviewConnectionExchanges v-if="connection && mode === 'exchanges'" :connection="connection.id" @jump="jumpToMessage" />
+      <template v-else-if="stream">
         <OverviewSegmentMap :stream="stream" :segments="segments" @jump="jump" />
         <p v-if="error" class="p-3 text-pl-st-violation" role="alert">{{ error }}</p>
         <div class="min-h-0 flex-1">

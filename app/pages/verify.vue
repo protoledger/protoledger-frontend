@@ -227,6 +227,7 @@ const total = computed(() => view.value?.categories.reduce((n, c) => n + c.count
           </table>
 
           <VerifyCoverageMap :key="view.run?.id ?? 'none'" />
+          <VerifyExchangeGraph :key="`graph-${view.run?.id ?? 'none'}`" />
         </div>
       </CommonAsyncState>
     </section>

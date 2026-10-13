@@ -4,6 +4,8 @@ import type {
   CorpusFilter,
   DeviceConnections,
   EntropyPage,
+  ExchangeGraph,
+  ExchangePairPage,
   FieldBehaviorHints,
   FieldHints,
   ActionLogRecord,
@@ -146,6 +148,10 @@ export interface ResearchSource {
   getFieldBehavior(streams: string[], messageId?: string): Promise<FieldBehaviorHints>
   getChecksumHints(streams: string[], messageId?: string): Promise<ChecksumHints>
   getEntropy(streams: string[]): Promise<EntropyPage>
+  /** Пары запрос→ответ соединения по времени; границы — из сохранённого описания. */
+  getExchangePairs(connection: string, offset?: number): Promise<ExchangePairPage>
+  /** Граф обмена по всем соединениям: типы, ответы, переходы. */
+  getExchangeGraph(): Promise<ExchangeGraph>
   /** Заготовки наблюдений и гипотез по всем потокам проекта. */
   getSuggestions(): Promise<SuggestionsView>
   /** Принять заготовку: наблюдение на байтах и гипотеза на нём; id гипотезы или null — пример данных. */

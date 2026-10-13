@@ -438,6 +438,20 @@ export function createMockResearchSource(): ResearchSource {
       }
     },
     getClockOffset: async () => null,
+    getExchangePairs: async (connection) => {
+      await delay()
+      const msg = (dir: 'ab' | 'ba', i: number, id: string) => ({ stream: `${connection}:${dir}`, start: i * 12, end: i * 12 + 12, messageId: id, firstTsNs: 1_790_899_200_000_000_000 + i * 1_000_000_000, lastTsNs: 1_790_899_200_000_000_000 + i * 1_000_000_000 })
+      const items = Array.from({ length: 6 }, (_, i) => ({ requests: [msg('ab', i, 'set_param_req')], responses: i === 5 ? [] : [msg('ba', i, 'set_param_resp')], delayNs: i === 5 ? null : 1_200_000 + i * 100_000, certainty: (i === 5 ? 'unanswered' : 'certain') as 'certain' | 'unanswered' }))
+      return { items, total: 6, limit: 100, offset: 0, stats: { exchanges: 6, certain: 5, ordered: 0, ambiguous: 0, unanswered: 1, unsolicited: 0, minDelayNs: 1_200_000, medianDelayNs: 1_400_000, maxDelayNs: 1_600_000 } }
+    },
+    getExchangeGraph: async () => (await delay(), {
+      connections: 9, messages: 120,
+      nodes: [{ id: 'set_param_req', requests: 30, responses: 0 }, { id: 'set_param_resp', requests: 0, responses: 29 }, { id: 'measure_req', requests: 31, responses: 0 }, { id: 'measure_resp', requests: 0, responses: 30 }],
+      answers: [{ from: 'set_param_req', to: 'set_param_resp', count: 29 }, { from: 'measure_req', to: 'measure_resp', count: 30 }],
+      next: [{ from: 'set_param_req', to: 'measure_req', count: 18 }, { from: 'measure_req', to: 'set_param_req', count: 12 }],
+      starts: [{ from: 'начало', to: 'set_param_req', count: 9 }],
+      unanswered: 2, unsolicited: 0, dot: 'digraph exchange {\n  rankdir=LR;\n}\n', truncated: false, incomplete: false,
+    }),
     getTypeHints: async () => (await delay(), {
       messages: 46, truncated: false, incomplete: false, rare: 0,
       keys: [{ kind: 'byte' as const, at: 3, values: 3, lengthExplainedPermille: 920, constantGainPermille: 410, scorePermille: 665 }],

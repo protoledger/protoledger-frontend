@@ -896,6 +896,14 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       return unwrap(await api.POST('/api/analysis/entropy', { body: { streams } }))
     },
 
+    async getExchangePairs(connection, offset = 0) {
+      return unwrap(await api.POST('/api/exchanges', { body: { connection, limit: 100, offset } }))
+    },
+
+    async getExchangeGraph() {
+      return unwrap(await api.POST('/api/interpretation/graph', { body: {} }))
+    },
+
     async getClockOffset(logId) {
       return unwrap(await api.GET('/api/action-logs/{id}/clock-offset', { params: { path: { id: logId } } }))
     },
