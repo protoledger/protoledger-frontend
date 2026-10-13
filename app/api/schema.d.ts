@@ -459,6 +459,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/action-logs/{id}/clock-offset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Сдвиг часов журнала относительно записей
+         * @description Журнал ведёт одна машина, трафик пишет другая: их часы расходятся на секунды или на часы, и тогда
+         *     в окне времени после действия нет его данных. Движок ищет поправку (до 14 часов в обе стороны),
+         *     при которой кадры с данными идут сразу за наибольшим числом действий. `offsetMs` — сколько
+         *     прибавить ко времени журнала сверх уже заданной поправки `currentOffsetMs`; `null`, если часы
+         *     согласованы (расхождение меньше 100 мс или поправка ничего не добавляет), общего сдвига не видно
+         *     (после поправки данные идут менее чем за 60 % действий) или столько же действий совпадает и при
+         *     другом сдвиге. В `reason` — основание словами. Это предложение: чтобы применить поправку, журнал
+         *     импортируют заново с `clockOffsetMs` в сопоставлении. Описание протокола не нужно.
+         */
+        get: operations["estimateJournalClockOffset"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/action-logs/{id}/exchanges": {
         parameters: {
             query?: never;
@@ -1427,6 +1454,20 @@ export interface components {
             messageId: string | null;
             category: string;
             tsNs: number;
+        };
+        ClockOffset: {
+            /** @description Действий журнала, относящихся к записям проекта */
+            actions: number;
+            /** @description После скольких из них данные идут в окне сейчас */
+            matchedNow: number;
+            /** @description Предлагаемая поправка, мс: прибавить ко времени журнала */
+            offsetMs: number | null;
+            /** @description То же с поправкой */
+            matchedShifted: number;
+            /** @description Поправка, заданная при импорте журнала */
+            currentOffsetMs: number;
+            windowMs: number;
+            reason: string;
         };
         ActionExchangePage: {
             items: {
@@ -4677,6 +4718,47 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["ActionPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NoProject"];
+        };
+    };
+    estimateJournalClockOffset: {
+        parameters: {
+            query?: {
+                /** @description Окно после действия, в котором ждём данные, мс */
+                windowMs?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Оценка сдвига с основанием */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "actions": 16,
+                     *       "matchedNow": 2,
+                     *       "offsetMs": 3200,
+                     *       "matchedShifted": 16,
+                     *       "currentOffsetMs": 0,
+                     *       "windowMs": 2000,
+                     *       "reason": "с поправкой +3200 мс данные в окне 2000 мс идут после 16 из 16 действий, без неё — после 2"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ClockOffset"];
                 };
             };
             400: components["responses"]["BadRequest"];
