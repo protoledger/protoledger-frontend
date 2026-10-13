@@ -17,7 +17,7 @@ const chosen = ref<number[]>([])
 const busy = ref(false)
 const failures = ref<string[]>([])
 
-const key = (s: Suggestion) => `${s.messageId}·${s.param}`
+const key = (s: Suggestion) => `${s.messageId}·${s.param}·${s.observation.stream}·${s.observation.start}`
 const exists = (s: Suggestion) => props.existing.includes(s.hypothesis.statement)
 // Тест без поля в описании проверять не на чем — такую заготовку сначала поддерживает правка описания.
 const blocked = (s: Suggestion) => !s.field || exists(s)
@@ -57,7 +57,7 @@ async function accept() {
       workspace.log(`Гипотеза ${id} из заготовки: ${s.hypothesis.statement}`)
     }
     catch (e) {
-      failures.value.push(`${key(s)}: ${e instanceof Error ? e.message : 'не удалось принять'}`)
+      failures.value.push(`${s.messageId} ↔ ${s.param}: ${e instanceof Error ? e.message : 'не удалось принять'}`)
     }
   }
   busy.value = false
