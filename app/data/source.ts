@@ -1,8 +1,10 @@
 import type {
   ActionLogMapping,
   CorpusFilter,
+  DeviceConnections,
   FieldHints,
   ActionLogRecord,
+  ByteExplanation,
   Connection,
   ConnectionFlag,
   Frame,
@@ -123,6 +125,10 @@ export interface ResearchSource {
   getFixHints(hypothesis: string, yaml?: string): Promise<FixHintsView>
   /** Карта покрытия байтов описанием по типам сообщений. */
   getCoverage(yaml?: string): Promise<CoverageView>
+  /** «Объясни байт»: сообщение, поля, наблюдения и итоги прогонов для байта потока. */
+  explainByte(stream: string, offset: number): Promise<ByteExplanation>
+  /** Соединения устройства по журналу действий; null — журнала в проекте нет. */
+  getDeviceConnections(): Promise<DeviceConnections | null>
 }
 
 export type DataSourceKind = 'mock' | 'live'

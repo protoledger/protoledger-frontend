@@ -104,6 +104,20 @@ describe('живые модели экранов', () => {
     expect(v.runIssues).toEqual([{ id: 'H6', label: 'опровергнута в run-2 · контрпримеров 4', runId: 'run-2' }])
   })
 
+  it('соединения устройства: без журнала — null, а не ошибка', async () => {
+    stubApi({ '/api/analysis/device-connections': new Response(JSON.stringify({ title: 'нет журнала', status: 409 }), { status: 409, headers: { 'Content-Type': 'application/problem+json' } }) })
+    expect(await createLiveResearchSource(contractWithBytes(), createMockResearchSource()).getDeviceConnections()).toBeNull()
+  })
+
+  it('объясни байт: запрос со смещением в адресе', async () => {
+    const body = { stream: 'x:c0001:ab', offset: 12, kind: 'data', value: 0, frames: [], message: null, fields: [], observations: [], hypotheses: [], runs: [] }
+    const fetch = vi.fn(async (_input: Request) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    vi.stubGlobal('fetch', fetch)
+    const r = await createLiveResearchSource(contractWithBytes(), createMockResearchSource()).explainByte('x:c0001:ab', 12)
+    expect(r.offset).toBe(12)
+    expect(new URL(fetch.mock.calls[0]![0].url).pathname + new URL(fetch.mock.calls[0]![0].url).search).toBe('/api/streams/x%3Ac0001%3Aab/explain?offset=12')
+  })
+
   it('действия с одинаковым временем получают разные запросы по порядку', () => {
     const t = (ms: number) => new Date(Date.UTC(2026, 9, 10, 14, 0, 0, ms)).toISOString()
     const ex = {

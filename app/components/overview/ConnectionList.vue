@@ -40,6 +40,21 @@ async function load(reset: boolean) {
 
 watch([source, port, flag], () => load(true), { immediate: true })
 
+// Соединения устройства — вывод движка по журналу действий, а не факт: значок с причиной в подсказке.
+const devices = ref<Map<string, string>>(new Map())
+const deviceSummary = ref<string | null>(null)
+watch(() => project.project?.path, async () => {
+  try {
+    const r = await data.getDeviceConnections()
+    devices.value = new Map((r?.items ?? []).filter(i => i.role === 'device').map(i => [i.connection, i.reason]))
+    deviceSummary.value = r ? `устройство: ${formatCount(r.devices)} из ${formatCount(r.total)}` : null
+  }
+  catch {
+    devices.value = new Map()
+    deviceSummary.value = null
+  }
+}, { immediate: true })
+
 // Порт сервера повторяется у соединений, порты клиентов — случайные. Если роли известны (виден SYN), берём сторону b.
 function frequentPorts(list: Connection[]) {
   const count = new Map<number, number>()
@@ -90,6 +105,7 @@ function onKey(e: KeyboardEvent) {
       <button class="pl-chip" :aria-pressed="flag === 'gaps'" type="button" @click="flag = flag === 'gaps' ? undefined : 'gaps'">Есть дыры</button>
       <button class="pl-chip" :aria-pressed="flag === 'bad_checksum'" type="button" @click="flag = flag === 'bad_checksum' ? undefined : 'bad_checksum'">Плохой checksum</button>
       <span class="ml-auto text-pl-muted">{{ formatCount(total) }} · {{ filterLabel }}</span>
+      <span v-if="deviceSummary" class="w-full text-right text-pl-muted" title="Соединения, в которых данные идут следом за действиями журнала">{{ deviceSummary }}</span>
     </div>
     <div class="pl-scroll flex-1" tabindex="0" aria-label="Список соединений: стрелки вверх и вниз" @keydown="onKey">
       <CommonAsyncState :pending="pending" :error="error" :empty="!items.length" empty-text="Соединений по фильтру нет." @retry="load(true)">
@@ -102,6 +118,7 @@ function onKey(e: KeyboardEvent) {
                 <div v-if="project.sources.length > 1 && !source" class="mb-0.5 truncate text-[11px] text-pl-muted" :title="project.sourceName(c.source)">{{ safeText(project.sourceName(c.source)) }}</div>
                 <div>{{ c.a.address }}:{{ c.a.port }} → {{ c.b.address }}:{{ c.b.port }}</div>
                 <div class="mt-1 flex flex-wrap gap-1">
+                  <span v-if="devices.has(c.id)" :title="devices.get(c.id)"><CommonStatusBadge status="hypothesis" label="устройство" /></span>
                   <CommonStatusBadge v-for="f in c.flags" :key="f" :status="FLAG_STATUS[f]?.status ?? 'unknown'" :label="flagLabel(c, f)" />
                   <span :class="tag">{{ CLOSE[c.close] }}</span>
                   <span v-if="!c.rolesKnown" :class="tag">роли неизвестны</span>

@@ -856,6 +856,21 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       return { steps: unwrap(await api.GET('/api/project/next-steps')).steps }
     },
 
+    async explainByte(stream, offset) {
+      return unwrap(await api.GET('/api/streams/{stream}/explain', { params: { path: { stream }, query: { offset } } }))
+    },
+
+    async getDeviceConnections() {
+      try {
+        return unwrap(await api.POST('/api/analysis/device-connections', { body: {} }))
+      }
+      catch (e) {
+        // 409 — в проекте нет журнала действий: подсвечивать нечего.
+        if (e instanceof ApiError && e.status === 409) return null
+        throw e
+      }
+    },
+
     async generateReport(format, runId) {
       const r = unwrap(await api.POST('/api/reports', { body: { format, ...(runId ? { runId } : {}) } }))
       return { fileName: r.fileName, content: r.content }

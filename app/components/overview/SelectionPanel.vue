@@ -124,6 +124,8 @@ function time(iso: string) {
         </dl>
         <p v-else class="m-3.5 text-pl-muted">В выделении есть байты без данных — значение не вычисляется.</p>
 
+        <OverviewByteExplain v-if="selection.streamId" :stream="selection.streamId" :offset="range.start" />
+
         <h3 class="pl-caption m-0 border-t border-pl-line px-3.5 pt-2.5">Участок</h3>
         <div class="flex flex-col items-start gap-1.5 px-3.5 pt-2.5 pb-3.5 [&_p]:m-0">
           <CommonStatusBadge :status="segStatus.status" :label="segStatus.label" />
