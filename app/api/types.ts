@@ -27,6 +27,8 @@ export type ActionLogMapping = S['ActionLogMapping']
 export type ActionLogRecord = S['ActionLog']
 export type CorpusFilter = S['CorpusFilter']
 export type FieldHints = S['FieldHints']
+export type ByteExplanation = S['ByteExplanation']
+export type DeviceConnections = S['DeviceConnections']
 
 export interface Page<T> {
   items: T[]

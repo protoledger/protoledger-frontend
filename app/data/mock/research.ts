@@ -1,6 +1,6 @@
 import type { ResearchSource } from '../source'
 import { base64ToBytes } from '~/utils/bytes'
-import { streamBytes } from './stand'
+import { connections, streamBytes } from './stand'
 import type { FramingSpec } from '~/api/types'
 import type { ActionLog, ActionsView, CompareView, ExchangeView, FramingView, HypothesesView, HypothesisDetail, InterpretationView, ProjectExtras, ReportView, VerificationView } from '../views'
 
@@ -405,6 +405,38 @@ export function createMockResearchSource(): ResearchSource {
         { id: 'unknown', screen: 'interpretation' as const, title: 'Опишите неизвестные байты', detail: 'measure_resp.tail — 8,6% байтов без поля.' },
       ],
     }),
+    explainByte: async (stream, offset) => {
+      await delay()
+      const start = offset - (offset % 12)
+      const at = offset - start
+      const field = at < 2 ? { name: 'magic', start, end: start + 2, status: 'rule' as const, state: 'decoded', value: 'A55A', hypothesis: null }
+        : at < 4 ? { name: 'length', start: start + 2, end: start + 4, status: 'rule' as const, state: 'decoded', value: '8', hypothesis: null }
+          : at < 6 ? { name: 'value', start: start + 4, end: start + 6, status: 'hypothesis' as const, state: 'decoded', value: '210', hypothesis: { id: 'H2', statement: 'value — уставка из журнала, ×10', test: 'value == action.params.value * 10' } }
+            : { name: 'tail', start: start + 6, end: start + 12, status: 'unknown' as const, state: 'decoded', value: null, hypothesis: null }
+      return {
+        stream, offset, kind: 'data' as const, value: 0x5A,
+        frames: [{ frame: 120 + Math.floor(offset / 12), tsNs: 0, start, end: start + 12, duplicate: false }],
+        message: { start, end: start + 12, messageId: 'set_param_req', category: 'matched', offset: at },
+        fields: [field],
+        observations: at >= 4 && at < 6 ? [{ id: 'obs-3', comment: 'Байты 4–5 меняются вместе с уставкой', start: start + 4, end: start + 6 }] : [],
+        hypotheses: at >= 4 && at < 6 ? [{ id: 'H2', statement: 'value — уставка ×10', status: 'supported' }] : [],
+        runs: [{ id: 'run-4', revision: 3, sameInterpretation: true, category: 'matched', messageId: 'set_param_req', violations: [] }],
+      }
+    },
+    getDeviceConnections: async () => {
+      await delay()
+      const all = connections()
+      const device = new Set([1, 2, 4, 9].map(i => all[i - 1]?.id))
+      return {
+        windowMs: 2000, total: all.length, devices: device.size,
+        items: all.map(c => ({
+          connection: c.id, source: c.source, a: `${c.a.address}:${c.a.port}`, b: `${c.b.address}:${c.b.port}`,
+          role: device.has(c.id) ? 'device' as const : 'background' as const,
+          actionsMatched: device.has(c.id) ? 11 : 0, actionsTotal: 12, sharePermille: device.has(c.id) ? 917 : 0, payloadFrames: c.frameCount,
+          reason: device.has(c.id) ? 'данные в течение 2000 мс после 11 из 12 действий записи' : 'данные не идут следом за действиями журнала',
+        })),
+      }
+    },
     generateReport: async () => null,
     listRuns: async () => (await delay(), verification.runs.map(r => ({ id: r.id, label: r.label, stale: !r.current }))),
   }
