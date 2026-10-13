@@ -3,7 +3,14 @@ const data = useData()
 const draft = useDraftAction()
 const workspace = useWorkspaceStore()
 const action = ref<string | undefined>(undefined)
-const { data: view, error, refresh, pending } = await useAsyncData('compare', () => data.getCompare(action.value), { watch: [action] })
+const logId = ref<string | undefined>(undefined)
+const { data: view, error, refresh, pending } = await useAsyncData('compare', () => data.getCompare(action.value, logId.value), { watch: [action, logId] })
+
+// У другого журнала свой набор действий: выбор действия начинается заново.
+function pickLog(id: string) {
+  action.value = undefined
+  logId.value = id
+}
 const selectedCorr = ref(0)
 const saving = ref(false)
 const saveNote = ref<string | null>(null)
@@ -42,6 +49,15 @@ const hot = 'bg-pl-st-hypothesis/18 text-pl-st-hypothesis'
   <div class="flex h-full">
     <section class="pl-scroll min-w-0 flex-1">
       <CommonPanelHeader title="Сообщения рядом" :subtitle="view?.action ? `действие ${view.action} · выровнены по началу` : 'выровнены по началу'">
+        <select
+          v-if="(view?.logs.length ?? 0) > 1"
+          class="h-7 max-w-56 rounded border border-pl-line bg-pl-raise px-2 text-pl-fg-strong"
+          aria-label="Журнал действий для сравнения"
+          :value="view!.logId ?? ''"
+          @change="pickLog(($event.target as HTMLSelectElement).value)"
+        >
+          <option v-for="l in view!.logs" :key="l.id" :value="l.id">{{ safeText(l.name) }}</option>
+        </select>
         <select
           v-if="view?.actions.length"
           class="h-7 rounded border border-pl-line bg-pl-raise px-2 text-pl-fg-strong"

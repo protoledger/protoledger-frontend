@@ -140,6 +140,9 @@ export interface CompareCorrelation {
 }
 
 export interface CompareView {
+  /** Журналы проекта; сравнение идёт по журналу logId. */
+  logs: { id: string, name: string }[]
+  logId: string | null
   /** Действия журнала, по которым можно сравнивать; выбранное — action. */
   actions: string[]
   action: string | null

@@ -102,6 +102,8 @@ const compareRow = (label: string, bytes: string, changedFrom = 4): CompareView[
 }
 
 const compare: CompareView = {
+  logs: [{ id: 'log-1', name: 'actions.csv' }],
+  logId: 'log-1',
   actions: ['set_param', 'read_measure', 'reset'],
   action: 'set_param',
   notes: [],
