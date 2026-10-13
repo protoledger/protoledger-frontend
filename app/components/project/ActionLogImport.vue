@@ -50,7 +50,7 @@ async function submit() {
   }
 }
 
-const field = 'h-[30px] w-full rounded border border-pl-line bg-pl-raise px-2 text-pl-fg-strong outline-none focus:border-pl-wine-text'
+const field = 'h-[30px] w-full rounded border border-pl-line bg-pl-raise px-2 text-pl-fg-strong focus:border-pl-wine-text'
 </script>
 
 <template>

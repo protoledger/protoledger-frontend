@@ -388,7 +388,7 @@ const TOKEN: Record<string, string> = {
               <textarea
                 id="interp-yaml"
                 v-model="text"
-                class="absolute inset-0 m-0 resize-none overflow-hidden border-0 bg-transparent p-0 pr-6 font-mono text-[12.5px] leading-[21px] whitespace-pre text-transparent caret-pl-fg-strong outline-none selection:bg-pl-wine-soft"
+                class="absolute inset-0 m-0 resize-none overflow-hidden border-0 bg-transparent p-0 pr-6 font-mono text-[12.5px] leading-[21px] whitespace-pre text-transparent caret-pl-fg-strong outline-none selection:bg-pl-wine-soft focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-pl-focus"
                 wrap="off"
                 spellcheck="false"
                 autocomplete="off"

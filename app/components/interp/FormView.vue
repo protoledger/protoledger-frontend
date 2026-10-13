@@ -24,7 +24,7 @@ function add(m: FormMessage) {
 }
 
 const unquote = (v: string | undefined) => (v ?? '').replace(/^"(.*)"$/, '$1')
-const cell = 'h-7 w-full min-w-0 rounded border border-transparent bg-transparent px-1.5 font-mono text-pl-fg-strong outline-none hover:border-pl-line focus:border-pl-wine-text focus:bg-pl-raise'
+const cell = 'h-7 w-full min-w-0 rounded border border-transparent bg-transparent px-1.5 font-mono text-pl-fg-strong hover:border-pl-line focus:border-pl-wine-text focus:bg-pl-raise'
 </script>
 
 <template>

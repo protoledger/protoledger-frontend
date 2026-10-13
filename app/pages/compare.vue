@@ -93,7 +93,13 @@ const hot = 'bg-pl-st-hypothesis/18 text-pl-st-hypothesis'
 
           <h3 class="pl-caption m-0 px-3 pt-3.5 pb-2">Корреляции с журналом</h3>
           <p v-if="!view.correlations.length" class="px-3 text-pl-muted">Связей байтов с параметрами не найдено.</p>
-          <table v-else class="pl-table">
+          <table
+            v-else
+            class="pl-table"
+            tabindex="0"
+            aria-label="Корреляции: стрелки вверх и вниз выбирают связь"
+            @keydown="(e: KeyboardEvent) => { const i = stepIndex(e, selectedCorr, view!.correlations.length); if (i !== null) { selectedCorr = i; revealSelected(e) } }"
+          >
             <thead><tr><th>Позиция</th><th>Как читать</th><th>Значения</th><th>Связь</th><th class="text-right">Доля</th></tr></thead>
             <tbody>
               <tr v-for="(c, i) in view.correlations" :key="i" :aria-selected="i === selectedCorr" @click="selectedCorr = i">
