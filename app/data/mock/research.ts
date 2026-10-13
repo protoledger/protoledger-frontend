@@ -62,7 +62,7 @@ const framing: FramingView = {
 }
 
 const actions: ActionsView = {
-  logs: [{ id: 'log-0001', name: 'actions.csv', rows: 46 }],
+  logs: [{ id: 'log-0001', name: 'actions.csv', rows: 46, clockOffsetMs: 0 }],
   log: { id: 'log-0001', name: 'actions.csv', rows: 46 },
   rows: [
     { id: 'a1', time: '14:02:11.200', action: 'set_param', params: 'value = 21', result: 'ok', candidates: 1, source: null, exchange: 'paired', request: { label: 'set_param', stream: '9f2c7e10:c0002:ab', start: 0, end: 7 }, response: { label: 'set_param_resp', stream: '9f2c7e10:c0002:ba', start: 0, end: 6 } },
@@ -437,6 +437,7 @@ export function createMockResearchSource(): ResearchSource {
         })),
       }
     },
+    getClockOffset: async () => null,
     getSuggestions: async () => {
       await delay()
       const obs = (start: number, comment: string) => ({ source: 'a'.repeat(64), stream: 'stand:c0001:ab', start, end: start + 2, comment })

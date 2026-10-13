@@ -93,7 +93,8 @@ export interface ExchangeSide {
 }
 
 export interface ActionsView {
-  logs: { id: string, name: string, rows: number }[]
+  /** clockOffsetMs — поправка часов, заданная при импорте журнала. */
+  logs: { id: string, name: string, rows: number, clockOffsetMs: number }[]
   log: { id: string, name: string, rows: number } | null
   rows: ActionRow[]
   /** Сколько строк журнала всего; rows — страница с offset. */
