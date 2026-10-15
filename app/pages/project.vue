@@ -174,7 +174,7 @@ const CHECKSUM = ['ignore', 'warn', 'drop'] as const
             <tbody>
               <tr v-for="s in project.sources" :key="s.sha256" :aria-selected="s.sha256 === selected?.sha256" @click="selectedSha = s.sha256">
                 <td>{{ safeText(s.name) }}</td>
-                <td>{{ s.format.toUpperCase() }}</td>
+                <td class="whitespace-nowrap">{{ s.format.toUpperCase() }}</td>
                 <td class="font-mono" :title="s.sha256">{{ s.status === 'importing' ? '—' : `${s.sha256.slice(0, 4)}…${s.sha256.slice(-4)}` }}</td>
                 <td class="text-right whitespace-nowrap">{{ s.status === 'importing' ? '—' : formatCount(s.frameCount) }}</td>
                 <td class="text-right whitespace-nowrap">{{ formatBytesSize(s.sizeBytes) }}</td>
@@ -237,13 +237,13 @@ const CHECKSUM = ['ignore', 'warn', 'drop'] as const
         <dl class="m-0 grid grid-cols-1 gap-1.5 px-3 [&_dd]:mb-2 [&_dd]:ml-0 [&_dt]:text-pl-muted">
           <dt>{{ tr('project.overlap') }}</dt>
           <dd>
-            <span class="pl-seg" role="radiogroup" :aria-label="tr('project.overlap')">
+            <span class="pl-seg flex w-full [&>*]:flex-1 [&>*]:px-1.5 [&>*]:text-center [&>*]:leading-tight [&>*]:whitespace-normal" role="radiogroup" :aria-label="tr('project.overlap')">
               <button v-for="v in OVERLAP" :key="v" type="button" role="radio" :aria-checked="project.project.settings.overlapPolicy === v" :disabled="savingSettings" @click="setSettings({ overlapPolicy: v })">{{ policyLabel(v) }}</button>
             </span>
           </dd>
           <dt>{{ tr('project.badChecksum') }}</dt>
           <dd>
-            <span class="pl-seg" role="radiogroup" :aria-label="tr('project.badChecksum')">
+            <span class="pl-seg flex w-full [&>*]:flex-1 [&>*]:px-1.5 [&>*]:text-center [&>*]:leading-tight [&>*]:whitespace-normal" role="radiogroup" :aria-label="tr('project.badChecksum')">
               <button v-for="v in CHECKSUM" :key="v" type="button" role="radio" :aria-checked="project.project.settings.checksumPolicy === v" :disabled="savingSettings" @click="setSettings({ checksumPolicy: v })">{{ policyLabel(v) }}</button>
             </span>
           </dd>
