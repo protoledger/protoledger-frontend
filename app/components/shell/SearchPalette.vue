@@ -57,7 +57,13 @@ const groups = computed(() => [
       onSelect: () => go(e.path, e.query),
     })),
   })).filter(g => g.items.length),
-])
+  {
+    id: 'limit',
+    label: 'Не всё в поиске',
+    ignoreFilter: true,
+    items: index.value.filter(e => e.group === 'limit').map(e => ({ label: safeText(e.label, 200), icon: 'i-lucide-info', onSelect: () => go(e.path) })),
+  },
+].filter(g => g.items.length))
 
 function run(action: () => void) {
   open.value = false

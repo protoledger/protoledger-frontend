@@ -74,9 +74,9 @@ export function createLiveSource(): ContractSource {
     async cancelJob(id) {
       return unwrap(await api.DELETE('/api/jobs/{id}', { params: { path: { id } } }))
     },
-    watchJob(id, onUpdate) {
+    watchJob(id, onUpdate, onLink) {
       const controller = new AbortController()
-      void followJob(api, id, onUpdate, controller.signal)
+      void followJob(api, id, onUpdate, controller.signal, onLink)
       return () => controller.abort()
     },
   }
@@ -86,11 +86,14 @@ const FINISHED: Job['state'][] = ['succeeded', 'failed', 'cancelled']
 
 // Поток событий может оборваться (сон ноутбука, перезапуск окна): тогда спрашиваем задачу напрямую
 // и, если она ещё идёт, подписываемся снова — иначе индикатор «висит» навсегда.
-async function followJob(api: ReturnType<typeof apiClient>, id: string, onUpdate: (job: Job) => void, signal: AbortSignal) {
+async function followJob(api: ReturnType<typeof apiClient>, id: string, onUpdate: (job: Job) => void, signal: AbortSignal, onLink?: (ok: boolean) => void) {
   for (let attempt = 0; !signal.aborted; attempt++) {
     let last: Job | null = null
     try {
-      last = await streamJob(id, onUpdate, signal)
+      last = await streamJob(id, (job) => {
+        onLink?.(true)
+        onUpdate(job)
+      }, signal)
     }
     catch {
       if (signal.aborted) return
@@ -100,11 +103,13 @@ async function followJob(api: ReturnType<typeof apiClient>, id: string, onUpdate
       const res = await api.GET('/api/jobs/{id}', { params: { path: { id } } })
       if (res.response.status === 404) return
       const job = unwrap(res)
+      onLink?.(true)
       onUpdate(job)
       if (FINISHED.includes(job.state)) return
     }
     catch {
-      // Движок недоступен — попробуем ещё раз после паузы.
+      // Движок недоступен — показываем это у задачи и пробуем ещё раз после паузы.
+      onLink?.(false)
     }
     await new Promise(r => setTimeout(r, Math.min(1000 * 2 ** attempt, 5000)))
   }

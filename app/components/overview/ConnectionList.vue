@@ -43,6 +43,15 @@ watch([source, port, flag], () => load(true), { immediate: true })
 // Импорт закончился (запись стала «готово») — в списке появились её соединения.
 const sourcesKey = computed(() => project.sources.map(s => `${s.sha256}:${s.status}`).join())
 watch(sourcesKey, (now, before) => { if (before !== undefined) void load(true) })
+// Пока идёт импорт, соединения появляются по мере разбора — обновляем первую страницу раз в 5 с
+// (если исследователь уже листает дальше, список не сбрасываем).
+const jobs = useJobsStore()
+let poll: ReturnType<typeof setInterval> | undefined
+watch(() => jobs.active.some(j => j.kind === 'import'), (importing) => {
+  clearInterval(poll)
+  if (importing) poll = setInterval(() => { if (!pending.value && items.value.length <= PAGE) void load(true) }, 5000)
+}, { immediate: true })
+onBeforeUnmount(() => clearInterval(poll))
 
 // Соединения устройства — вывод движка по журналу действий, а не факт: значок с причиной в подсказке.
 const devices = ref<Map<string, string>>(new Map())

@@ -9,6 +9,8 @@ export const useJobsStore = defineStore('jobs', () => {
   const jobs = ref<Job[]>([])
   const labels = ref<Record<string, string>>({})
   const unsubscribe = new Map<string, () => void>()
+  // Задачи, у которых оборвалась связь с движком: показываем «переподключаюсь», а не «идёт».
+  const lost = ref<Record<string, boolean>>({})
 
   const active = computed(() => jobs.value.filter(j => ACTIVE.includes(j.state)))
 
@@ -23,6 +25,7 @@ export const useJobsStore = defineStore('jobs', () => {
     if (unsubscribe.has(id)) return
     unsubscribe.set(id, data.watchJob(id, (job) => {
       upsert(job)
+      lost.value[id] = false
       if (!ACTIVE.includes(job.state)) {
         unsubscribe.get(id)?.()
         unsubscribe.delete(id)
@@ -30,7 +33,7 @@ export const useJobsStore = defineStore('jobs', () => {
         // Импорт и прогон меняют состояние проекта — обновляем подсказку «что дальше».
         void useProjectStore().refreshNextSteps()
       }
-    }))
+    }, (ok) => { lost.value[id] = !ok }))
   }
 
   async function load(onDone?: (job: Job) => void) {
@@ -44,5 +47,5 @@ export const useJobsStore = defineStore('jobs', () => {
     upsert(await data.cancelJob(id))
   }
 
-  return { jobs, labels, active, track, load, cancel }
+  return { jobs, labels, lost, active, track, load, cancel }
 })

@@ -12,23 +12,33 @@ export function framingOnlyYaml(spec: FramingSpec): string {
   return [`format: ${FORMAT}`, 'scope:', '  direction: any', framingLine(spec), 'messages: []', ''].join('\n')
 }
 
+const FRAMING_KEY = /^(?:framing|"framing"|'framing')\s*:/
+const MESSAGES_KEY = /^(?:messages|"messages"|'messages')\s*:/
+
 /**
  * Заменяет верхнеуровневый блок `framing:` (до следующего ключа верхнего уровня) или добавляет его.
  * Остальной текст интерпретации не трогается; проверку делает движок при сохранении.
+ * Концы строк (LF или CRLF) сохраняются. Если блок помечен якорем и на него ссылаются — отказ:
+ * замена молча сломала бы ссылки.
  */
 export function replaceFramingBlock(yaml: string, spec: FramingSpec): string {
-  const lines = yaml.split('\n')
-  const start = lines.findIndex(l => /^framing\s*:/.test(l))
+  const eol = yaml.includes('\r\n') ? '\r\n' : '\n'
+  const lines = yaml.split(/\r?\n/)
+  const start = lines.findIndex(l => FRAMING_KEY.test(l))
   if (start === -1) {
-    const messages = lines.findIndex(l => /^messages\s*:/.test(l))
+    const messages = lines.findIndex(l => MESSAGES_KEY.test(l))
     const at = messages === -1 ? lines.length : messages
     lines.splice(at, 0, framingLine(spec))
-    return lines.join('\n')
+    return lines.join(eol)
+  }
+  const anchor = /:\s*&([\w-]+)/.exec(lines[start]!)?.[1]
+  if (anchor && new RegExp(`\\*${anchor}\\b`).test(yaml)) {
+    throw new Error(`Блок framing помечен якорем &${anchor}, и на него есть ссылки — замените фрейминг в редакторе вручную`)
   }
   let end = start + 1
   while (end < lines.length && (/^\s/.test(lines[end]!) || lines[end] === '' || lines[end]!.startsWith('#'))) end++
   // Пустые строки и комментарии перед следующим ключом оставляем на месте.
   while (end > start + 1 && (lines[end - 1] === '' || lines[end - 1]!.startsWith('#'))) end--
   lines.splice(start, end - start, framingLine(spec))
-  return lines.join('\n')
+  return lines.join(eol)
 }

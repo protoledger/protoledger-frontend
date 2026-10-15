@@ -58,7 +58,11 @@ const JOB_STATE: Record<string, string> = {
         <p v-if="!jobs.jobs.length" :class="empty">Задач нет.</p>
         <div v-for="j in jobs.jobs" :key="j.id" :class="row">
           <span class="w-20 text-pl-muted">{{ j.id }}</span>
-          <span :class="text">{{ jobs.labels[j.id] ?? 'Импорт записи' }} — {{ JOB_STATE[j.state] }}</span>
+          <span :class="text">
+            {{ jobs.labels[j.id] ?? 'Импорт записи' }} — {{ JOB_STATE[j.state] }}
+            <span v-if="jobs.lost[j.id] && j.state === 'running'" class="text-pl-st-hypothesis">· нет связи с движком, переподключаюсь</span>
+            <span v-if="j.state === 'failed' && j.error" class="text-pl-st-violation">· {{ safeText(j.error.detail ?? j.error.title) }}</span>
+          </span>
           <span class="whitespace-nowrap text-pl-muted">{{ formatCount(j.progress.done) }} / {{ j.progress.total ? formatCount(j.progress.total) : '?' }} {{ j.progress.unit === 'frames' ? 'кадров' : 'байт' }}</span>
           <button v-if="j.state === 'running'" class="pl-btn pl-btn-ghost h-6" type="button" @click="jobs.cancel(j.id)">Отменить</button>
         </div>

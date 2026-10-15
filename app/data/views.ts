@@ -210,7 +210,8 @@ export interface Hypothesis {
 
 /** Строка поиска везде: объект проекта и куда по нему перейти. */
 export interface SearchEntry {
-  group: 'connection' | 'hypothesis' | 'run' | 'observation'
+  /** limit — пояснение «в поиске не всё», показывается при любом запросе. */
+  group: 'connection' | 'hypothesis' | 'run' | 'observation' | 'limit'
   label: string
   suffix?: string
   path: string
