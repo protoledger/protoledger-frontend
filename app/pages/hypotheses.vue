@@ -31,7 +31,7 @@ async function loadDetail(id: string | null) {
 watch(selected, loadDetail, { immediate: true })
 
 // Новая гипотеза: утверждение, тест-выражение и наблюдения-основания.
-const { data: observations, refresh: refreshObservations } = await useAsyncData('hyp-observations', () => data.getObservations(), { default: () => [] as { id: string, text: string }[] })
+const { data: observations, refresh: refreshObservations } = await useAsyncData('hyp-observations', () => data.getObservations(), { default: () => [] as { id: string, text: string, where?: string, anchor?: AnchorRef }[] })
 const creating = ref(false)
 const form = reactive({ statement: '', test: '', basis: [] as string[] })
 const formError = ref<string | null>(null)
@@ -174,9 +174,7 @@ async function deleteObservation(id: string) {
 }
 
 function openAnchor(a: AnchorRef | undefined) {
-  if (!a) return navigateTo('/overview')
-  const cut = a.stream.lastIndexOf(':')
-  return navigateTo({ path: '/overview', query: { conn: a.stream.slice(0, cut), dir: a.stream.slice(cut + 1), from: String(a.start), to: String(a.end) } })
+  return navigateTo(a ? anchorRoute(a) : '/overview')
 }
 
 // «Поддержана на N примерах», а не «подтверждена»: гипотеза не становится фактом.
@@ -250,7 +248,11 @@ const BADGE: Record<Hypothesis['status'], { status: KnowledgeStatus, label: (h: 
             <li v-for="o in observations" :key="o.id" class="flex flex-col gap-1 border-b border-pl-line py-1.5">
               <div v-if="editingObs !== o.id" class="flex items-start gap-2">
                 <b class="flex-none font-semibold">{{ o.id }}</b>
-                <span class="min-w-0 flex-1">{{ safeText(o.text) }}</span>
+                <span class="min-w-0 flex-1">
+                  {{ safeText(o.text) }}
+                  <NuxtLink v-if="o.anchor" :to="anchorRoute(o.anchor)" class="block font-mono text-xs text-pl-wine-text hover:underline" :title="tr('compare.toBytes')">{{ safeText(o.where ?? '') }}</NuxtLink>
+                  <span v-else-if="o.where" class="block font-mono text-xs text-pl-muted">{{ safeText(o.where) }}</span>
+                </span>
                 <button class="pl-btn pl-btn-ghost h-6 flex-none" type="button" @click="editingObs = o.id; obsComment = o.text">{{ tr('common.edit') }}</button>
                 <button class="pl-btn pl-btn-ghost h-6 flex-none" type="button" @click="deleteObservation(o.id)">{{ confirmDelete === o.id ? tr('common.confirmDelete') : tr('common.delete') }}</button>
               </div>
