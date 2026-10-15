@@ -24,7 +24,6 @@ export function setLocale(next: Locale) {
   catch {
     // Хранилище недоступно — выбор действует до перезагрузки.
   }
-  if (typeof document !== 'undefined') document.documentElement.lang = next
 }
 
 /** Текст интерфейса по ключу; {name} в строке заменяется параметром. Тексты движка не переводятся. */
