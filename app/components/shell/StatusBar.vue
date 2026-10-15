@@ -29,8 +29,8 @@ const policies = computed(() => project.project?.settings)
         <span>{{ safeText(c) }}</span>
       </template>
     </nav>
-    <span v-if="policies" class="whitespace-nowrap text-pl-muted">{{ tr('shell.status.overlap') }} <b class="font-semibold text-pl-fg">{{ policies.overlapPolicy }}</b></span>
-    <span v-if="policies" class="whitespace-nowrap text-pl-muted">checksum <b class="font-semibold text-pl-fg">{{ policies.checksumPolicy }}</b></span>
+    <span v-if="policies" class="whitespace-nowrap text-pl-muted">{{ tr('shell.status.overlap') }} <b class="font-semibold text-pl-fg">{{ policyLabel(policies.overlapPolicy) }}</b></span>
+    <span v-if="policies" class="whitespace-nowrap text-pl-muted">{{ tr('shell.status.checksum') }} <b class="font-semibold text-pl-fg">{{ policyLabel(policies.checksumPolicy) }}</b></span>
     <span class="whitespace-nowrap text-pl-muted">{{ tr('shell.status.engine', { v: project.project?.engineVersion ?? '—' }) }}</span>
     <span v-if="sample" class="rounded-[3px] border border-dashed border-pl-st-hypothesis px-1.5 text-pl-st-hypothesis" :title="tr('shell.status.sampleTitle')">{{ tr('shell.status.sample') }}</span>
   </footer>

@@ -29,6 +29,12 @@ export default defineMessages({
   'diag.checksum_offload': 'checksum offload',
   'diag.bad_block': 'блок записи',
   'diag.limit_exceeded': 'предел',
+  'policy.first': 'брать первое',
+  'policy.last': 'брать последнее',
+  'policy.flag': 'отметить',
+  'policy.ignore': 'игнорировать',
+  'policy.warn': 'предупреждать',
+  'policy.drop': 'отбрасывать',
 }, {
   'status.rule': 'rule',
   'status.hypothesis': 'hypothesis',
@@ -58,4 +64,10 @@ export default defineMessages({
   'diag.checksum_offload': 'checksum offload',
   'diag.bad_block': 'capture block',
   'diag.limit_exceeded': 'limit',
+  'policy.first': 'take first',
+  'policy.last': 'take last',
+  'policy.flag': 'flag',
+  'policy.ignore': 'ignore',
+  'policy.warn': 'warn',
+  'policy.drop': 'drop',
 })

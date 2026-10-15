@@ -107,8 +107,8 @@ async function setSettings(patch: Partial<ProjectSettings>) {
   }
 }
 
-const OVERLAP = [['first', 'first'], ['last', 'last'], ['flag', 'flag']] as const
-const CHECKSUM = [['ignore', 'ignore'], ['warn', 'warn'], ['drop', 'drop']] as const
+const OVERLAP = ['first', 'last', 'flag'] as const
+const CHECKSUM = ['ignore', 'warn', 'drop'] as const
 </script>
 
 <template>
@@ -238,13 +238,13 @@ const CHECKSUM = [['ignore', 'ignore'], ['warn', 'warn'], ['drop', 'drop']] as c
           <dt>{{ tr('project.overlap') }}</dt>
           <dd>
             <span class="pl-seg" role="radiogroup" :aria-label="tr('project.overlap')">
-              <button v-for="[v, l] in OVERLAP" :key="v" type="button" role="radio" :aria-checked="project.project.settings.overlapPolicy === v" :disabled="savingSettings" @click="setSettings({ overlapPolicy: v })">{{ l }}</button>
+              <button v-for="v in OVERLAP" :key="v" type="button" role="radio" :aria-checked="project.project.settings.overlapPolicy === v" :disabled="savingSettings" @click="setSettings({ overlapPolicy: v })">{{ policyLabel(v) }}</button>
             </span>
           </dd>
           <dt>{{ tr('project.badChecksum') }}</dt>
           <dd>
             <span class="pl-seg" role="radiogroup" :aria-label="tr('project.badChecksum')">
-              <button v-for="[v, l] in CHECKSUM" :key="v" type="button" role="radio" :aria-checked="project.project.settings.checksumPolicy === v" :disabled="savingSettings" @click="setSettings({ checksumPolicy: v })">{{ l }}</button>
+              <button v-for="v in CHECKSUM" :key="v" type="button" role="radio" :aria-checked="project.project.settings.checksumPolicy === v" :disabled="savingSettings" @click="setSettings({ checksumPolicy: v })">{{ policyLabel(v) }}</button>
             </span>
           </dd>
           <template v-if="project.extras?.matchWindowMs">
