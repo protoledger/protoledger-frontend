@@ -153,7 +153,7 @@ export interface CompareView {
   mask: boolean[]
   responses: CompareRow[]
   correlations: CompareCorrelation[]
-  observations: { id: string, text: string, status: KnowledgeStatus, label?: string, anchor?: string }[]
+  observations: { id: string, text: string, status: KnowledgeStatus, label?: string, anchor?: string, anchorRef?: AnchorRef }[]
   observationTotal: number
   notes: string[]
 }

@@ -164,6 +164,25 @@ describe('живые модели экранов', () => {
     expect([b.request?.start, b.response?.start]).toEqual([8, 12])
   })
 
+  it('без описания запрос из нескольких сегментов склеивается в один ход', () => {
+    const t = (ms: number) => new Date(Date.UTC(2026, 9, 10, 14, 0, 0, ms)).toISOString()
+    const f = (stream: string, start: number, end: number, ms: number, frameNo: number) => ({ source: SHA, stream, start, end, time: t(ms), frameNo, duplicate: false })
+    const ex = {
+      action: { line: 1, time: t(100), action: 'read_param', params: {}, result: {}, resultRaw: '' },
+      window: { from: t(0), to: t(1000) },
+      interpretationApplied: false,
+      frames: [
+        f('x:c0001:ab', 0, 3, 110, 34), f('x:c0001:ab', 3, 10, 111, 36), f('x:c0001:ab', 10, 17, 112, 38),
+        f('x:c0001:ba', 0, 8, 120, 40), f('x:c0001:ba', 8, 20, 121, 41),
+        f('x:c0001:ab', 17, 25, 300, 50),
+      ],
+      messages: [],
+    }
+    const { request, response } = pickExchange(ex)
+    expect([request?.start, request?.end, request?.frameNo, request?.lastFrameNo]).toEqual([0, 17, 34, 38])
+    expect([response?.start, response?.end, response?.frameNo, response?.lastFrameNo]).toEqual([0, 20, 40, 41])
+  })
+
   it('действия: выбранный журнал, обмены по строкам и пояснение без описания', async () => {
     const t = new Date(Date.UTC(2026, 9, 10, 14, 0, 0, 0)).toISOString()
     const logs = { items: [

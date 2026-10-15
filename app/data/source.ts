@@ -120,7 +120,7 @@ export interface ResearchSource {
   /** Объекты проекта для поиска везде: соединения, гипотезы, прогоны, наблюдения. */
   getSearchIndex(): Promise<SearchEntry[]>
   /** Наблюдения проекта — основания для гипотез. */
-  getObservations(): Promise<{ id: string, text: string }[]>
+  getObservations(): Promise<{ id: string, text: string, where?: string, anchor?: AnchorRef }[]>
   /** Создать гипотезу; id или null — пример данных, не сохраняется. */
   createHypothesis(input: { statement: string, test: string, basis: string[] }): Promise<string | null>
   /** Статус ставит исследователь: проверка теста сам статус не меняет. */

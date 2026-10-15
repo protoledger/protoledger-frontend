@@ -49,21 +49,40 @@ function lengthType(h: S['LengthHint']) {
   return h.width === 1 ? 'u8' : `u${h.width * 8} ${h.bigEndian ? 'BE' : 'LE'}`
 }
 
-interface ExchangePart { source: string, stream: string, start: number, end: number, time: number, frameNo?: number }
+interface ExchangePart { source: string, stream: string, start: number, end: number, time: number, frameNo?: number, lastFrameNo?: number }
 
 // Запрос — первое после действия в направлении a→b, ответ — первое после запроса в обратном.
 // used — уже занятые части: у действий с одинаковым временем запросы идут по порядку, а не один на всех.
+// Без интерпретации части — кадры TCP: ход стороны (запрос в нескольких сегментах) склеиваем
+// из подряд идущих кадров потока до первого кадра обратной стороны.
 export function pickExchange(ex: S['Exchange'], used = new Set<string>()): { request?: ExchangePart, response?: ExchangePart } {
   const key = (p: ExchangePart) => `${p.stream}@${p.start}`
   const actionAt = Date.parse(ex.action.time)
-  const parts: ExchangePart[] = ex.messages.length
-    ? ex.messages.map(m => ({ source: m.source, stream: m.stream, start: m.start, end: m.end, time: Date.parse(m.firstTime) }))
-    : ex.frames.filter(f => !f.duplicate).map(f => ({ source: f.source, stream: f.stream, start: f.start, end: f.end, time: Date.parse(f.time), frameNo: f.frameNo }))
+  const byFrames = !ex.messages.length
+  const parts: ExchangePart[] = byFrames
+    ? ex.frames.filter(f => !f.duplicate).map(f => ({ source: f.source, stream: f.stream, start: f.start, end: f.end, time: Date.parse(f.time), frameNo: f.frameNo }))
+    : ex.messages.map(m => ({ source: m.source, stream: m.stream, start: m.start, end: m.end, time: Date.parse(m.firstTime) }))
   const byTime = (a: ExchangePart, b: ExchangePart) => a.time - b.time || a.start - b.start
-  const request = parts.filter(p => p.stream.endsWith(':ab') && p.time >= actionAt && !used.has(key(p))).sort(byTime)[0]
-  const response = request ? parts.filter(p => p.stream.endsWith(':ba') && p.time >= request.time && !used.has(key(p))).sort(byTime)[0] : undefined
-  if (request) used.add(key(request))
-  if (response) used.add(key(response))
+  const free = (dir: string, after: number) => parts.filter(p => p.stream.endsWith(dir) && p.time >= after && !used.has(key(p))).sort(byTime)
+  const turn = (first: ExchangePart, before: number): ExchangePart => {
+    const merged = { ...first }
+    if (!byFrames) return merged
+    for (;;) {
+      const next = parts.find(p => p.stream === merged.stream && p.start === merged.end && p.time < before && !used.has(key(p)))
+      if (!next) return merged
+      used.add(key(next))
+      merged.end = next.end
+      merged.lastFrameNo = next.frameNo
+    }
+  }
+  const firstRequest = free(':ab', actionAt)[0]
+  if (!firstRequest) return {}
+  used.add(key(firstRequest))
+  const firstResponse = free(':ba', firstRequest.time)[0]
+  const request = turn(firstRequest, firstResponse?.time ?? Infinity)
+  if (!firstResponse) return { request }
+  used.add(key(firstResponse))
+  const response = turn(firstResponse, free(':ab', firstResponse.time)[0]?.time ?? Infinity)
   return { request, response }
 }
 
@@ -347,7 +366,7 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
         if (!p) return null
         const frame = p.frameNo ?? ex.frames.find(f => f.stream === p.stream && f.start <= p.start && p.start < f.end)?.frameNo
         return {
-          title: tr('data.ex.title', { title, frame: frame ? tr('data.ex.frame', { n: frame }) : '', ms: Math.round(p.time - actionAt) }),
+          title: tr('data.ex.title', { title, frame: frame ? (p.lastFrameNo ? tr('data.ex.frames', { from: frame, to: p.lastFrameNo }) : tr('data.ex.frame', { n: frame })) : '', ms: Math.round(p.time - actionAt) }),
           direction,
           bytes: await hexOf(p.stream, p.start, p.end),
           highlight: [],
@@ -364,9 +383,9 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
           { at: pos(actionAt), kind: 'action' },
           ...ex.frames.map(f => ({
             at: pos(Date.parse(f.time)),
-            kind: request && f.stream === request.stream && f.start <= request.start && request.start < f.end
+            kind: request && f.stream === request.stream && f.start < request.end && request.start < f.end
               ? 'request' as const
-              : response && f.stream === response.stream && f.start <= response.start && response.start < f.end ? 'response' as const : 'other' as const,
+              : response && f.stream === response.stream && f.start < response.end && response.start < f.end ? 'response' as const : 'other' as const,
           })),
         ],
         request: await side(request, tr('data.request'), 'a → b'),
@@ -521,7 +540,12 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
     },
 
     async getObservations() {
-      return unwrap(await api.GET('/api/observations')).items.map(o => ({ id: o.id, text: o.comment || tr('data.noComment') }))
+      return unwrap(await api.GET('/api/observations')).items.map(o => ({
+        id: o.id,
+        text: o.comment || tr('data.noComment'),
+        where: `${shortStream(o.anchor.stream)} [${o.anchor.start}, ${o.anchor.end})`,
+        anchor: o.anchorState === 'ok' ? { source: o.anchor.source, stream: o.anchor.stream, start: o.anchor.start, end: o.anchor.end } : undefined,
+      }))
     },
 
     async createHypothesis({ statement, test, basis }) {
@@ -733,6 +757,8 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
         status: (o.anchorState === 'ok' ? 'rule' : o.anchorState === 'broken' ? 'violation' : 'gap') as KnowledgeStatus,
         label: o.anchorState === 'ok' ? tr('data.anchor.ok') : o.anchorState === 'broken' ? tr('data.anchor.broken') : tr('data.anchor.gone'),
         anchor: `${shortStream(o.anchor.stream)} [${o.anchor.start}, ${o.anchor.end})`,
+        // Ссылка к байтам — только пока якорь указывает на те же байты.
+        anchorRef: o.anchorState === 'ok' ? { source: o.anchor.source, stream: o.anchor.stream, start: o.anchor.start, end: o.anchor.end } : undefined,
       }))
       const log = logs.find(l => l.id === logId) ?? logs[0]
       const logRefs = logs.map(l => ({ id: l.id, name: l.name }))

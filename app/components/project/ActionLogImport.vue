@@ -10,9 +10,16 @@ const data = useData()
 const columns = ref<string[]>([])
 const mapping = reactive<ActionLogMapping>({ time: '', action: '', params: null, result: null, source: null, timeFormat: 'rfc3339', paramsFormat: 'kv', resultFormat: 'kv', delimiter: null, utcOffsetMinutes: 0, clockOffsetMs: 0 })
 const busy = ref(false)
+type Column = 'time' | 'action' | 'params' | 'result' | 'source'
+// Причина движка относится к его догадке: колонку сменили руками — так и пишем.
+function reasonFor(key: Column) {
+  if (!reasons.value[key]) return null
+  return (mapping[key] ?? null) === (guessed.value[key] ?? null) ? safeText(reasons.value[key]) : tr('project.manualChoice')
+}
 const error = ref<string | null>(null)
 const done = ref<ActionLogRecord | null>(null)
 const reasons = ref<Record<string, string>>({})
+const guessed = ref<Partial<ActionLogMapping>>({})
 const trial = ref<{ rows: number, skipped: number } | null>(null)
 const guessing = ref(false)
 
@@ -29,6 +36,7 @@ watch(() => props.file, async (file) => {
   if (!header.columns.length) error.value = tr('project.noColumns')
   // Затем догадка движка: он пробует разобрать весь файл и объясняет выбор каждой колонки.
   reasons.value = {}
+  guessed.value = {}
   trial.value = null
   guessing.value = true
   try {
@@ -37,6 +45,7 @@ watch(() => props.file, async (file) => {
       columns.value = g.columns
       Object.assign(mapping, g.mapping)
       reasons.value = g.reasons
+      guessed.value = { ...g.mapping }
       trial.value = { rows: g.rows, skipped: g.skipped }
       if (g.columns.length) error.value = null
     }
@@ -96,7 +105,7 @@ const field = 'h-[30px] w-full rounded border border-pl-line bg-pl-raise px-2 te
         <select id="al-time" v-model="mapping.time" :class="field" required>
           <option v-for="c in columns" :key="c" :value="c">{{ c }}</option>
         </select>
-        <p v-if="reasons.time" class="col-start-2 -mt-1 mb-0 text-xs text-pl-muted">{{ safeText(reasons.time) }}</p>
+        <p v-if="reasonFor('time')" class="col-start-2 -mt-1 mb-0 text-xs text-pl-muted">{{ reasonFor('time') }}</p>
         <label for="al-format" class="text-pl-muted">{{ tr('project.timeFormat') }}</label>
         <select id="al-format" v-model="mapping.timeFormat" :class="field">
           <option v-for="f in TIME_FORMATS" :key="f.value" :value="f.value">{{ f.label }}</option>
@@ -105,25 +114,25 @@ const field = 'h-[30px] w-full rounded border border-pl-line bg-pl-raise px-2 te
         <select id="al-action" v-model="mapping.action" :class="field" required>
           <option v-for="c in columns" :key="c" :value="c">{{ c }}</option>
         </select>
-        <p v-if="reasons.action" class="col-start-2 -mt-1 mb-0 text-xs text-pl-muted">{{ safeText(reasons.action) }}</p>
+        <p v-if="reasonFor('action')" class="col-start-2 -mt-1 mb-0 text-xs text-pl-muted">{{ reasonFor('action') }}</p>
         <label for="al-params" class="text-pl-muted">{{ tr('project.params') }}</label>
         <select id="al-params" v-model="mapping.params" :class="field">
           <option :value="null">{{ tr('project.none') }}</option>
           <option v-for="c in columns" :key="c" :value="c">{{ c }}</option>
         </select>
-        <p v-if="reasons.params" class="col-start-2 -mt-1 mb-0 text-xs text-pl-muted">{{ safeText(reasons.params) }}</p>
+        <p v-if="reasonFor('params')" class="col-start-2 -mt-1 mb-0 text-xs text-pl-muted">{{ reasonFor('params') }}</p>
         <label for="al-result" class="text-pl-muted">{{ tr('project.result') }}</label>
         <select id="al-result" v-model="mapping.result" :class="field">
           <option :value="null">{{ tr('project.none') }}</option>
           <option v-for="c in columns" :key="c" :value="c">{{ c }}</option>
         </select>
-        <p v-if="reasons.result" class="col-start-2 -mt-1 mb-0 text-xs text-pl-muted">{{ safeText(reasons.result) }}</p>
+        <p v-if="reasonFor('result')" class="col-start-2 -mt-1 mb-0 text-xs text-pl-muted">{{ reasonFor('result') }}</p>
         <label for="al-source" class="text-pl-muted">{{ tr('project.captureColumn') }}</label>
         <select id="al-source" v-model="mapping.source" :class="field" :title="tr('project.sourceColumnHint')">
           <option :value="null">{{ tr('project.none') }}</option>
           <option v-for="c in columns" :key="c" :value="c">{{ c }}</option>
         </select>
-        <p v-if="reasons.source" class="col-start-2 -mt-1 mb-0 text-xs text-pl-muted">{{ safeText(reasons.source) }}</p>
+        <p v-if="reasonFor('source')" class="col-start-2 -mt-1 mb-0 text-xs text-pl-muted">{{ reasonFor('source') }}</p>
         <label for="al-pformat" class="text-pl-muted">{{ tr('project.paramsFormat') }}</label>
         <select id="al-pformat" v-model="mapping.paramsFormat" :class="field">
           <option value="kv">{{ tr('project.kv') }}</option>

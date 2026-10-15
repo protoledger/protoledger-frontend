@@ -91,6 +91,7 @@ export default defineMessages({
   'project.parsedActions': 'разобрано действий: {n}',
   'project.importing': 'Импортирую…',
   'project.importAction': 'Импортировать',
+  'project.manualChoice': 'выбрано вручную',
 }, {
   'project.tree': 'Project structure',
   'project.captures': 'Captures',
@@ -182,4 +183,5 @@ export default defineMessages({
   'project.parsedActions': 'actions parsed: {n}',
   'project.importing': 'Importing…',
   'project.importAction': 'Import',
+  'project.manualChoice': 'chosen manually',
 })

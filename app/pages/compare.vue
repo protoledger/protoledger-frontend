@@ -129,7 +129,8 @@ const hot = 'bg-pl-st-hypothesis/18 text-pl-st-hypothesis'
             <div>{{ safeText(o.text) }}</div>
             <div class="mt-1 flex flex-wrap gap-2">
               <CommonStatusBadge :status="o.status" :label="o.label" />
-              <span v-if="o.anchor" class="rounded-[3px] border border-pl-line px-1.5 text-[11px] text-pl-muted">{{ safeText(o.anchor) }}</span>
+              <NuxtLink v-if="o.anchorRef" :to="anchorRoute(o.anchorRef)" class="rounded-[3px] border border-pl-line px-1.5 font-mono text-[11px] text-pl-wine-text hover:underline" :title="tr('compare.toBytes')">{{ safeText(o.anchor ?? '') }}</NuxtLink>
+              <span v-else-if="o.anchor" class="rounded-[3px] border border-pl-line px-1.5 text-[11px] text-pl-muted">{{ safeText(o.anchor) }}</span>
             </div>
           </div>
         </div>
