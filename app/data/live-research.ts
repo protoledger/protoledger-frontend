@@ -192,6 +192,18 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
     return unwrap(await api.GET('/api/interpretation/revisions')).items
   }
 
+  // Пока ревизий нет, GET /api/interpretation отвечает 404 и браузер пишет ошибку в консоль: сначала спрашиваем список.
+  async function currentInterpretation(): Promise<S['InterpretationDoc'] | null> {
+    if (!(await revisions()).length) return null
+    try {
+      return unwrap(await api.GET('/api/interpretation'))
+    }
+    catch (e) {
+      if (e instanceof ApiError && e.status === 404) return null
+      throw e
+    }
+  }
+
   async function hexOf(stream: string, start: number, end: number): Promise<string[]> {
     const res = await contract.getStreamBytes(stream, start, Math.min(end - start, 32))
     return res.segments.flatMap(seg => (seg.data ? Array.from(base64ToBytes(seg.data)).map(hexByte) : Array.from({ length: seg.end - seg.start }, () => '░░')))
@@ -398,15 +410,9 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
     },
 
     async getInterpretation() {
-      let doc: S['InterpretationDoc']
-      try {
-        doc = unwrap(await api.GET('/api/interpretation'))
-      }
-      catch (e) {
-        if (e instanceof ApiError && e.status === 404) {
-          return { rev: null, dirty: false, tree: [], yaml: [], selectedLine: 0, stream: await defaultStream(), preview: { stream: '—', rows: [] }, violations: [], runIssues: [], field: null, quickFix: null }
-        }
-        throw e
+      const doc = await currentInterpretation()
+      if (!doc) {
+        return { rev: null, dirty: false, tree: [], yaml: [], selectedLine: 0, stream: await defaultStream(), preview: { stream: '—', rows: [] }, violations: [], runIssues: [], field: null, quickFix: null }
       }
       const stream = await defaultStream()
       const { tree, preview, violations } = stream ? await previewOf(stream) : { tree: [], preview: { stream: '—', rows: [] }, violations: [] }
@@ -733,17 +739,9 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
     },
 
     async applyFraming(spec) {
-      let yaml: string
-      let baseRev = 0
-      try {
-        const doc = unwrap(await api.GET('/api/interpretation'))
-        yaml = replaceFramingBlock(doc.yaml, spec)
-        baseRev = doc.rev
-      }
-      catch (e) {
-        if (!(e instanceof ApiError && e.status === 404)) throw e
-        yaml = framingOnlyYaml(spec)
-      }
+      const doc = await currentInterpretation()
+      const yaml = doc ? replaceFramingBlock(doc.yaml, spec) : framingOnlyYaml(spec)
+      const baseRev = doc?.rev ?? 0
       // Между чтением и сохранением описание могли сохранить из другой вкладки — тогда 409, а не затирание.
       return unwrap(await api.PUT('/api/interpretation', { body: { yaml, baseRev } })).rev
     },

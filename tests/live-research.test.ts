@@ -80,11 +80,13 @@ describe('живые модели экранов', () => {
     expect(v.runs.map(r => r.current)).toEqual([true, false])
   })
 
-  it('нет интерпретации — пустая модель, а не ошибка', async () => {
-    stubApi({})
+  it('нет интерпретации — пустая модель, а не ошибка, и без запроса, отвечающего 404', async () => {
+    stubApi({ '/api/interpretation/revisions': { items: [] } })
     const v = await createLiveResearchSource(contractWithBytes(), createMockResearchSource()).getInterpretation()
     expect(v.rev).toBeNull()
     expect(v.yaml).toEqual([])
+    const paths = vi.mocked(fetch).mock.calls.map(([input]) => new URL(typeof input === 'string' ? input : (input as Request).url, 'http://x').pathname)
+    expect(paths).not.toContain('/api/interpretation')
   })
 
   it('нарушения в редакторе — из последнего полного прогона ревизии', async () => {
@@ -94,6 +96,7 @@ describe('живые модели экранов', () => {
     })
     const refuted = (n: number) => [{ id: 'H6', test: 't', verdict: 'refuted', applicable: 24, held: 24 - n, counterexamples: n }]
     stubApi({
+      '/api/interpretation/revisions': { items: [{ rev: 3, digest: SHA, createdAt: '2026-10-10T14:00:00Z' }] },
       '/api/interpretation': { rev: 3, yaml: 'messages: []', digest: SHA },
       '/api/interpretation/preview': { items: [], total: 0, limit: 500, offset: 0 },
       '/api/runs': { items: [head('run-3', { sources: [SHA] }), head('run-2', {})], total: 2, limit: 20, offset: 0 },
