@@ -398,7 +398,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Журналы действий проекта */
+        /**
+         * Журналы действий проекта
+         * @description Все записи журналов в порядке импорта. Файл, импортированный повторно (с другим сопоставлением
+         *     колонок или поправкой часов), в анализе представлен последней записью: у прежних в `replacedBy`
+         *     стоит её `id`. Заменённые записи остаются в проекте — по ним воспроизводятся прогоны, выполненные
+         *     до замены, — и читаются по своему `id`, но в анализ «по всем журналам» не входят.
+         */
         get: operations["listActionLogs"];
         put?: never;
         /**
@@ -409,7 +415,8 @@ export interface paths {
          *     миллисекундах, микросекундах, наносекундах; `clockOffsetMs` — поправка на сдвиг часов клиента относительно
          *     часов записи; параметры — `ключ=значение;…` или JSON. Строки, которые не разобрались, перечислены в
          *     `errors` (до 100), а не теряются молча; если разобрана меньше половины — `422`. Файл копируется в проект
-         *     и хранится неизменным; повторный импорт — новая запись списка.
+         *     и хранится неизменным; повторный импорт — новая запись списка, она заменяет прежние записи того же
+         *     файла в анализе (`replacedBy`), а прогоны с тестами гипотез помечаются устаревшими (`action_logs`).
          */
         post: operations["importActionLog"];
         delete?: never;
@@ -474,12 +481,22 @@ export interface paths {
          *     прибавить ко времени журнала сверх уже заданной поправки `currentOffsetMs`; `null`, если часы
          *     согласованы (расхождение меньше 100 мс или поправка ничего не добавляет), общего сдвига не видно
          *     (после поправки данные идут менее чем за 60 % действий) или столько же действий совпадает и при
-         *     другом сдвиге. В `reason` — основание словами. Это предложение: чтобы применить поправку, журнал
-         *     импортируют заново с `clockOffsetMs` в сопоставлении. Описание протокола не нужно.
+         *     другом сдвиге. В `reason` — основание словами. Это предложение: применяет поправку `POST` этого же
+         *     пути с `clockOffsetMs` = `currentOffsetMs` + `offsetMs`. Описание протокола не нужно.
          */
         get: operations["estimateJournalClockOffset"];
         put?: never;
-        post?: never;
+        /**
+         * Применить поправку часов к импортированному журналу
+         * @description Сохранённая копия журнала разбирается заново с тем же сопоставлением колонок и новой поправкой
+         *     `clockOffsetMs` (полное значение, а не добавка к прежнему). Результат — новая запись списка: она
+         *     заменяет прежнюю в анализе, прежняя получает `replacedBy` и остаётся в проекте, чтобы прогоны,
+         *     выполненные до поправки, воспроизводились. Прогоны с тестами гипотез помечаются устаревшими
+         *     (`action_logs`); вернуть прежнюю поправку — тем же запросом, и прежние прогоны снова актуальны.
+         *     `409` — проект не открыт, запись уже заменена (поправку применяют к действующей) или поправка
+         *     уже такая.
+         */
+        post: operations["applyJournalClockOffset"];
         delete?: never;
         options?: never;
         head?: never;
@@ -785,6 +802,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/connections/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * TCP-соединение по идентификатору
+         * @description Соединение по идентификатору из якоря (`<первые 8 hex sha256>:c0001`): переход от контрпримера,
+         *     наблюдения или отчёта к соединению без перебора списка.
+         */
+        get: operations["getConnection"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/streams/{stream}/bytes": {
         parameters: {
             query?: never;
@@ -922,7 +960,10 @@ export interface paths {
          *     Дальше ищутся два вида связей. **`values`**: поле (смещение, тип: u8/i8/u16/i16/u32/i32, оба порядка байтов),
          *     значение которого равно числовому параметру или результату действия (`params.value`, `result.applied`),
          *     в том числе с фиксированной точкой (`scale`: 1, 10, 100, 1000). Показываются связи с долей совпадений не ниже
-         *     80 % и не меньше чем на пяти сообщениях; постоянный параметр ни с чем не связывается. **`actions`**: смещение,
+         *     80 % и не меньше чем на пяти сообщениях; постоянный параметр ни с чем не связывается. Связь должна
+         *     подтверждаться на разных значениях параметра и держаться на каждом значении, которое встретилось
+         *     больше одного раза; результат действия (`result.*`) ищется только в сообщениях отвечающей стороны —
+         *     в запросе его ещё нет. **`actions`**: смещение,
          *     где значение — код действия (у разных действий разные значения, у одного — почти всегда одно). Это подсказки:
          *     совпадение на примерах не доказывает связь, у каждой есть число примеров и первый контрпример.
          *     Границы сообщений — из `framing` либо из сохранённой интерпретации; `messageId` оставляет сообщения одного
@@ -1725,7 +1766,7 @@ export interface components {
             revision?: number | null;
         };
         /**
-         * @description Почему прогон устарел — интерпретацию или настройки сборки изменили, записи пропали из проекта, сменились журналы действий для тестов гипотез
+         * @description Почему прогон устарел — интерпретацию или настройки сборки изменили, записи пропали из проекта, сменились журналы действий для тестов гипотез (другие файлы либо тот же файл с другим сопоставлением колонок или поправкой часов)
          * @enum {string}
          */
         StaleReason: "interpretation" | "settings" | "sources" | "action_logs";
@@ -1954,6 +1995,18 @@ export interface components {
             firstTime: string | null;
             /** Format: date-time */
             lastTime: string | null;
+            /**
+             * @description Запись, заменившая эту в анализе: тот же файл импортирован заново. У действующей записи поля нет
+             * @example log-0002
+             */
+            replacedBy?: string;
+        };
+        ApplyClockOffsetRequest: {
+            /**
+             * Format: int64
+             * @description Поправка часов журнала целиком, мс: прибавляется ко времени журнала
+             */
+            clockOffsetMs: number;
         };
         ActionLogList: {
             items: components["schemas"]["ActionLog"][];
@@ -2780,10 +2833,11 @@ export interface components {
         /**
          * @description Признаки для значков в списке: повторы сегментов, дыры, неоднозначные перекрытия,
          *     нет SYN (роли неизвестны), неверные контрольные суммы, усечённые кадры,
-         *     порты переиспользованы раньше (соединение начато заново).
+         *     порты переиспользованы раньше (соединение начато заново), данные до начала потока по seq
+         *     (`out_of_window`: в поток не вошли, кадры перечислены).
          * @enum {string}
          */
-        ConnectionFlag: "retransmissions" | "gaps" | "ambiguous" | "no_syn" | "bad_checksum" | "truncated" | "reused_ports";
+        ConnectionFlag: "retransmissions" | "gaps" | "ambiguous" | "no_syn" | "bad_checksum" | "truncated" | "reused_ports" | "out_of_window";
         /**
          * @description `a` — инициатор, если виден SYN; иначе меньший адрес:порт
          * @enum {string}
@@ -4768,6 +4822,67 @@ export interface operations {
             409: components["responses"]["NoProject"];
         };
     };
+    applyJournalClockOffset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "clockOffsetMs": 3200
+                 *     }
+                 */
+                "application/json": components["schemas"]["ApplyClockOffsetRequest"];
+            };
+        };
+        responses: {
+            /** @description Журнал разобран с поправкой и заменил прежнюю запись */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "log-0002",
+                     *       "sha256": "3f5a1c0d9e8b7a6f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a0f9e8d",
+                     *       "name": "main.actions.csv",
+                     *       "rows": 16,
+                     *       "skipped": 0,
+                     *       "errors": [],
+                     *       "mapping": {
+                     *         "time": "time",
+                     *         "action": "action",
+                     *         "params": "params",
+                     *         "result": "result",
+                     *         "timeFormat": "rfc3339",
+                     *         "paramsFormat": "kv",
+                     *         "resultFormat": "kv",
+                     *         "utcOffsetMinutes": 0,
+                     *         "clockOffsetMs": 3200
+                     *       },
+                     *       "firstTime": "2026-10-01T00:00:03.556179000Z",
+                     *       "lastTime": "2026-10-01T00:00:25.042006000Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ActionLog"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            415: components["responses"]["UnsupportedMedia"];
+            422: components["responses"]["Unprocessable"];
+        };
+    };
     listActionExchanges: {
         parameters: {
             query?: {
@@ -5899,6 +6014,64 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["NoProject"];
+        };
+    };
+    getConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @example 3f5a1c0d:c0001 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Соединение */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "3f5a1c0d:c0001",
+                     *       "source": "3f5a1c0d9e8b7a6f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a0f9e8d",
+                     *       "a": {
+                     *         "address": "192.168.1.10",
+                     *         "port": 51234
+                     *       },
+                     *       "b": {
+                     *         "address": "192.168.1.20",
+                     *         "port": 9000
+                     *       },
+                     *       "rolesKnown": true,
+                     *       "firstFrameTime": "2026-10-09T12:00:00.100000000Z",
+                     *       "lastFrameTime": "2026-10-09T12:00:05.420000000Z",
+                     *       "frameCount": 42,
+                     *       "close": "fin",
+                     *       "flags": [],
+                     *       "flagCounts": {},
+                     *       "streams": [
+                     *         {
+                     *           "id": "3f5a1c0d:c0001:ab",
+                     *           "direction": "a_to_b",
+                     *           "length": 310,
+                     *           "dataBytes": 310,
+                     *           "gapBytes": 0,
+                     *           "ambiguousBytes": 0,
+                     *           "startAvailable": true
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Connection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getStreamBytes: {
