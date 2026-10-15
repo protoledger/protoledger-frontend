@@ -7,8 +7,6 @@ import overview from './overview'
 import bounds from './bounds'
 import actions from './actions'
 import compare from './compare'
-import interp from './interp'
-import hypotheses from './hypotheses'
 import verify from './verify'
 import report from './report'
 import data from './data'
@@ -16,9 +14,9 @@ import v1 from './v1'
 import type { Message } from './types'
 
 type Keys<A> = A extends { ru: Record<infer K extends string, Message> } ? K : never
-export type MessageKey = Keys<typeof common> | Keys<typeof shell> | Keys<typeof status> | Keys<typeof project> | Keys<typeof overview> | Keys<typeof bounds> | Keys<typeof actions> | Keys<typeof compare> | Keys<typeof interp> | Keys<typeof hypotheses> | Keys<typeof verify> | Keys<typeof report> | Keys<typeof data> | Keys<typeof v1>
+export type MessageKey = Keys<typeof common> | Keys<typeof shell> | Keys<typeof status> | Keys<typeof project> | Keys<typeof overview> | Keys<typeof bounds> | Keys<typeof actions> | Keys<typeof compare> | Keys<typeof verify> | Keys<typeof report> | Keys<typeof data> | Keys<typeof v1>
 
-const AREAS = [common, shell, status, project, overview, bounds, actions, compare, interp, hypotheses, verify, report, data, v1]
+const AREAS = [common, shell, status, project, overview, bounds, actions, compare, verify, report, data, v1]
 
 export const MESSAGES = {
   ru: Object.assign({}, ...AREAS.map(a => a.ru)) as Record<MessageKey, Message>,

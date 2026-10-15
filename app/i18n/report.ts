@@ -5,7 +5,7 @@ export default defineMessages({
   'report.export': 'Экспорт',
   'report.exportHtml': 'Экспорт HTML',
   'report.exportMd': 'Экспорт Markdown',
-  'report.exportYaml': 'Экспорт описания в YAML',
+  'report.exportYaml': 'Файл описания для программ',
   'report.log.saved': 'Отчёт сохранён: {name}',
   'report.log.yamlSaved': 'Описание сохранено: {name}',
   'report.buildFailed': 'Не удалось собрать отчёт',
@@ -21,7 +21,7 @@ export default defineMessages({
   'report.building': 'Собираю…',
   'report.downloadHtml': 'Скачать HTML',
   'report.downloadMd': 'Скачать Markdown',
-  'report.interpYaml': 'Описание в YAML',
+  'report.interpYaml': 'Файл описания',
   'report.htmlNote': 'HTML-отчёт открывается как обычный файл: в нём нет скриптов и внешних ресурсов.',
 }, {
   'report.sections': 'Sections',
