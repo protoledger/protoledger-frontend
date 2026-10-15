@@ -50,6 +50,8 @@ async function exportInterpretation() {
 }
 
 const h2 = 'mt-6 mb-2 font-display text-[17px] font-semibold text-pl-wine'
+// Хеши и якоря без пробелов иначе растягивают колонку и обрезаются справа.
+const isToken = (c: string) => c.length >= 24 && !/\s/.test(c)
 const tableCls = 'mt-2.5 w-full border-collapse text-[12.5px] [&_td]:border-b [&_td]:border-pl-line [&_td]:px-2.5 [&_td]:py-1.5 [&_td]:align-top [&_td]:break-words [&_th]:bg-pl-raise [&_th]:px-2.5 [&_th]:py-1.5 [&_th]:text-left [&_th]:text-[11px] [&_th]:tracking-[0.06em] [&_th]:uppercase'
 </script>
 
@@ -83,7 +85,7 @@ const tableCls = 'mt-2.5 w-full border-collapse text-[12.5px] [&_td]:border-b [&
               <table :class="tableCls">
                 <thead><tr><th v-for="(h, j) in b.head" :key="j">{{ safeText(h) }}</th></tr></thead>
                 <tbody>
-                  <tr v-for="(row, r) in b.rows" :key="r"><td v-for="(c, j) in row" :key="j">{{ safeText(c) }}</td></tr>
+                  <tr v-for="(row, r) in b.rows" :key="r"><td v-for="(c, j) in row" :key="j" :class="{ 'min-w-[17ch] font-mono break-all': isToken(c) }">{{ safeText(c) }}</td></tr>
                 </tbody>
               </table>
             </div>
