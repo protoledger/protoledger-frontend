@@ -1,4 +1,5 @@
 import { tr } from './i18n'
+import type { MessageKey } from '~/i18n'
 
 /** Единый язык статусов: цвет + значок + подпись, одинаково в UI и отчёте. Подписи — на языке интерфейса. */
 export type KnowledgeStatus =
@@ -56,4 +57,12 @@ export const DIAGNOSTIC_STATUS: Record<string, { label: string, status: Knowledg
   checksum_offload: { get label() { return tr('diag.checksum_offload') }, status: 'rule' },
   bad_block: { get label() { return tr('diag.bad_block') }, status: 'violation' },
   limit_exceeded: { get label() { return tr('diag.limit_exceeded') }, status: 'violation' },
+}
+
+const POLICY: Record<string, MessageKey> = { first: 'policy.first', last: 'policy.last', flag: 'policy.flag', ignore: 'policy.ignore', warn: 'policy.warn', drop: 'policy.drop' }
+
+/** Подпись политики сборки потоков; значение для движка остаётся прежним. */
+export function policyLabel(value: string): string {
+  const key = POLICY[value]
+  return key ? tr(key) : value
 }
