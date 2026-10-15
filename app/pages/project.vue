@@ -101,30 +101,6 @@ const CHECKSUM = ['ignore', 'warn', 'drop'] as const
 
 <template>
   <div class="flex h-full">
-    <ShellSidePanel id="project-tree" :title="tr('project.tree')" :width="270">
-      <div class="pl-scroll flex-1">
-        <ul v-if="project.project" class="m-0 list-none py-1.5">
-          <li class="flex items-center gap-1.5 py-1 pr-2.5 pl-3.5 whitespace-nowrap"><UIcon name="i-lucide-folder-open" class="shrink-0" aria-hidden="true" /> <span class="min-w-0 truncate">{{ safeText(project.project.name) }}.protoledger</span></li>
-          <li class="flex items-center gap-1.5 py-1 pr-2.5 pl-[30px] whitespace-nowrap"><UIcon name="i-lucide-folder" class="shrink-0" aria-hidden="true" /> {{ tr('project.captures') }} <span class="ml-auto text-[11px] text-pl-muted">{{ project.sources.length }}</span></li>
-          <li v-for="s in project.sources" :key="s.sha256" class="flex items-center gap-1.5 py-1 pr-2.5 pl-12 whitespace-nowrap" :title="s.name">
-            <UIcon name="i-lucide-file" class="shrink-0" aria-hidden="true" /> <span class="min-w-0 truncate">{{ safeText(s.name) }}</span>
-            <span v-if="s.status === 'importing'" class="ml-auto shrink-0 text-[11px] text-pl-muted">{{ percent(s) ?? '…' }}%</span>
-            <UIcon v-else-if="project.issuesOf(s.sha256)" name="i-lucide-triangle-alert" class="ml-auto shrink-0" :class="project.issuesOf(s.sha256)!.status === 'violation' ? 'text-pl-st-violation' : 'text-pl-st-ambiguous'" :aria-label="tr('project.issuesLabel', { labels: project.issuesOf(s.sha256)!.labels.join(', ') })" />
-          </li>
-          <li class="flex items-center gap-1.5 py-1 pr-2.5 pl-[30px] whitespace-nowrap"><UIcon name="i-lucide-folder" class="shrink-0" aria-hidden="true" /> {{ tr('project.logs') }} <span class="ml-auto text-[11px] text-pl-muted">{{ logs.length }}</span></li>
-          <li v-for="l in logs" :key="l.name" class="flex items-center gap-1.5 py-1 pr-2.5 pl-12 whitespace-nowrap" :title="l.name"><UIcon name="i-lucide-file" class="shrink-0" aria-hidden="true" /> <span class="min-w-0 truncate">{{ safeText(l.name) }}</span></li>
-          <template v-if="project.extras">
-            <li class="flex items-center gap-1.5 py-1 pr-2.5 pl-[30px] whitespace-nowrap"><UIcon name="i-lucide-folder" class="shrink-0" aria-hidden="true" /> {{ tr('screen.interpretation') }} <span class="ml-auto text-[11px] text-pl-muted">{{ project.extras.interpretationRevs.length }} rev</span></li>
-            <li v-for="r in project.extras.interpretationRevs" :key="r.rev" class="flex items-center gap-1.5 py-1 pr-2.5 pl-12 whitespace-nowrap">
-              <UIcon name="i-lucide-code-xml" class="shrink-0" aria-hidden="true" /> rev {{ r.rev }}<span v-if="r.current"> · {{ tr('project.current') }}</span>
-            </li>
-            <li class="flex items-center gap-1.5 py-1 pr-2.5 pl-[30px] whitespace-nowrap"><UIcon name="i-lucide-folder" class="shrink-0" aria-hidden="true" /> {{ tr('project.observations') }} <span class="ml-auto text-[11px] text-pl-muted">{{ project.extras.observationCount }}</span></li>
-            <li class="flex items-center gap-1.5 py-1 pr-2.5 pl-[30px] whitespace-nowrap"><UIcon name="i-lucide-folder" class="shrink-0" aria-hidden="true" /> {{ tr('project.hypotheses') }} <span class="ml-auto text-[11px] text-pl-muted">{{ project.extras.hypothesisCount }}</span></li>
-            <li class="flex items-center gap-1.5 py-1 pr-2.5 pl-[30px] whitespace-nowrap"><UIcon name="i-lucide-folder" class="shrink-0" aria-hidden="true" /> {{ tr('project.runs') }} <span class="ml-auto text-[11px] text-pl-muted">{{ project.extras.runCount }}</span></li>
-          </template>
-        </ul>
-      </div>
-    </ShellSidePanel>
 
     <section class="pl-scroll min-w-0 flex-1 px-4 pt-[18px] pb-6">
       <ProjectOpenForm v-if="project.loaded && !project.project && !project.error" />
@@ -210,7 +186,7 @@ const CHECKSUM = ['ignore', 'warn', 'drop'] as const
           <dt>{{ tr('project.format') }}</dt><dd>{{ selected.format.toUpperCase() }} · {{ formatBytesSize(selected.sizeBytes) }}</dd>
           <dt>{{ tr('project.framesCol') }}</dt><dd>{{ formatCount(selected.frameCount) }}</dd>
           <dt>{{ tr('project.connections') }}</dt><dd>{{ formatCount(selected.connectionCount) }}</dd>
-          <dt>{{ tr('common.import') }}</dt><dd>{{ selected.importId }}</dd>
+          <dt>{{ tr('project.importId') }}</dt><dd>{{ selected.importId }}</dd>
         </dl>
         <template v-if="selected && project.diagnostics[selected.sha256]?.items.length">
           <h3 class="pl-caption mt-1 mb-2 px-3">{{ tr('project.captureIssues') }}</h3>

@@ -225,11 +225,47 @@ async function build() {
   }
 }
 
-async function check() {
+// Новая запись: загрузить и проверить описанием только на ней — без правки описания (ТЗ: дополнительная запись).
+const flow = useImportFlow()
+const newInput = ref<HTMLInputElement | null>(null)
+const lastNew = ref<string | null>(null)
+const isExample = computed(() => (project.project?.name ?? '').startsWith('thermostand'))
+const exampleNew = '04_new_observations.pcapng'
+const exampleNewLoaded = computed(() => project.sources.some(x => x.name === exampleNew))
+async function checkNew(file: File) {
+  actionError.value = null
+  notice.value = null
+  busy.value = tr('protocol.newLoading', { name: file.name })
+  try {
+    await flow.importCaptures([file])
+    await flow.settle()
+    if (flow.errors.value.length) throw new Error(flow.errors.value.join('; '))
+    const source = project.sources.find(x => x.name === file.name)
+    if (!source) throw new Error(tr('protocol.newMissing'))
+    lastNew.value = file.name
+    await check({ sources: [source.sha256] })
+  }
+  catch (e) {
+    actionError.value = e instanceof Error ? e.message : tr('protocol.saveFailed')
+    busy.value = null
+  }
+}
+function onNewFile(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (file) void checkNew(file)
+}
+async function checkExampleNew() {
+  const res = await fetch(`/examples/thermostand/${exampleNew}`)
+  if (res.ok) await checkNew(new File([await res.blob()], exampleNew))
+}
+
+async function check(corpus?: { sources: string[] }) {
   actionError.value = null
   busy.value = tr('protocol.checking')
   try {
-    const jobId = await data.startRun()
+    const jobId = await data.startRun(corpus)
     if (jobId) {
       await new Promise<void>((resolve) => {
         jobs.track(jobId, tr('shell.run.label'), (job) => {
@@ -362,7 +398,11 @@ function downloadYaml() {
           <button class="pl-btn h-7" type="button" @click="downloadYaml">
             <UIcon name="i-lucide-download" class="size-4" aria-hidden="true" /> {{ tr('protocol.yamlFile') }}
           </button>
-          <button class="pl-btn pl-btn-primary h-7" type="button" :disabled="!!busy" :title="tr('protocol.checkHint')" @click="check">
+          <button class="pl-btn h-7" type="button" :disabled="!!busy" :title="tr('protocol.newHint')" @click="newInput?.click()">
+            <UIcon name="i-lucide-file-plus-2" class="size-4" aria-hidden="true" /> {{ tr('protocol.new') }}
+          </button>
+          <input ref="newInput" type="file" accept=".pcap,.pcapng,.cap" class="hidden" @change="onNewFile">
+          <button class="pl-btn pl-btn-primary h-7" type="button" :disabled="!!busy" :title="tr('protocol.checkHint')" @click="check()">
             <UIcon name="i-lucide-circle-check-big" class="size-4" aria-hidden="true" /> {{ tr('protocol.check') }}
           </button>
         </template>
@@ -402,6 +442,15 @@ function downloadYaml() {
           <div v-if="run" class="ml-auto shrink-0 text-right text-pl-muted">
             {{ tr('protocol.lastCheck', { messages: run.head.summary.messages, unknown: run.head.summary.unknownBytes }) }}
           </div>
+        </div>
+        <div v-if="isExample && !exampleNewLoaded && !busy" class="flex flex-wrap items-center gap-3 rounded-md border border-dashed border-pl-line px-4 py-2.5">
+          <span class="text-pl-muted">{{ tr('protocol.exampleNew') }}</span>
+          <button class="pl-btn h-7" type="button" @click="checkExampleNew">{{ tr('protocol.exampleNewButton') }}</button>
+        </div>
+        <div v-if="lastNew && run && !busy" class="flex flex-wrap items-center gap-3 rounded-md border px-4 py-2.5" :class="run.head.summary.counterexamples ? 'border-pl-st-violation' : 'border-pl-st-rule'" aria-live="polite">
+          <UIcon :name="run.head.summary.counterexamples ? 'i-lucide-circle-alert' : 'i-lucide-circle-check'" class="size-5" :class="run.head.summary.counterexamples ? 'text-pl-st-violation' : 'text-pl-st-rule'" aria-hidden="true" />
+          <span class="text-pl-fg-strong">{{ tr('protocol.newResult', { name: lastNew, n: run.head.summary.messages, ok: run.head.summary.counts.matched ?? 0, bad: run.head.summary.counterexamples }) }}</span>
+          <NuxtLink :to="{ path: '/verify', query: { run: run.head.id } }" class="text-pl-wine-text hover:underline">{{ tr('protocol.newDetails') }}</NuxtLink>
         </div>
         <p v-if="stale" class="flex items-center gap-2 text-pl-st-hypothesis">
           <UIcon name="i-lucide-rotate-ccw" class="size-4" aria-hidden="true" /> {{ tr('protocol.check.stale') }}
@@ -474,6 +523,9 @@ function downloadYaml() {
                   </td>
                   <td><CommonStatusBadge :status="f.status" :label="tr(`protocol.status.${f.status}` as MessageKey)" /></td>
                   <td><button class="pl-btn pl-btn-ghost h-6" type="button" @click="startEdit(selected, i)">{{ tr('protocol.edit') }}</button></td>
+                </tr>
+                <tr v-if="!rows.some(r => !r.header)">
+                  <td colspan="7" class="text-pl-muted">{{ tr('protocol.noOwnFields') }}</td>
                 </tr>
               </tbody>
             </table>
