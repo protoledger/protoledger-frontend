@@ -95,7 +95,7 @@ async function jumpToMessage(id: string, start: number, end: number) {
 <template>
   <div class="flex h-full">
     <ShellSidePanel id="overview-connections" title="Соединения" :width="420" :min="300">
-      <OverviewConnectionList :selected-id="connection?.id ?? null" @select="select" />
+      <OverviewConnectionList :selected-id="connection?.id ?? null" :auto-select="!initial.conn" @select="select" />
     </ShellSidePanel>
 
     <section class="flex min-w-0 flex-1 flex-col">

@@ -3,7 +3,8 @@ import type { Connection, ConnectionFlag } from '~/api/types'
 import { formatCount } from '~/utils/bytes'
 import { FLAG_STATUS } from '~/utils/status'
 
-const props = defineProps<{ selectedId: string | null }>()
+// autoSelect: false — экран открыт по ссылке на соединение, первое из списка не подставляем.
+const props = withDefaults(defineProps<{ selectedId: string | null, autoSelect?: boolean }>(), { autoSelect: true })
 const emit = defineEmits<{ select: [connection: Connection] }>()
 
 const data = useData()
@@ -28,7 +29,7 @@ async function load(reset: boolean) {
     items.value = reset ? page.items : [...items.value, ...page.items]
     total.value = page.total
     if (reset && !source.value && !port.value && !flag.value) topPorts.value = frequentPorts(page.items)
-    if (reset && !props.selectedId && page.items[0]) emit('select', page.items.find(c => c.flags.includes('gaps')) ?? page.items[0])
+    if (reset && props.autoSelect && !props.selectedId && page.items[0]) emit('select', page.items.find(c => c.flags.includes('gaps')) ?? page.items[0])
   }
   catch (e) {
     error.value = e instanceof Error ? e.message : 'Не удалось загрузить соединения'
