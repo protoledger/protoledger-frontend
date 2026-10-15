@@ -27,7 +27,7 @@ async function toObservation() {
   saving.value = true
   saveNote.value = null
   try {
-    const comment = `байты ${c.position} (${c.read}) ${c.relation}, ${c.share}`
+    const comment = tr('compare.obsComment', { position: c.position, read: c.read, relation: c.relation, share: c.share })
     const saved = await data.createObservation(c.anchor, comment)
     if (!saved) return draft(tr('compare.observation.created'))
     workspace.log(tr('compare.observation.logged', { comment }))

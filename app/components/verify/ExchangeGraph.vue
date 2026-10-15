@@ -16,7 +16,7 @@ async function build() {
     graph.value = await data.getExchangeGraph()
   }
   catch (e) {
-    error.value = e instanceof Error ? e.message : 'Не удалось построить граф'
+    error.value = e instanceof Error ? e.message : tr('verify.graph.failed')
   }
   finally {
     pending.value = false
@@ -38,7 +38,7 @@ async function copyDot() {
 const ROW = 34
 const W = 560
 const NODE_W = 190
-const name = (id: string) => (id === '?' ? 'тип не определён' : id)
+const name = (id: string) => (id === '?' ? tr('verify.typeUnknown') : id)
 
 // Запросы слева, ответы справа; рёбра «запрос → ответ» — линии, толщина по числу пар.
 const layout = computed(() => {
@@ -68,21 +68,21 @@ const text = 'fill: var(--pl-fg-strong); font: 12px var(--font-mono, monospace)'
 <template>
   <div class="mt-5">
     <div class="flex flex-wrap items-center gap-2">
-      <h3 class="pl-caption m-0">Граф обмена</h3>
-      <button class="pl-btn h-7" type="button" :disabled="pending" @click="build">{{ pending ? 'Строю…' : graph ? 'Перестроить' : 'Построить' }}</button>
-      <button v-if="graph" class="pl-btn pl-btn-ghost h-7" type="button" title="Тот же граф в формате Graphviz DOT" @click="copyDot">{{ copied ? 'скопировано' : 'Копировать DOT' }}</button>
+      <h3 class="pl-caption m-0">{{ tr('verify.graph.title') }}</h3>
+      <button class="pl-btn h-7" type="button" :disabled="pending" @click="build">{{ pending ? tr('verify.graph.building') : graph ? tr('verify.graph.rebuild') : tr('verify.graph.build') }}</button>
+      <button v-if="graph" class="pl-btn pl-btn-ghost h-7" type="button" :title="tr('verify.graph.dotTitle')" @click="copyDot">{{ copied ? tr('common.copied') : tr('verify.graph.copyDot') }}</button>
     </div>
     <p v-if="error" class="m-0 mt-2 text-pl-muted" role="alert">{{ safeText(error) }}</p>
     <template v-if="graph && layout">
       <p class="m-0 mt-2 text-pl-muted">
-        {{ formatCount(graph.connections) }} соед. · {{ formatCount(graph.messages) }} сообщ.
-        <template v-if="graph.unanswered"> · запросов без ответа {{ formatCount(graph.unanswered) }}</template>
-        <template v-if="graph.unsolicited"> · ответов без запроса {{ formatCount(graph.unsolicited) }}</template>
-        · наблюдаемое поведение на записях, а не заявленный автомат.
+        {{ tr('verify.graph.connections', { n: formatCount(graph.connections) }) }} · {{ tr('verify.msgCount', { n: formatCount(graph.messages) }) }}
+        <template v-if="graph.unanswered"> · {{ tr('verify.graph.unanswered', { n: formatCount(graph.unanswered) }) }}</template>
+        <template v-if="graph.unsolicited"> · {{ tr('verify.graph.unsolicited', { n: formatCount(graph.unsolicited) }) }}</template>
+        · {{ tr('verify.graph.observed') }}
       </p>
-      <p v-if="!graph.nodes.length" class="m-0 mt-2 text-pl-muted">Типов сообщений нет — сначала опишите их в «Интерпретации».</p>
+      <p v-if="!graph.nodes.length" class="m-0 mt-2 text-pl-muted">{{ tr('verify.graph.noTypes') }}</p>
       <div v-else class="mt-2 overflow-x-auto">
-        <svg :width="W" :height="layout.height" :viewBox="`0 0 ${W} ${layout.height}`" role="img" aria-label="Граф обмена: запросы слева, ответы справа, линии — чем отвечают; числа — в списке под графом">
+        <svg :width="W" :height="layout.height" :viewBox="`0 0 ${W} ${layout.height}`" role="img" :aria-label="tr('verify.graph.aria')">
           <line v-for="e in layout.edges" :key="`${e.from}-${e.to}`" :x1="e.x1" :y1="e.y1" :x2="e.x2" :y2="e.y2" stroke="var(--pl-st-rule)" :stroke-width="e.width" stroke-opacity="0.8" />
           <g v-for="n in [...layout.left, ...layout.right]" :key="n.id">
             <rect :x="layout.pos.get(n.id)!.x" :y="layout.pos.get(n.id)!.y" :width="NODE_W" height="24" rx="3" fill="var(--pl-raise)" stroke="var(--pl-line)" />
@@ -94,20 +94,20 @@ const text = 'fill: var(--pl-fg-strong); font: 12px var(--font-mono, monospace)'
       </div>
       <div v-if="graph.answers.length || graph.next.length || graph.starts.length" class="mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1">
         <template v-if="graph.answers.length">
-          <span class="text-pl-muted">Ответы</span>
+          <span class="text-pl-muted">{{ tr('verify.graph.answers') }}</span>
           <span class="font-mono text-xs">{{ graph.answers.map(e => `${name(e.from)} → ${name(e.to)} ×${e.count}`).join(' · ') }}</span>
         </template>
         <template v-if="graph.starts.length">
-          <span class="text-pl-muted">Начало</span>
+          <span class="text-pl-muted">{{ tr('verify.graph.starts') }}</span>
           <span class="font-mono text-xs">{{ graph.starts.map(e => `${name(e.to)} ×${e.count}`).join(' · ') }}</span>
         </template>
         <template v-if="graph.next.length">
-          <span class="text-pl-muted">Следом</span>
+          <span class="text-pl-muted">{{ tr('verify.graph.next') }}</span>
           <span class="font-mono text-xs">{{ graph.next.slice(0, 12).map(e => `${name(e.from)} → ${name(e.to)} ×${e.count}`).join(' · ') }}</span>
         </template>
       </div>
-      <p v-if="graph.truncated" class="m-0 mt-1 text-xs text-pl-muted">Рёбер больше 200 — показаны самые частые.</p>
-      <p v-if="graph.incomplete" class="m-0 mt-1 text-xs text-pl-st-hypothesis">Разбор прерван по времени — граф построен по части соединений.</p>
+      <p v-if="graph.truncated" class="m-0 mt-1 text-xs text-pl-muted">{{ tr('verify.graph.truncated') }}</p>
+      <p v-if="graph.incomplete" class="m-0 mt-1 text-xs text-pl-st-hypothesis">{{ tr('verify.graph.incomplete') }}</p>
     </template>
   </div>
 </template>

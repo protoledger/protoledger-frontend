@@ -61,6 +61,7 @@ export default defineMessages({
   'compare.change.new': 'только во втором',
   'compare.change.missing': 'только в первом',
   'compare.change.same': 'в обоих',
+  'compare.obsComment': 'байты {position} ({read}) {relation}, {share}',
 }, {
   'compare.actions.title': 'Messages side by side',
   'compare.actions.subtitle': 'action {action} · aligned by start',
@@ -122,4 +123,5 @@ export default defineMessages({
   'compare.change.new': 'only in set B',
   'compare.change.missing': 'only in set A',
   'compare.change.same': 'in both sets',
+  'compare.obsComment': 'bytes {position} ({read}) {relation}, {share}',
 })

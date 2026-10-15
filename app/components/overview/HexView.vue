@@ -130,7 +130,7 @@ function cellClass(cell: { offset: number, info: ByteInfo | null }) {
     class="pl-scroll relative h-full font-mono text-[12.5px] leading-[22px] select-none focus-visible:-outline-offset-2"
     tabindex="0"
     role="grid"
-    aria-label="Байты потока: стрелки — перемещение, Shift — расширить выделение"
+    :aria-label="tr('overview.hexAria')"
     @scroll="scrollTop = ($event.target as HTMLElement).scrollTop"
     @keydown="onKey"
     @mouseup="dragging = false"
@@ -147,8 +147,7 @@ function cellClass(cell: { offset: number, info: ByteInfo | null }) {
           >
             <template v-if="row.gapStart && row.gapSegment">
               <CommonStatusBadge status="gap" />
-              нет данных · {{ row.gapSegment.end - row.gapSegment.start }} байт ·
-              [{{ row.gapSegment.start }}, {{ row.gapSegment.end }}) не захвачены
+              {{ tr('overview.gapInfo', { n: row.gapSegment.end - row.gapSegment.start, start: row.gapSegment.start, end: row.gapSegment.end }) }}
             </template>
           </span>
           <template v-else>
