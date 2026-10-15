@@ -10,7 +10,7 @@ interface Layout {
   bottomOpen: boolean
 }
 
-const LAYOUT_KEY = 'protoledger-layout'
+const LAYOUT_KEY = 'protoledger-layout-v2'
 
 // Раскладка — удобство одного пользователя, поэтому хранится в браузере; без хранилища работает с умолчаниями.
 function readLayout(): Partial<Layout> {
@@ -25,7 +25,7 @@ function readLayout(): Partial<Layout> {
 /** Раскладка панелей, нижняя панель, журнал событий и режим фокуса. */
 export const useWorkspaceStore = defineStore('workspace', () => {
   const saved = readLayout()
-  const bottomOpen = ref(saved.bottomOpen ?? true)
+  const bottomOpen = ref(saved.bottomOpen ?? false)
   const bottomTab = ref<'diagnostics' | 'jobs' | 'events'>('diagnostics')
   const events = ref<{ time: string, text: string }[]>([])
   const panels = ref<Record<string, PanelState>>(saved.panels ?? {})
@@ -61,7 +61,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   function resetLayout() {
     panels.value = {}
     inspector.value = { width: 360, collapsed: false }
-    bottomOpen.value = true
+    bottomOpen.value = false
     focus.value = false
   }
 
