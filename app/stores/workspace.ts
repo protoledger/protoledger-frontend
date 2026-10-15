@@ -34,7 +34,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   // На узком экране панель открывается поверх рабочей области; одновременно — одна (id панели или 'inspector').
   const drawer = ref<string | null>(null)
   // Несохранённый текст описания живёт дольше экрана редактора: переход на другой экран его не теряет.
-  const interpDraft = ref<{ rev: number | null, text: string } | null>(null)
+  const interpDraft = ref<{ rev: number | null, base: number, text: string } | null>(null)
   // Скрытая плашка «что дальше» возвращается при следующем открытии приложения.
   const nextStepsHidden = ref(false)
 

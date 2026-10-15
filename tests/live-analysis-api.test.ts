@@ -63,4 +63,12 @@ describe('новые запросы к движку', () => {
     expect(await live().applyClockOffset('log-0001', 5000)).toBe('log-0002')
     expect(calls[0]).toMatchObject({ method: 'POST', url: '/api/action-logs/log-0001/clock-offset', body: { clockOffsetMs: 5000 } })
   })
+
+  it('сохранение описания и «Применить как фрейминг» передают ревизию, от которой правка', async () => {
+    const calls = record(c => (c.method === 'GET' ? json({ rev: 4, digest: 'd', yaml: 'format: protoledger/interpretation@1\nmessages: []\n' }) : json({ rev: 5, digest: 'd', created: true })))
+    await live().saveInterpretation('format: protoledger/interpretation@1\n', 3)
+    expect(calls[0]).toMatchObject({ method: 'PUT', body: { baseRev: 3 } })
+    await live().applyFraming({ kind: 'length_prefixed', length: { at: 2, type: 'u16be', adjust: 8 }, status: 'hypothesis' })
+    expect(calls.at(-1)).toMatchObject({ method: 'PUT', body: { baseRev: 4 } })
+  })
 })

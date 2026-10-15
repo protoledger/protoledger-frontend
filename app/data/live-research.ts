@@ -423,8 +423,8 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
 
     previewInterpretation: (stream, yaml) => previewOf(stream, yaml),
 
-    async saveInterpretation(yaml) {
-      const res = unwrap(await api.PUT('/api/interpretation', { body: { yaml } }))
+    async saveInterpretation(yaml, baseRev) {
+      const res = unwrap(await api.PUT('/api/interpretation', { body: { yaml, ...(baseRev === undefined ? {} : { baseRev }) } }))
       return { rev: res.rev, created: res.created }
     },
 
@@ -713,14 +713,18 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
 
     async applyFraming(spec) {
       let yaml: string
+      let baseRev = 0
       try {
-        yaml = replaceFramingBlock(unwrap(await api.GET('/api/interpretation')).yaml, spec)
+        const doc = unwrap(await api.GET('/api/interpretation'))
+        yaml = replaceFramingBlock(doc.yaml, spec)
+        baseRev = doc.rev
       }
       catch (e) {
         if (!(e instanceof ApiError && e.status === 404)) throw e
         yaml = framingOnlyYaml(spec)
       }
-      return unwrap(await api.PUT('/api/interpretation', { body: { yaml } })).rev
+      // Между чтением и сохранением описание могли сохранить из другой вкладки — тогда 409, а не затирание.
+      return unwrap(await api.PUT('/api/interpretation', { body: { yaml, baseRev } })).rev
     },
 
     async getCompare(action, logId) {

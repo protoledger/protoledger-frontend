@@ -109,7 +109,11 @@ export interface ResearchSource {
   /** Применить текст к потоку без сохранения; без yaml — последняя сохранённая ревизия. */
   previewInterpretation(stream: string, yaml?: string): Promise<Pick<InterpretationView, 'tree' | 'preview' | 'violations'>>
   /** Проверить и сохранить текст; created = false — смысл не изменился, ревизии нет. */
-  saveInterpretation(yaml: string): Promise<{ rev: number, created: boolean }>
+  /**
+   * baseRev — ревизия, текущая на момент начала правки (0 — описания не было): сохранена другая — ошибка 409.
+   * Поля пока нет в контракте: движок без его поддержки поле не учитывает и сохраняет как раньше.
+   */
+  saveInterpretation(yaml: string, baseRev?: number): Promise<{ rev: number, created: boolean }>
   getInterpretationRevisions(): Promise<number[]>
   /** Подсказка типа поля по значениям в записях; null — пример данных. Поле группы — «группа.поле». */
   getFieldHints(messageId: string, field: string, yaml?: string): Promise<FieldHints | null>

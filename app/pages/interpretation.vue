@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ApiError } from '~/api/client'
 import type { DraftView, FixHintsView, InterpretationView } from '~/data/views'
 import { STATUS } from '~/utils/status'
 import type { FieldHints } from '~/api/types'
@@ -36,9 +37,14 @@ const mode = ref<'yaml' | 'form'>('yaml')
 const text = ref('')
 const original = ref('')
 const basedOn = ref<number | null>(null)
+// Ревизия, текущая на момент начала правки: с ней сохраняем, чтобы не затереть ревизию, сохранённую
+// после (другая вкладка, «Применить как фрейминг»). Открытая старая ревизия сюда не попадает — откат законен.
+const editBase = ref(0)
+const conflict = ref(false)
 const stream = ref<string | null>(null)
 const result = ref<Pick<InterpretationView, 'tree' | 'preview' | 'violations'> | null>(null)
 const problem = ref<string | null>(null)
+watch(problem, (p) => { if (!p) conflict.value = false })
 const previewing = ref(false)
 const saving = ref(false)
 const notice = ref<string | null>(null)
@@ -52,6 +58,7 @@ watch(view, (v) => {
   const kept = workspace.interpDraft
   text.value = kept ? kept.text : v.rev ? original.value : TEMPLATE
   basedOn.value = kept ? kept.rev : v.rev
+  editBase.value = kept ? kept.base : v.rev ?? 0
   stream.value = v.stream
   result.value = v.rev ? { tree: v.tree, preview: v.preview, violations: v.violations } : null
   selectedLine.value = v.selectedLine || null
@@ -60,7 +67,7 @@ watch(view, (v) => {
 const dirty = computed(() => !!view.value && text.value !== original.value)
 watch([text, dirty], () => {
   const untouchedTemplate = !view.value?.rev && text.value === TEMPLATE
-  workspace.interpDraft = dirty.value && !untouchedTemplate ? { rev: basedOn.value, text: text.value } : null
+  workspace.interpDraft = dirty.value && !untouchedTemplate ? { rev: basedOn.value, base: editBase.value, text: text.value } : null
 })
 const nextRev = computed(() => (revisions.value[0] ?? view.value?.rev ?? 0) + 1)
 
@@ -200,7 +207,7 @@ async function save() {
   saving.value = true
   notice.value = null
   try {
-    const res = await data.saveInterpretation(text.value)
+    const res = await data.saveInterpretation(text.value, editBase.value)
     problem.value = null
     if (res.created) {
       workspace.log(`Сохранена ревизия интерпретации rev ${res.rev}`)
@@ -213,6 +220,8 @@ async function save() {
     }
   }
   catch (e) {
+    // 409 — после ревизии, от которой правка, сохранили другую: это не ошибка в тексте.
+    conflict.value = e instanceof ApiError && e.status === 409
     problem.value = e instanceof Error ? e.message : 'Не удалось сохранить интерпретацию'
   }
   finally {
@@ -428,7 +437,7 @@ const TOKEN: Record<string, string> = {
     <ShellInspectorContent :title="selectedLine ? `Строка ${selectedLine}` : 'Предпросмотр'">
       <div v-if="view" class="pl-scroll flex-1">
         <div v-if="problem" class="m-3 border border-pl-st-violation/60 p-2.5" role="alert">
-          <CommonStatusBadge status="violation" label="ошибка в тексте" />
+          <CommonStatusBadge :status="conflict ? 'stale' : 'violation'" :label="conflict ? 'описание изменилось' : 'ошибка в тексте'" />
           <pre class="mt-2 mb-0 font-mono text-[11.5px] whitespace-pre-wrap text-pl-fg">{{ problem }}</pre>
         </div>
         <p v-if="notice" class="m-3 text-pl-st-rule" aria-live="polite">{{ notice }}</p>
