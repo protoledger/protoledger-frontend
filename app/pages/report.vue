@@ -11,6 +11,9 @@ const live = data.kind === 'live'
 const { data: view, error: sampleError, pending: samplePending, refresh: refreshSample } = await useAsyncData('report-sample', () => (live ? Promise.resolve(null) : data.getReport()))
 const { data: runs } = await useAsyncData('report-runs', () => data.listRuns(), { default: () => [] as { id: string, label: string, stale: boolean }[] })
 const runId = ref<string>('')
+// Номера прогонов с ведущими нулями: последний — наибольший.
+const latest = computed(() => [...runs.value].sort((a, b) => b.id.localeCompare(a.id))[0] ?? null)
+const shown = computed(() => (runId.value ? runs.value.find(r => r.id === runId.value) : latest.value) ?? null)
 const { data: report, error, pending, refresh } = await useAsyncData('report', () => (live ? data.generateReport('md', runId.value || undefined) : Promise.resolve(null)), { watch: [runId] })
 
 const blocks = computed(() => (report.value ? reportBlocks(report.value.content) : []))
@@ -69,6 +72,9 @@ const tableCls = 'mt-2.5 w-full border-collapse text-[12.5px] [&_td]:border-b [&
     </ShellSidePanel>
 
     <section class="pl-scroll min-w-0 flex-1 px-6 py-[18px]">
+      <p v-if="live && shown" class="mx-auto mt-0 mb-2 max-w-[820px] text-pl-muted">
+        {{ tr('report.basedOn', { id: shown.id }) }} · {{ safeText(shown.label) }}<span v-if="shown.stale" class="text-pl-st-stale"> · {{ tr('report.stale') }}</span>
+      </p>
       <!-- Отчёт движка: блоки выводятся только интерполяцией текста, HTML в страницу не попадает. -->
       <CommonAsyncState v-if="live" :pending="pending" :error="error?.message" :empty="!report" :empty-text="tr('report.empty')" @retry="refresh()">
         <article v-if="report" class="light mx-auto max-w-[820px] border-t-4 border-pl-wine bg-pl-card px-5 py-6 sm:px-11 sm:py-10 text-sm leading-relaxed text-pl-card-fg">
@@ -121,10 +127,10 @@ const tableCls = 'mt-2.5 w-full border-collapse text-[12.5px] [&_td]:border-b [&
       <div class="flex flex-col gap-1.5 p-3">
         <label for="report-run" class="pl-caption">{{ tr('report.runLabel') }}</label>
         <select id="report-run" v-model="runId" class="h-7 rounded border border-pl-line bg-pl-raise px-2 text-pl-fg">
-          <option value="">{{ tr('report.lastRun') }}</option>
+          <option value="">{{ latest ? tr('report.lastRunOf', { id: latest.id }) : tr('report.lastRun') }}</option>
           <option v-for="r in runs" :key="r.id" :value="r.id">{{ r.id }} · {{ safeText(r.label) }}{{ r.stale ? ` · ${tr('report.stale')}` : '' }}</option>
         </select>
-        <p class="m-0 text-pl-muted">{{ tr('report.staleNote') }}</p>
+        <p class="m-0 text-pl-muted">{{ tr('report.reproNote') }} {{ tr('report.staleNote') }}</p>
       </div>
       <div class="flex flex-col gap-2 border-t border-pl-line p-3">
         <button class="pl-btn pl-btn-primary justify-center" type="button" :disabled="!!exporting" @click="exportReport('html')">{{ exporting === 'html' ? tr('report.building') : tr('report.downloadHtml') }}</button>
