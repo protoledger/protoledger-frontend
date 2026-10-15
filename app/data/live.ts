@@ -57,6 +57,11 @@ export function createLiveSource(): ContractSource {
     async listConnections(query) {
       return unwrap(await api.GET('/api/connections', { params: { query } }))
     },
+    async getConnection(id) {
+      const res = await api.GET('/api/connections/{id}', { params: { path: { id } } })
+      if (res.response.status === 404) return null
+      return unwrap(res)
+    },
     async getStreamBytes(stream, from, len) {
       return unwrap(await api.GET('/api/streams/{stream}/bytes', { params: { path: { stream }, query: { from, len } } }))
     },
@@ -71,44 +76,67 @@ export function createLiveSource(): ContractSource {
     },
     watchJob(id, onUpdate) {
       const controller = new AbortController()
-      void streamJob(id, onUpdate, controller.signal)
+      void followJob(api, id, onUpdate, controller.signal)
       return () => controller.abort()
     },
   }
 }
 
+const FINISHED: Job['state'][] = ['succeeded', 'failed', 'cancelled']
+
+// Поток событий может оборваться (сон ноутбука, перезапуск окна): тогда спрашиваем задачу напрямую
+// и, если она ещё идёт, подписываемся снова — иначе индикатор «висит» навсегда.
+async function followJob(api: ReturnType<typeof apiClient>, id: string, onUpdate: (job: Job) => void, signal: AbortSignal) {
+  for (let attempt = 0; !signal.aborted; attempt++) {
+    let last: Job | null = null
+    try {
+      last = await streamJob(id, onUpdate, signal)
+    }
+    catch {
+      if (signal.aborted) return
+    }
+    if (last && FINISHED.includes(last.state)) return
+    try {
+      const res = await api.GET('/api/jobs/{id}', { params: { path: { id } } })
+      if (res.response.status === 404) return
+      const job = unwrap(res)
+      onUpdate(job)
+      if (FINISHED.includes(job.state)) return
+    }
+    catch {
+      // Движок недоступен — попробуем ещё раз после паузы.
+    }
+    await new Promise(r => setTimeout(r, Math.min(1000 * 2 ** attempt, 5000)))
+  }
+}
+
 // EventSource не умеет заголовков, поэтому SSE читаем через fetch со стримом.
-async function streamJob(id: string, onUpdate: (job: Job) => void, signal: AbortSignal) {
+async function streamJob(id: string, onUpdate: (job: Job) => void, signal: AbortSignal): Promise<Job | null> {
   const headers: Record<string, string> = { Accept: 'text/event-stream' }
   const token = readSessionToken()
   if (token) headers['X-Protoledger-Token'] = token
   let last: Job | null = null
-  try {
-    const res = await fetch(`/api/jobs/${encodeURIComponent(id)}/events`, { headers, signal })
-    if (!res.ok || !res.body) throw new ApiError(res.status, engineDownProblem(res.status))
-    const reader = res.body.pipeThrough(new TextDecoderStream()).getReader()
-    let buffer = ''
-    for (;;) {
-      const { value, done } = await reader.read()
-      if (done) break
-      const parsed = parseSseChunk(buffer + value)
-      buffer = parsed.rest
-      for (const ev of parsed.events) {
-        if (ev.event === 'state') {
-          last = JSON.parse(ev.data) as Job
-          onUpdate(last)
-        }
-        else if (ev.event === 'progress') {
-          const { stage, done: d, total, unit } = JSON.parse(ev.data) as JobProgress & { jobId: string }
-          const base: Job = last ?? { id, kind: 'import', state: 'running', progress: { stage, done: d, total, unit } }
-          last = { ...base, progress: { stage, done: d, total, unit } }
-          onUpdate(last)
-        }
+  const res = await fetch(`/api/jobs/${encodeURIComponent(id)}/events`, { headers, signal })
+  if (!res.ok || !res.body) throw new ApiError(res.status, engineDownProblem(res.status))
+  const reader = res.body.pipeThrough(new TextDecoderStream()).getReader()
+  let buffer = ''
+  for (;;) {
+    const { value, done } = await reader.read()
+    if (done) break
+    const parsed = parseSseChunk(buffer + value)
+    buffer = parsed.rest
+    for (const ev of parsed.events) {
+      if (ev.event === 'state') {
+        last = JSON.parse(ev.data) as Job
+        onUpdate(last)
+      }
+      else if (ev.event === 'progress') {
+        const { stage, done: d, total, unit } = JSON.parse(ev.data) as JobProgress & { jobId: string }
+        const base: Job = last ?? { id, kind: 'import', state: 'running', progress: { stage, done: d, total, unit } }
+        last = { ...base, progress: { stage, done: d, total, unit } }
+        onUpdate(last)
       }
     }
   }
-  catch (e) {
-    if (signal.aborted) return
-    throw e
-  }
+  return last
 }

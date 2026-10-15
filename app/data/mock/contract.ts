@@ -101,6 +101,10 @@ export function createMockContractSource(): ContractSource {
       const src = sources.find(s => s.sha256 === sha256)
       return stand.sourceDiagnostics(sha256, src?.frameCount ?? 0)
     },
+    async getConnection(id) {
+      await delay()
+      return stand.connections().find(c => c.id === id) ?? null
+    },
     async listConnections(query) {
       await delay()
       let items = stand.connections()

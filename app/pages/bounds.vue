@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onWatcherCleanup } from 'vue'
 import type { FramingDetail, FramingView } from '~/data/views'
 
 const data = useData()
@@ -16,31 +17,39 @@ const detailError = ref<string | null>(null)
 const applying = ref(false)
 const applied = ref<string | null>(null)
 
+// Поток или кандидат сменились раньше ответа — старый ответ не показываем.
 watch(stream, async (s) => {
+  let stale = false
+  onWatcherCleanup(() => { stale = true })
   if (!s) return
   view.value = null
   error.value = null
   try {
-    view.value = await data.getFraming(s.id)
+    const v = await data.getFraming(s.id)
+    if (stale) return
+    view.value = v
     selected.value = 0
   }
   catch (e) {
-    error.value = e instanceof Error ? e.message : 'Не удалось найти кандидатов'
+    if (!stale) error.value = e instanceof Error ? e.message : 'Не удалось найти кандидатов'
   }
 }, { immediate: true })
 
 const candidate = computed(() => view.value?.candidates[selected.value] ?? null)
 
 watch([candidate, stream], async ([c, s]) => {
+  let stale = false
+  onWatcherCleanup(() => { stale = true })
   detail.value = null
   detailError.value = null
   applied.value = null
   if (!c || !s) return
   try {
-    detail.value = await data.getFramingDetail(s.id, c.spec)
+    const d = await data.getFramingDetail(s.id, c.spec)
+    if (!stale) detail.value = d
   }
   catch (e) {
-    detailError.value = e instanceof Error ? e.message : 'Не удалось применить кандидата к потоку'
+    if (!stale) detailError.value = e instanceof Error ? e.message : 'Не удалось применить кандидата к потоку'
   }
 }, { immediate: true })
 

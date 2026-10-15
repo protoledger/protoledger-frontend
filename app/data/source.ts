@@ -75,6 +75,8 @@ export interface ContractSource {
   importActionLog(file: File, mapping: ActionLogMapping): Promise<ActionLogRecord>
   getDiagnostics(sha256: string): Promise<SourceDiagnostics>
   listConnections(query: ConnectionQuery): Promise<Page<Connection>>
+  /** Соединение по идентификатору — не зависит от страницы списка; null — такого нет. */
+  getConnection(id: string): Promise<Connection | null>
   getStreamBytes(stream: string, from: number, len: number): Promise<StreamBytes>
   getFrame(source: string, frameNo: number): Promise<Frame>
   listJobs(): Promise<Job[]>

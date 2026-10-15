@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onWatcherCleanup } from 'vue'
 import type { ClockOffset } from '~/api/types'
 import type { ActionMessageRef, ActionRow, ExchangeView } from '~/data/views'
 import { formatCount } from '~/utils/bytes'
@@ -30,16 +31,21 @@ async function loadMore() {
   }
 }
 
+// Стрелками по таблице выбор меняется быстрее ответов — показываем обмен только последнего действия.
 watch(selected, async (id) => {
+  let stale = false
+  onWatcherCleanup(() => { stale = true })
   exchange.value = null
   if (!id) return
   exchangeState.value = 'loading'
   try {
-    exchange.value = await data.getExchange(id)
-    exchangeState.value = exchange.value ? 'idle' : 'none'
+    const ex = await data.getExchange(id)
+    if (stale) return
+    exchange.value = ex
+    exchangeState.value = ex ? 'idle' : 'none'
   }
   catch {
-    exchangeState.value = 'error'
+    if (!stale) exchangeState.value = 'error'
   }
 }, { immediate: true })
 

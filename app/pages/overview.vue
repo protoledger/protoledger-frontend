@@ -22,12 +22,17 @@ const range = computed({
 // Якорь в адресе: ?conn=…&dir=ab&from=…&to=… — ссылка ведёт к тем же байтам.
 // Запоминаем его до того, как список соединений выберет первое по умолчанию.
 const initial = { ...route.query }
+const notFound = ref<string | null>(null)
 async function restoreFromQuery(query: typeof initial = initial) {
   const id = typeof query.conn === 'string' ? query.conn : null
   if (!id) return
-  const page = await data.listConnections({ limit: 500 })
-  const found = page.items.find(c => c.id === id)
-  if (!found) return
+  // Соединение берём по id: ссылка может вести дальше первой страницы списка.
+  const found = await data.getConnection(id)
+  if (!found) {
+    notFound.value = id
+    return
+  }
+  notFound.value = null
   if (query.dir === 'ab' || query.dir === 'ba') dir.value = query.dir
   select(found)
   const from = Number(query.from)
@@ -114,6 +119,7 @@ async function jumpToMessage(id: string, start: number, end: number) {
           <OverviewHexView ref="hex" v-model:range="range" :stream="stream" :at="at" :ensure="ensure" />
         </div>
       </template>
+      <p v-else-if="notFound" class="p-4 text-pl-st-violation" role="alert">Соединение {{ safeText(notFound) }} не найдено в проекте.</p>
       <p v-else class="p-4 text-pl-muted">Выберите соединение слева.</p>
     </section>
 
