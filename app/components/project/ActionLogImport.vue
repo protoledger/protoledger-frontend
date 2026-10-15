@@ -26,7 +26,7 @@ watch(() => props.file, async (file) => {
   const header = readCsvHeader(head)
   columns.value = header.columns
   Object.assign(mapping, guessMapping(header.columns, head), { delimiter: header.delimiter === ',' ? null : header.delimiter })
-  if (!header.columns.length) error.value = 'В первой строке файла не найдены названия колонок'
+  if (!header.columns.length) error.value = tr('project.noColumns')
   // Затем догадка движка: он пробует разобрать весь файл и объясняет выбор каждой колонки.
   reasons.value = {}
   trial.value = null
@@ -50,11 +50,11 @@ watch(() => props.file, async (file) => {
 }, { immediate: true })
 
 const TIME_FORMATS = [
-  ['rfc3339', 'RFC 3339 (2026-10-01T12:00:00Z)'],
-  ['unix_seconds', 'Unix, секунды'],
-  ['unix_millis', 'Unix, миллисекунды'],
-  ['unix_micros', 'Unix, микросекунды'],
-  ['unix_nanos', 'Unix, наносекунды'],
+  { value: 'rfc3339', get label() { return tr('project.timeRfc3339') } },
+  { value: 'unix_seconds', get label() { return tr('project.timeUnixSeconds') } },
+  { value: 'unix_millis', get label() { return tr('project.timeUnixMillis') } },
+  { value: 'unix_micros', get label() { return tr('project.timeUnixMicros') } },
+  { value: 'unix_nanos', get label() { return tr('project.timeUnixNanos') } },
 ] as const
 
 async function submit() {
@@ -66,7 +66,7 @@ async function submit() {
     emit('imported', done.value)
   }
   catch (e) {
-    error.value = e instanceof Error ? e.message : 'Не удалось импортировать журнал'
+    error.value = e instanceof Error ? e.message : tr('project.logImportFailed')
   }
   finally {
     busy.value = false
@@ -77,77 +77,77 @@ const field = 'h-[30px] w-full rounded border border-pl-line bg-pl-raise px-2 te
 </script>
 
 <template>
-  <UModal v-model:open="open" title="Импорт журнала действий" :description="file?.name">
+  <UModal v-model:open="open" :title="tr('project.logImportTitle')" :description="file?.name">
     <template #body>
       <div v-if="done" class="flex flex-col gap-2" aria-live="polite">
-        <CommonStatusBadge status="rule" :label="`разобрано действий: ${done.rows}`" />
-        <p v-if="done.skipped" class="m-0 text-pl-muted">Не разобрано строк: {{ done.skipped }}. Первые из них:</p>
+        <CommonStatusBadge status="rule" :label="tr('project.parsedActions', { n: done.rows })" />
+        <p v-if="done.skipped" class="m-0 text-pl-muted">{{ tr('project.skippedRows', { n: done.skipped }) }}</p>
         <ul v-if="done.errors.length" class="m-0 max-h-40 list-none overflow-auto p-0 text-pl-muted">
-          <li v-for="e in done.errors" :key="e.line">строка {{ e.line }}: {{ e.why }}</li>
+          <li v-for="e in done.errors" :key="e.line">{{ tr('project.line', { n: e.line }) }}: {{ e.why }}</li>
         </ul>
       </div>
       <form v-else id="action-log-form" class="grid grid-cols-[140px_minmax(0,1fr)] items-center gap-x-3 gap-y-2" @submit.prevent="submit">
         <p class="col-span-2 m-0 mb-1 text-pl-muted" aria-live="polite">
-          <template v-if="guessing">Движок подбирает колонки…</template>
-          <template v-else-if="trial">Колонки подобраны движком: пробный разбор — {{ trial.rows }} строк<template v-if="trial.skipped">, не разобрано {{ trial.skipped }}</template>. Проверьте и при необходимости поправьте.</template>
-          <template v-if="reasons.delimiter"> Разделитель {{ safeText(reasons.delimiter) }}.</template>
+          <template v-if="guessing">{{ tr('project.guessing') }}</template>
+          <template v-else-if="trial">{{ tr('project.guessed', { n: trial.rows, skipped: trial.skipped }) }}</template>
+          <template v-if="reasons.delimiter"> {{ tr('project.delimiter') }} {{ safeText(reasons.delimiter) }}.</template>
         </p>
-        <label for="al-time" class="text-pl-muted">Время *</label>
+        <label for="al-time" class="text-pl-muted">{{ tr('project.time') }} *</label>
         <select id="al-time" v-model="mapping.time" :class="field" required>
           <option v-for="c in columns" :key="c" :value="c">{{ c }}</option>
         </select>
         <p v-if="reasons.time" class="col-start-2 -mt-1 mb-0 text-xs text-pl-muted">{{ safeText(reasons.time) }}</p>
-        <label for="al-format" class="text-pl-muted">Формат времени</label>
+        <label for="al-format" class="text-pl-muted">{{ tr('project.timeFormat') }}</label>
         <select id="al-format" v-model="mapping.timeFormat" :class="field">
-          <option v-for="[v, l] in TIME_FORMATS" :key="v" :value="v">{{ l }}</option>
+          <option v-for="f in TIME_FORMATS" :key="f.value" :value="f.value">{{ f.label }}</option>
         </select>
-        <label for="al-action" class="text-pl-muted">Действие *</label>
+        <label for="al-action" class="text-pl-muted">{{ tr('project.action') }} *</label>
         <select id="al-action" v-model="mapping.action" :class="field" required>
           <option v-for="c in columns" :key="c" :value="c">{{ c }}</option>
         </select>
         <p v-if="reasons.action" class="col-start-2 -mt-1 mb-0 text-xs text-pl-muted">{{ safeText(reasons.action) }}</p>
-        <label for="al-params" class="text-pl-muted">Параметры</label>
+        <label for="al-params" class="text-pl-muted">{{ tr('project.params') }}</label>
         <select id="al-params" v-model="mapping.params" :class="field">
-          <option :value="null">— нет —</option>
+          <option :value="null">{{ tr('project.none') }}</option>
           <option v-for="c in columns" :key="c" :value="c">{{ c }}</option>
         </select>
         <p v-if="reasons.params" class="col-start-2 -mt-1 mb-0 text-xs text-pl-muted">{{ safeText(reasons.params) }}</p>
-        <label for="al-result" class="text-pl-muted">Результат</label>
+        <label for="al-result" class="text-pl-muted">{{ tr('project.result') }}</label>
         <select id="al-result" v-model="mapping.result" :class="field">
-          <option :value="null">— нет —</option>
+          <option :value="null">{{ tr('project.none') }}</option>
           <option v-for="c in columns" :key="c" :value="c">{{ c }}</option>
         </select>
         <p v-if="reasons.result" class="col-start-2 -mt-1 mb-0 text-xs text-pl-muted">{{ safeText(reasons.result) }}</p>
-        <label for="al-source" class="text-pl-muted">Колонка записи</label>
-        <select id="al-source" v-model="mapping.source" :class="field" title="Если журнал описывает несколько записей: колонка с именем файла записи для каждого действия">
-          <option :value="null">— нет —</option>
+        <label for="al-source" class="text-pl-muted">{{ tr('project.captureColumn') }}</label>
+        <select id="al-source" v-model="mapping.source" :class="field" :title="tr('project.sourceColumnHint')">
+          <option :value="null">{{ tr('project.none') }}</option>
           <option v-for="c in columns" :key="c" :value="c">{{ c }}</option>
         </select>
         <p v-if="reasons.source" class="col-start-2 -mt-1 mb-0 text-xs text-pl-muted">{{ safeText(reasons.source) }}</p>
-        <label for="al-pformat" class="text-pl-muted">Формат параметров</label>
+        <label for="al-pformat" class="text-pl-muted">{{ tr('project.paramsFormat') }}</label>
         <select id="al-pformat" v-model="mapping.paramsFormat" :class="field">
-          <option value="kv">ключ=значение;…</option>
+          <option value="kv">{{ tr('project.kv') }}</option>
           <option value="json">JSON</option>
         </select>
-        <label for="al-rformat" class="text-pl-muted">Формат результата</label>
+        <label for="al-rformat" class="text-pl-muted">{{ tr('project.resultFormat') }}</label>
         <select id="al-rformat" v-model="mapping.resultFormat" :class="field">
-          <option value="kv">ключ=значение;…</option>
+          <option value="kv">{{ tr('project.kv') }}</option>
           <option value="json">JSON</option>
         </select>
-        <label for="al-utc" class="text-pl-muted">Пояс, мин от UTC</label>
+        <label for="al-utc" class="text-pl-muted">{{ tr('project.utcOffset') }}</label>
         <input id="al-utc" v-model.number="mapping.utcOffsetMinutes" type="number" step="15" :class="field">
-        <label for="al-clock" class="text-pl-muted">Сдвиг часов, мс</label>
+        <label for="al-clock" class="text-pl-muted">{{ tr('project.clockOffset') }}</label>
         <input id="al-clock" v-model.number="mapping.clockOffsetMs" type="number" :class="field">
         <p class="col-span-2 m-0 text-xs text-pl-muted">
-          Колонка записи нужна, если один журнал описывает несколько записей. Сдвиг часов — поправка, если часы клиента расходились с часами записи.
+          {{ tr('project.logHint') }}
         </p>
       </form>
       <p v-if="error" class="mt-3 mb-0 text-pl-st-violation" role="alert">{{ error }}</p>
     </template>
     <template #footer>
       <div class="flex w-full justify-end gap-2.5">
-        <button class="pl-btn" type="button" @click="open = false">{{ done ? 'Закрыть' : 'Отмена' }}</button>
-        <button v-if="!done" class="pl-btn pl-btn-primary" type="submit" form="action-log-form" :disabled="busy || !columns.length">{{ busy ? 'Импортирую…' : 'Импортировать' }}</button>
+        <button class="pl-btn" type="button" @click="open = false">{{ done ? tr('common.close') : tr('common.cancel') }}</button>
+        <button v-if="!done" class="pl-btn pl-btn-primary" type="submit" form="action-log-form" :disabled="busy || !columns.length">{{ busy ? tr('project.importing') : tr('project.importAction') }}</button>
       </div>
     </template>
   </UModal>

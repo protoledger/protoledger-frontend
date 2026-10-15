@@ -14,11 +14,11 @@ onMounted(() => { native.value = hasNativeFolderPicker() })
 async function choose() {
   error.value = null
   try {
-    const picked = await pickFolder('Папка проекта')
+    const picked = await pickFolder(tr('project.folder'))
     if (picked) path.value = picked
   }
   catch (e) {
-    error.value = e instanceof Error ? e.message : 'Не удалось открыть выбор папки'
+    error.value = e instanceof Error ? e.message : tr('project.pickFailed')
   }
 }
 const busy = ref<'create' | 'open' | null>(null)
@@ -27,20 +27,20 @@ const error = ref<string | null>(null)
 async function submit(mode: 'create' | 'open') {
   const value = path.value.trim()
   if (!value) {
-    error.value = 'Укажите папку проекта'
+    error.value = tr('project.pathRequired')
     return
   }
   busy.value = mode
   error.value = null
   try {
     await project.open(value, mode)
-    workspace.log(`${mode === 'create' ? 'Создан' : 'Открыт'} проект ${value}`)
+    workspace.log(mode === 'create' ? tr('project.createdProject', { path: value }) : tr('project.openedProject', { path: value }))
     // При открытии движок заново разбирает записи фоновыми задачами.
     await jobs.load()
     emit('opened')
   }
   catch (e) {
-    error.value = e instanceof Error ? e.message : 'Не удалось открыть проект'
+    error.value = e instanceof Error ? e.message : tr('project.openFailed')
   }
   finally {
     busy.value = null
@@ -50,13 +50,13 @@ async function submit(mode: 'create' | 'open') {
 
 <template>
   <form class="flex max-w-xl flex-col gap-3 p-4" @submit.prevent="submit('open')">
-    <h1 v-if="props.title !== ''" class="m-0 font-display text-2xl font-semibold text-pl-fg-strong">{{ props.title ?? 'Проект не открыт' }}</h1>
+    <h1 v-if="props.title !== ''" class="m-0 font-display text-2xl font-semibold text-pl-fg-strong">{{ props.title ?? tr('shell.top.noProject') }}</h1>
     <p class="m-0 text-pl-muted">
-      Проект — папка <code class="font-mono">*.protoledger</code> с копиями записей, журналами и результатами.
-      Относительный путь считается от каталога проектов движка.
+      {{ tr('project.openIntro') }} <code class="font-mono">*.protoledger</code> {{ tr('project.openIntroRest') }}
+      {{ tr('project.relativePath') }}
     </p>
     <label class="flex flex-col gap-1.5">
-      <span class="pl-caption">Папка проекта</span>
+      <span class="pl-caption">{{ tr('project.folder') }}</span>
       <span class="flex gap-2">
         <input
           id="project-path"
@@ -66,12 +66,12 @@ async function submit(mode: 'create' | 'open') {
           autocomplete="off"
           spellcheck="false"
         >
-        <button v-if="native" class="pl-btn h-[30px]" type="button" @click="choose">Выбрать папку…</button>
+        <button v-if="native" class="pl-btn h-[30px]" type="button" @click="choose">{{ tr('project.pickFolder') }}</button>
       </span>
     </label>
     <div class="flex items-center gap-2.5">
-      <button class="pl-btn pl-btn-primary" type="submit" :disabled="busy !== null">{{ busy === 'open' ? 'Открываю…' : 'Открыть' }}</button>
-      <button class="pl-btn" type="button" :disabled="busy !== null" @click="submit('create')">{{ busy === 'create' ? 'Создаю…' : 'Создать новый' }}</button>
+      <button class="pl-btn pl-btn-primary" type="submit" :disabled="busy !== null">{{ busy === 'open' ? tr('project.opening') : tr('project.open') }}</button>
+      <button class="pl-btn" type="button" :disabled="busy !== null" @click="submit('create')">{{ busy === 'create' ? tr('project.creating') : tr('project.create') }}</button>
     </div>
     <p v-if="error" class="m-0 text-pl-st-violation" role="alert">{{ error }}</p>
   </form>

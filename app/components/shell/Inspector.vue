@@ -1,7 +1,8 @@
 <script setup lang="ts">
 const workspace = useWorkspaceStore()
 const { compact } = useViewport()
-const inspectorTitle = useState<string>('inspector-title', () => 'Свойства')
+// Пустой заголовок — экран своего не задал: показываем «Свойства» на языке интерфейса.
+const inspectorTitle = useState<string>('inspector-title', () => '')
 const { onPointerDown, onKeydown } = useResizer(() => workspace.inspector, 'left', 280, 720)
 
 // На узком экране «Свойства» выезжают справа поверх рабочей области. Сама панель всегда в DOM:
@@ -24,12 +25,12 @@ function close() {
     v-if="rail && !workspace.focus"
     class="flex h-full w-[30px] shrink-0 flex-col items-center gap-2 border-l border-pl-line bg-pl-chrome pt-2 text-pl-muted hover:bg-pl-raise hover:text-pl-fg"
     type="button"
-    title="Развернуть «Свойства» (Alt+0)"
+    :title="tr('shell.expandProps')"
     :aria-expanded="overlay"
     @click="open"
   >
     <UIcon name="i-lucide-panel-right-open" class="size-4" aria-hidden="true" />
-    <span class="font-display text-xs font-semibold [writing-mode:vertical-rl]">Свойства</span>
+    <span class="font-display text-xs font-semibold [writing-mode:vertical-rl]">{{ tr('shell.properties') }}</span>
   </button>
   <div v-if="overlay" class="fixed inset-0 z-40 bg-black/40" aria-hidden="true" @click="close" />
   <aside
@@ -37,11 +38,11 @@ function close() {
     class="flex min-h-0 flex-col border-l border-pl-line bg-pl-bg"
     :class="compact ? 'fixed inset-y-0 right-0 z-50 shadow-xl' : 'relative shrink-0'"
     :style="{ width: compact ? `min(90vw, ${workspace.inspector.width}px)` : `${workspace.inspector.width}px` }"
-    aria-label="Свойства"
+    :aria-label="tr('shell.properties')"
     @keydown.esc="compact && close()"
   >
-    <CommonPanelHeader :title="inspectorTitle">
-      <button class="grid size-6 place-items-center rounded text-pl-muted hover:bg-pl-raise hover:text-pl-fg" type="button" title="Свернуть «Свойства» (Alt+0)" @click="close">
+    <CommonPanelHeader :title="inspectorTitle || tr('shell.properties')">
+      <button class="grid size-6 place-items-center rounded text-pl-muted hover:bg-pl-raise hover:text-pl-fg" type="button" :title="tr('shell.collapseProps')" @click="close">
         <UIcon :name="compact ? 'i-lucide-x' : 'i-lucide-panel-right-close'" class="size-4" aria-hidden="true" />
       </button>
     </CommonPanelHeader>
@@ -55,7 +56,7 @@ function close() {
       :aria-valuenow="workspace.inspector.width"
       aria-valuemin="280"
       aria-valuemax="720"
-      aria-label="Ширина «Свойства»: стрелки влево и вправо"
+      :aria-label="tr('shell.panelWidth', { title: tr('shell.properties') })"
       tabindex="0"
       @pointerdown="onPointerDown"
       @keydown="onKeydown"

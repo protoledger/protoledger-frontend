@@ -6,9 +6,9 @@ defineEmits<{ retry: [] }>()
 <template>
   <div v-if="error" class="flex flex-col items-start gap-2.5 p-4 text-pl-muted" role="alert">
     <span>{{ error }}</span>
-    <button class="pl-btn" type="button" @click="$emit('retry')">Повторить</button>
+    <button class="pl-btn" type="button" @click="$emit('retry')">{{ tr('common.retry') }}</button>
   </div>
-  <div v-else-if="pending && empty" class="p-4 text-pl-muted" aria-live="polite">Загрузка…</div>
-  <div v-else-if="empty" class="p-4 text-pl-muted">{{ emptyText ?? 'Пусто' }}</div>
+  <div v-else-if="pending && empty" class="p-4 text-pl-muted" aria-live="polite">{{ tr('common.loading') }}</div>
+  <div v-else-if="empty" class="p-4 text-pl-muted">{{ emptyText ?? tr('common.empty') }}</div>
   <slot v-else />
 </template>

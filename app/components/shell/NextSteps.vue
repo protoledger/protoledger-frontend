@@ -6,14 +6,14 @@ const workspace = useWorkspaceStore()
 const route = useRoute()
 
 const SCREEN: Record<NextStepScreen, { path: string, label: string }> = {
-  sources: { path: '/project', label: 'Проект' },
-  actions: { path: '/actions', label: 'Действия' },
-  framing: { path: '/bounds', label: 'Границы' },
-  interpretation: { path: '/interpretation', label: 'Интерпретация' },
-  hypotheses: { path: '/hypotheses', label: 'Гипотезы' },
-  verification: { path: '/verify', label: 'Проверка' },
-  questions: { path: '/hypotheses', label: 'Вопросы' },
-  report: { path: '/report', label: 'Отчёт' },
+  sources: { path: '/project', get label() { return tr('screen.project') } },
+  actions: { path: '/actions', get label() { return tr('screen.actions') } },
+  framing: { path: '/bounds', get label() { return tr('screen.bounds') } },
+  interpretation: { path: '/interpretation', get label() { return tr('screen.interpretation') } },
+  hypotheses: { path: '/hypotheses', get label() { return tr('screen.hypotheses.short') } },
+  verification: { path: '/verify', get label() { return tr('screen.verify') } },
+  questions: { path: '/hypotheses', get label() { return tr('screen.questions') } },
+  report: { path: '/report', get label() { return tr('screen.report') } },
 }
 
 const first = computed(() => project.nextSteps[0] ?? null)
@@ -25,10 +25,10 @@ const expanded = ref(false)
   <section
     v-if="first && !workspace.focus && !workspace.nextStepsHidden"
     class="border-b border-pl-line bg-pl-wine-soft/40"
-    aria-label="Что дальше"
+    :aria-label="tr('shell.next.title')"
   >
     <div class="flex items-center gap-3 px-3 py-1.5 max-sm:flex-wrap max-sm:gap-x-2 max-sm:gap-y-1">
-      <span class="pl-caption flex-none max-sm:hidden">Что дальше</span>
+      <span class="pl-caption flex-none max-sm:hidden">{{ tr('shell.next.title') }}</span>
       <span class="min-w-0 truncate max-sm:order-first max-sm:w-full max-sm:whitespace-normal">
         <b class="text-pl-fg-strong">{{ safeText(first.title) }}</b>
         <span class="text-pl-muted"> — {{ safeText(first.detail) }}</span>
@@ -41,10 +41,10 @@ const expanded = ref(false)
         {{ SCREEN[first.screen].label }}
       </NuxtLink>
       <button v-if="rest.length" class="pl-btn pl-btn-ghost h-6 flex-none" type="button" :aria-expanded="expanded" @click="expanded = !expanded">
-        ещё {{ rest.length }}
+        {{ tr('shell.next.more', { n: rest.length }) }}
         <UIcon :name="expanded ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'" class="size-3.5" aria-hidden="true" />
       </button>
-      <button class="ml-auto grid size-6 flex-none place-items-center rounded text-pl-muted hover:bg-pl-raise hover:text-pl-fg" type="button" title="Скрыть подсказку" @click="workspace.nextStepsHidden = true">
+      <button class="ml-auto grid size-6 flex-none place-items-center rounded text-pl-muted hover:bg-pl-raise hover:text-pl-fg" type="button" :title="tr('shell.next.hide')" @click="workspace.nextStepsHidden = true">
         <UIcon name="i-lucide-x" class="size-3.5" aria-hidden="true" />
       </button>
     </div>

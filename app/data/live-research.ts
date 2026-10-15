@@ -1,6 +1,8 @@
 import { ApiError, apiClient, unwrap } from '~/api/client'
 import type { components } from '~/api/schema'
+import type { MessageKey } from '~/i18n'
 import { base64ToBytes, formatCount, hexByte } from '~/utils/bytes'
+import { intlLocale, tr } from '~/utils/i18n'
 import type { KnowledgeStatus } from '~/utils/status'
 import { collectConnections } from './connections'
 import type { ContractSource, ResearchSource } from './source'
@@ -10,12 +12,12 @@ import type { CompareRow, CompareView, ExchangeSide, ExchangeView, FieldViolatio
 type S = components['schemas']
 
 const CATEGORY: Record<string, { label: string, status: KnowledgeStatus }> = {
-  matched: { label: 'Совпало', status: 'rule' },
-  violated: { label: 'Нарушено', status: 'violation' },
-  incomplete: { label: 'Неполное', status: 'gap' },
-  ambiguous: { label: 'Неоднозначное', status: 'ambiguous' },
-  unmatched: { label: 'Не охвачено', status: 'unknown' },
-  limit_exceeded: { label: 'Превышен предел', status: 'violation' },
+  matched: { get label() { return tr('data.cat.matched') }, status: 'rule' },
+  violated: { get label() { return tr('data.cat.violated') }, status: 'violation' },
+  incomplete: { get label() { return tr('data.cat.incomplete') }, status: 'gap' },
+  ambiguous: { get label() { return tr('data.cat.ambiguous') }, status: 'ambiguous' },
+  unmatched: { get label() { return tr('data.cat.unmatched') }, status: 'unknown' },
+  limit_exceeded: { get label() { return tr('data.cat.limit_exceeded') }, status: 'violation' },
 }
 
 const HYPOTHESIS_STATUS: Record<S['HypothesisStatus'], Hypothesis['status']> = {
@@ -33,10 +35,10 @@ const API_HYPOTHESIS_STATUS: Record<Hypothesis['status'], S['HypothesisStatus']>
 }
 
 const COUNTER_REASON: Record<S['FramingCounter']['reason'], { status: KnowledgeStatus, note: string }> = {
-  bad_length: { status: 'violation', note: 'значение длины вне допустимого' },
-  overrun: { status: 'gap', note: 'сообщение выходит за конец участка' },
-  short_header: { status: 'gap', note: 'не хватает байтов заголовка' },
-  dissimilar: { status: 'unknown', note: 'начало не похоже на остальные' },
+  bad_length: { status: 'violation', get note() { return tr('data.counter.bad_length') } },
+  overrun: { status: 'gap', get note() { return tr('data.counter.overrun') } },
+  short_header: { status: 'gap', get note() { return tr('data.counter.short_header') } },
+  dissimilar: { status: 'unknown', get note() { return tr('data.counter.dissimilar') } },
 }
 
 const ACTIONS_PAGE = 200
@@ -67,7 +69,7 @@ export function pickExchange(ex: S['Exchange'], used = new Set<string>()): { req
 
 function clock(iso: string) {
   const d = new Date(iso)
-  return `${d.toLocaleTimeString('ru-RU', { timeZone: 'UTC' })}.${String(d.getUTCMilliseconds()).padStart(3, '0')}`
+  return `${d.toLocaleTimeString(intlLocale(), { timeZone: 'UTC' })}.${String(d.getUTCMilliseconds()).padStart(3, '0')}`
 }
 
 function pairs(obj: Record<string, number | string>) {
@@ -75,18 +77,13 @@ function pairs(obj: Record<string, number | string>) {
   return entries.length ? entries.map(([k, v]) => `${k} = ${v}`).join(', ') : '—'
 }
 
-const STALE_REASON: Record<S['StaleReason'], string> = {
-  interpretation: 'изменена интерпретация',
-  settings: 'изменены настройки сборки',
-  sources: 'записи пропали из проекта',
-  action_logs: 'изменились журналы действий',
-}
+const staleReason = (r: S['StaleReason']) => tr(`data.stale.${r}` as MessageKey)
 
 // Итог теста гипотезы: «поддержана на N», а не «доказана».
 const normTest = (t: string) => t.replace(/\s+/g, '')
 
 function verdictLabel(v: 'untested' | 'no_counterexample' | 'refuted' | null) {
-  return v === 'refuted' ? 'опровергнута' : v === 'no_counterexample' ? 'контрпримеров нет' : v === 'untested' ? 'не проверена' : '—'
+  return v === 'refuted' ? tr('data.v.refuted') : v === 'no_counterexample' ? tr('data.v.none') : v === 'untested' ? tr('data.v.untested') : '—'
 }
 
 // Сравнивать имеет смысл только прогоны одного корпуса: иначе разница — это другие данные, а не правка.
@@ -106,18 +103,18 @@ export function hypothesisChanges(items: S['RunHypothesisChange'][]): Verificati
     .map((h) => {
       const parts: string[] = []
       if (h.from !== h.to) parts.push(`${verdictLabel(h.from)} → ${verdictLabel(h.to)}`)
-      if (h.counterexamplesFrom !== h.counterexamplesTo) parts.push(`контрпримеров ${formatCount(h.counterexamplesFrom)} → ${formatCount(h.counterexamplesTo)}`)
-      if (h.applicableFrom !== h.applicableTo) parts.push(`проверок ${formatCount(h.applicableFrom)} → ${formatCount(h.applicableTo)}`)
+      if (h.counterexamplesFrom !== h.counterexamplesTo) parts.push(tr('data.ch.cx', { from: formatCount(h.counterexamplesFrom), to: formatCount(h.counterexamplesTo) }))
+      if (h.applicableFrom !== h.applicableTo) parts.push(tr('data.ch.checks', { from: formatCount(h.applicableFrom), to: formatCount(h.applicableTo) }))
       return {
         id: h.id,
-        text: parts.join(', ') || (h.kind === 'added' ? 'добавлена' : h.kind === 'removed' ? 'удалена' : 'изменён тест'),
+        text: parts.join(', ') || (h.kind === 'added' ? tr('data.ch.added') : h.kind === 'removed' ? tr('data.ch.removed') : tr('data.ch.test')),
         tone: h.kind === 'fixed' ? 'good' : h.kind === 'regressed' ? 'bad' : 'neutral',
       }
     })
 }
 
 function staleText(run: { stale: boolean, staleReasons: S['StaleReason'][] }) {
-  return run.stale ? run.staleReasons.map(r => STALE_REASON[r]).join(', ') || 'устарел' : null
+  return run.stale ? run.staleReasons.map(staleReason).join(', ') || tr('data.stale') : null
 }
 
 /** Якорь движка → адрес «Обзора»: поток `<запись>:cNNNN:ab` — соединение и направление. */
@@ -148,9 +145,9 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
 
   // Итог гипотезы в прогоне — тем же языком, что на «Проверке».
   function runVerdict(h: S['RunHypothesis'], runId: string): { status: KnowledgeStatus, label: string } {
-    if (h.verdict === 'refuted') return { status: 'violation', label: `${runId}: опровергнута · ${formatCount(h.counterexamples)}` }
+    if (h.verdict === 'refuted') return { status: 'violation', label: tr('data.run.refuted', { run: runId, n: formatCount(h.counterexamples) }) }
     if (h.verdict === 'no_counterexample') return { status: 'hypothesis', label: `${runId}: ${formatCount(h.held)} / ${formatCount(h.applicable)}` }
-    return { status: 'unknown', label: `${runId}: не проверена` }
+    return { status: 'unknown', label: tr('data.run.untested', { run: runId }) }
   }
 
   // История статуса — по последним прогонам: в каждом прогоне свой итог теста.
@@ -165,8 +162,8 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
         run: d.id,
         time: `rev ${d.revision ?? '—'}`,
         status,
-        label: h.verdict === 'refuted' ? `опровергнута · ${formatCount(h.counterexamples)}` : h.verdict === 'no_counterexample' ? `поддержана ${formatCount(h.held)} / ${formatCount(h.applicable)}` : 'не проверена',
-        scope: `${d.sources.length} зап.`,
+        label: h.verdict === 'refuted' ? tr('data.h.refuted', { n: formatCount(h.counterexamples) }) : h.verdict === 'no_counterexample' ? tr('data.h.supported', { held: formatCount(h.held), all: formatCount(h.applicable) }) : tr('data.v.untested'),
+        scope: tr('data.caps', { n: d.sources.length }),
         stale: runs[i]!.stale,
       }]
     })
@@ -209,14 +206,14 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       byType.set(m.messageId, fields)
     }
     const tree: InterpretationTreeNode[] = [{
-      label: 'Типы сообщений',
+      label: tr('data.tree.types'),
       badge: String(byType.size),
       children: [
         ...[...byType].map(([name, fields]) => ({
           label: name,
           children: [...fields].map(([field, status]) => ({ label: field, status: status as KnowledgeStatus })),
         })),
-        ...(untyped ? [{ label: `без типа · ${untyped}`, status: 'unknown' as const }] : []),
+        ...(untyped ? [{ label: `${tr('data.untyped')} · ${untyped}`, status: 'unknown' as const }] : []),
       ],
     }]
     const counts = preview.counts ?? {}
@@ -237,13 +234,13 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       preview: {
         stream: shortStream(stream),
         rows: preview.outOfScope
-          ? [{ label: 'Поток', value: 'вне области применимости' }]
+          ? [{ label: tr('data.pv.stream'), value: tr('data.pv.outOfScope') }]
           : [
-              { label: 'Сообщений', value: formatCount(total) },
+              { label: tr('data.messages'), value: formatCount(total) },
               ...Object.entries(counts).filter(([, c]) => c > 0).map(([k, c]) => ({ label: CATEGORY[k]?.label ?? k, value: formatCount(c) })),
-              { label: 'Неизвестных байтов', value: formatCount(preview.unknownBytes ?? 0) },
+              { label: tr('data.unknownBytes'), value: formatCount(preview.unknownBytes ?? 0) },
               // Структура и нарушения собираются по первой странице сообщений — говорим, если она не вся.
-              ...(preview.items.length < total ? [{ label: 'Структура и нарушения', value: `по первым ${formatCount(preview.items.length)} из ${formatCount(total)}` }] : []),
+              ...(preview.items.length < total ? [{ label: tr('data.pv.partial'), value: tr('data.pv.firstOf', { n: formatCount(preview.items.length), total: formatCount(total) }) }] : []),
             ],
       },
     }
@@ -261,7 +258,7 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       ])
       const sorted = [...revs].sort((a, b) => b.rev - a.rev)
       return {
-        title: project?.name ?? 'Проект',
+        title: project?.name ?? tr('data.project'),
         createdAt: null,
         actionCount: logs.items.reduce((n, l) => n + l.rows, 0),
         interpretationRevs: sorted.map((r, i) => ({ rev: r.rev, current: i === 0 })),
@@ -281,10 +278,10 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
         name: l.name,
         rows: l.rows,
         mapping: [
-          { column: l.mapping.time, field: 'Время' },
-          { column: l.mapping.action, field: 'Действие' },
-          ...(l.mapping.params ? [{ column: l.mapping.params, field: 'Параметры' }] : []),
-          ...(l.mapping.result ? [{ column: l.mapping.result, field: 'Результат' }] : []),
+          { column: l.mapping.time, field: tr('data.col.time') },
+          { column: l.mapping.action, field: tr('data.col.action') },
+          ...(l.mapping.params ? [{ column: l.mapping.params, field: tr('data.col.params') }] : []),
+          ...(l.mapping.result ? [{ column: l.mapping.result, field: tr('data.col.result') }] : []),
         ],
         status: l.rows > 0 ? 'mapped' as const : 'needs_mapping' as const,
       }))
@@ -305,10 +302,10 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       catch (e) {
         // Без сохранённой интерпретации нет сообщений — обмены искать не по чему.
         if (!(e instanceof ApiError && e.status === 409)) throw e
-        exchangeNote = 'Обмены появятся после сохранения описания: без границ сообщений их не найти.'
+        exchangeNote = tr('data.ex.note')
       }
       const byLine = new Map((exchanges?.items ?? []).map(x => [x.line, x]))
-      const ref = (m: S['ActionMessage'] | null) => (m ? { label: m.messageId ?? 'без типа', stream: m.stream, start: m.start, end: m.end } : null)
+      const ref = (m: S['ActionMessage'] | null) => (m ? { label: m.messageId ?? tr('data.untyped'), stream: m.stream, start: m.start, end: m.end } : null)
       return {
         logs,
         log,
@@ -350,7 +347,7 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
         if (!p) return null
         const frame = p.frameNo ?? ex.frames.find(f => f.stream === p.stream && f.start <= p.start && p.start < f.end)?.frameNo
         return {
-          title: `${title}${frame ? ` · кадр ${frame}` : ''} · +${Math.round(p.time - actionAt)} мс`,
+          title: tr('data.ex.title', { title, frame: frame ? tr('data.ex.frame', { n: frame }) : '', ms: Math.round(p.time - actionAt) }),
           direction,
           bytes: await hexOf(p.stream, p.start, p.end),
           highlight: [],
@@ -362,7 +359,7 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
         label: `${ex.action.action} · ${pairs(ex.action.params)}`,
         windowFrom: clock(ex.window.from),
         windowTo: clock(ex.window.to),
-        windowLabel: `окно ± ${Math.round((to - from) / 2)} мс`,
+        windowLabel: tr('data.ex.window', { ms: Math.round((to - from) / 2) }),
         events: [
           { at: pos(actionAt), kind: 'action' },
           ...ex.frames.map(f => ({
@@ -372,11 +369,11 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
               : response && f.stream === response.stream && f.start <= response.start && response.start < f.end ? 'response' as const : 'other' as const,
           })),
         ],
-        request: await side(request, 'Запрос', 'a → b'),
-        response: await side(response, 'Ответ', 'b → a'),
+        request: await side(request, tr('data.request'), 'a → b'),
+        response: await side(response, tr('data.response'), 'b → a'),
         note: ex.interpretationApplied
-          ? 'Запрос и ответ выделены по сообщениям интерпретации.'
-          : 'Интерпретации нет — запрос и ответ показаны по кадрам TCP.',
+          ? tr('data.ex.byMsg')
+          : tr('data.ex.byTcp'),
       }
       return view
     },
@@ -400,10 +397,10 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       const sameRev = runs.filter(r => r.revision === doc.rev)
       const chosen = sameRev.find(r => corpusKey(r.corpus) === FULL_CORPUS) ?? sameRev[0]
       const detail = chosen ? unwrap(await api.GET('/api/runs/{id}', { params: { path: { id: chosen.id } } })) : null
-      const partial = chosen && corpusKey(chosen.corpus) !== FULL_CORPUS ? ' (часть корпуса)' : ''
+      const partial = chosen && corpusKey(chosen.corpus) !== FULL_CORPUS ? tr('data.partCorpus') : ''
       const runIssues = (detail?.hypotheses ?? []).filter(h => h.verdict === 'refuted').map(h => ({
         id: h.id,
-        label: `опровергнута в ${detail!.id}${partial} · контрпримеров ${formatCount(h.counterexamples)}`,
+        label: tr('data.issue.refuted', { run: detail!.id, partial, n: formatCount(h.counterexamples) }),
         runId: detail!.id,
       }))
       return {
@@ -478,8 +475,8 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
         status,
         support: test && test.verdict !== 'untested' ? `${formatCount(test.held)} / ${formatCount(test.applicable)}` : '',
         claim: h.statement,
-        test: h.test ?? 'теста нет',
-        scope: test ? `применим к ${formatCount(test.applicable)} сообщ., выполнился на ${formatCount(test.held)}` : 'все записи проекта',
+        test: h.test ?? tr('data.noTest'),
+        scope: test ? tr('data.scope.test', { n: formatCount(test.applicable), held: formatCount(test.held) }) : tr('data.scope.all'),
         basis: h.basis.length ? h.basis.join(', ') : '—',
         marked: HYPOTHESIS_STATUS[h.status],
         counterexamples: (test?.counterexamples ?? []).map(c => ({
@@ -488,7 +485,7 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
           got: pairs(c.values),
           anchor: { source: c.anchor.source, stream: c.anchor.stream, start: c.anchor.start, end: c.anchor.end },
         })),
-        note: [h.note, test && test.counterexamplesTotal > test.counterexamples.length ? `Показано ${test.counterexamples.length} из ${test.counterexamplesTotal} контрпримеров.` : null].filter(Boolean).join(' '),
+        note: [h.note, test && test.counterexamplesTotal > test.counterexamples.length ? tr('data.cxShown', { n: test.counterexamples.length, total: test.counterexamplesTotal }) : null].filter(Boolean).join(' '),
         history: h.test ? await historyOf(h.test) : [],
       }
     },
@@ -515,16 +512,16 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
         })),
         // Соединений больше предела — честно говорим, что поиск видит не все.
         ...(conns.total > conns.items.length
-          ? [{ group: 'limit' as const, label: `ещё ${formatCount(conns.total - conns.items.length)} соединений не в поиске — найдите их на «Обзоре» фильтром по записи или порту`, suffix: '', path: '/overview', query: {} }]
+          ? [{ group: 'limit' as const, label: tr('data.search.more', { n: formatCount(conns.total - conns.items.length) }), suffix: '', path: '/overview', query: {} }]
           : []),
         ...hyps.items.map(h => ({ group: 'hypothesis' as const, label: `${h.id} · ${h.statement}`, suffix: HYPOTHESIS_STATUS[h.status], path: '/hypotheses', query: { h: h.id } })),
-        ...runs.items.map(r => ({ group: 'run' as const, label: `${r.id} · rev ${r.revision ?? '—'} · ${r.sources.length} зап.`, suffix: r.stale ? 'устарел' : 'актуален', path: '/verify', query: { run: r.id } })),
-        ...obs.items.map(o => ({ group: 'observation' as const, label: `${o.id} · ${o.comment || 'без комментария'}`, suffix: shortStream(o.anchor.stream), path: '/overview', query: link(o.anchor.stream, o.anchor.start, o.anchor.end) })),
+        ...runs.items.map(r => ({ group: 'run' as const, label: `${r.id} · rev ${r.revision ?? '—'} · ${tr('data.caps', { n: r.sources.length })}`, suffix: r.stale ? tr('data.stale') : tr('data.current'), path: '/verify', query: { run: r.id } })),
+        ...obs.items.map(o => ({ group: 'observation' as const, label: `${o.id} · ${o.comment || tr('data.noComment')}`, suffix: shortStream(o.anchor.stream), path: '/overview', query: link(o.anchor.stream, o.anchor.start, o.anchor.end) })),
       ]
     },
 
     async getObservations() {
-      return unwrap(await api.GET('/api/observations')).items.map(o => ({ id: o.id, text: o.comment || 'без комментария' }))
+      return unwrap(await api.GET('/api/observations')).items.map(o => ({ id: o.id, text: o.comment || tr('data.noComment') }))
     },
 
     async createHypothesis({ statement, test, basis }) {
@@ -574,8 +571,8 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       const at = runId ? runs.items.findIndex(r => r.id === runId) : 0
       const head = runs.items[Math.max(at, 0)]
       const empty: VerificationView = {
-        run: null, filters: [], totals: [], categories: [], categoriesNote: '', problems: [], diffWith: null, diffNote: null, diff: [], hypothesisChanges: [], hypotheses: [], runs: [],
-        runsNote: 'Прогонов ещё не было — запустите проверку.',
+        run: null, filters: [], totals: [], categories: [], categoriesNote: tr('data.catNote'), problems: [], diffWith: null, diffNote: null, diff: [], hypothesisChanges: [], hypotheses: [], runs: [],
+        runsNote: tr('data.noRuns'),
       }
       if (!head) return empty
       const [detail, names] = await Promise.all([
@@ -591,53 +588,53 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       const order: ResultCategory[] = ['matched', 'violated', 'incomplete', 'ambiguous', 'unmatched', 'limit_exceeded']
       const corpus = head.corpus
       return {
-        run: { id: head.id, rev: head.revision, scope: `${head.sources.length} зап.`, time: '', stale: staleText(head) },
+        run: { id: head.id, rev: head.revision, scope: tr('data.caps', { n: head.sources.length }), time: '', stale: staleText(head) },
         filters: [
-          ...(corpus.port ? [{ label: `порт ${corpus.port}`, active: true }] : []),
+          ...(corpus.port ? [{ label: tr('data.port', { n: corpus.port }), active: true }] : []),
           ...(corpus.direction ? [{ label: corpus.direction === 'a_to_b' ? 'a → b' : 'b → a', active: true }] : []),
           ...(corpus.sources?.length ? corpus.sources.map(sha => ({ label: names.get(sha) ?? sha.slice(0, 8), active: true })) : []),
         ],
         totals: [
-          { value: formatCount(s.messages), label: 'сообщений в наборе' },
-          { value: pct(matched, s.messages), label: 'совпало' },
-          { value: pct(s.messageBytes - s.unknownBytes, s.messageBytes), label: 'байтов покрыто полями' },
-          { value: formatCount(s.counterexamples), label: s.counterexamplesTruncated ? 'контрпримеров (показаны не все)' : 'контрпримеров' },
+          { value: formatCount(s.messages), label: tr('data.tot.messages') },
+          { value: pct(matched, s.messages), label: tr('data.tot.matched') },
+          { value: pct(s.messageBytes - s.unknownBytes, s.messageBytes), label: tr('data.tot.covered') },
+          { value: formatCount(s.counterexamples), label: s.counterexamplesTruncated ? tr('data.tot.cxPartial') : tr('data.tot.cx') },
         ],
         categories: [
           ...order.map(key => ({ key, label: CATEGORY[key]!.label, count: s.counts[key] ?? 0 })),
-          { key: 'out_of_scope' as const, label: 'Потоков вне области', count: s.outOfScopeStreams },
+          { key: 'out_of_scope' as const, label: tr('data.outOfScope'), count: s.outOfScopeStreams },
         ],
-        categoriesNote: '«Превышен предел» и потоки вне области — ограничения реализации и области применимости, а не свойства протокола.',
+        categoriesNote: tr('data.catNote'),
         // Контрпример теста гипотезы: структура сообщения цела (категория «совпало»), не выполнился тест.
         problems: detail.counterexamples.slice(0, 50).map(c => ({
           status: c.violations[0]?.kind === 'hypothesis' ? 'hypothesis' : CATEGORY[c.category]?.status ?? 'unknown',
-          label: c.violations[0]?.kind === 'hypothesis' ? 'гипотеза' : (CATEGORY[c.category]?.label ?? c.category).toLowerCase(),
+          label: c.violations[0]?.kind === 'hypothesis' ? tr('data.hyp') : (CATEGORY[c.category]?.label ?? c.category).toLowerCase(),
           where: where(names, c.anchor),
-          what: c.violations.map(v => v.detail).join('; ') || (c.messageId ? `тип ${c.messageId}` : 'тип не определён'),
+          what: c.violations.map(v => v.detail).join('; ') || (c.messageId ? tr('data.type', { id: c.messageId }) : tr('data.typeUnknown')),
           link: linkOf(c.anchor),
         })),
         diffWith: prev?.id ?? null,
-        diffNote: prev ? null : runs.items.length > 1 ? 'Прошлых прогонов с таким же корпусом нет — сравнивать не с чем.' : null,
+        diffNote: prev ? null : runs.items.length > 1 ? tr('data.noPrevRun') : null,
         hypothesisChanges: hypothesisChanges(diff?.hypotheses ?? []),
         hypotheses: (detail.hypotheses ?? []).map(h => ({
           id: h.id,
           test: h.test,
           status: h.verdict === 'refuted' ? 'violation' : h.verdict === 'no_counterexample' ? 'hypothesis' : 'unknown',
           label: h.verdict === 'refuted'
-            ? `опровергнута · контрпримеров ${formatCount(h.counterexamples)}`
-            : h.verdict === 'no_counterexample' ? `поддержана ${formatCount(h.held)} / ${formatCount(h.applicable)}` : 'не проверена',
+            ? tr('data.h.refutedCx', { n: formatCount(h.counterexamples) })
+            : h.verdict === 'no_counterexample' ? tr('data.h.supported', { held: formatCount(h.held), all: formatCount(h.applicable) }) : tr('data.v.untested'),
         })),
         diff: diff
           ? [
-              { label: 'Исправилось', value: formatCount(diff.totals.fixed), tone: 'good' },
-              { label: 'Ухудшилось', value: formatCount(diff.totals.regressed), tone: 'bad' },
-              { label: 'Изменилось', value: formatCount(diff.totals.changed), tone: 'neutral' },
-              { label: 'Добавилось / исчезло', value: `${formatCount(diff.totals.added)} / ${formatCount(diff.totals.removed)}`, tone: 'neutral' },
-              { label: 'Без изменений', value: formatCount(diff.totals.unchanged), tone: 'neutral' },
+              { label: tr('data.diff.fixed'), value: formatCount(diff.totals.fixed), tone: 'good' },
+              { label: tr('data.diff.regressed'), value: formatCount(diff.totals.regressed), tone: 'bad' },
+              { label: tr('data.diff.changed'), value: formatCount(diff.totals.changed), tone: 'neutral' },
+              { label: tr('data.diff.addedRemoved'), value: `${formatCount(diff.totals.added)} / ${formatCount(diff.totals.removed)}`, tone: 'neutral' },
+              { label: tr('data.diff.unchanged'), value: formatCount(diff.totals.unchanged), tone: 'neutral' },
             ]
           : [],
-        runs: runs.items.map(r => ({ id: r.id, label: `rev ${r.revision ?? '—'} · ${r.sources.length} зап.`, current: !r.stale, stale: staleText(r) })),
-        runsNote: 'Прогон устаревает, если изменились интерпретация, настройки сборки или записи — по хешам входов.',
+        runs: runs.items.map(r => ({ id: r.id, label: `rev ${r.revision ?? '—'} · ${tr('data.caps', { n: r.sources.length })}`, current: !r.stale, stale: staleText(r) })),
+        runsNote: tr('data.runsNote'),
       }
     },
 
@@ -656,33 +653,33 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
         share: pct(h.scorePermille),
         spec: h.framing,
         evidence: {
-          hypothesis: `длина = ${lengthType(h)} @${h.at} ${h.adjust >= 0 ? '+' : '−'} ${Math.abs(h.adjust)}`,
-          confirmed: `${formatCount(h.messages)} сообщ., ${formatCount(h.coveredBytes)} из ${formatCount(h.totalBytes)} байт`,
-          scope: `${h.streamsConfirmed} из ${h.streamsTotal} потоков · длины ${h.minLength}–${h.maxLength}`,
+          hypothesis: tr('data.fr.hyp', { type: lengthType(h), at: h.at, sign: h.adjust >= 0 ? '+' : '−', adj: Math.abs(h.adjust) }),
+          confirmed: tr('data.fr.confirmed', { n: formatCount(h.messages), covered: formatCount(h.coveredBytes), total: formatCount(h.totalBytes) }),
+          scope: tr('data.fr.scope', { ok: h.streamsConfirmed, all: h.streamsTotal, min: h.minLength, max: h.maxLength }),
           counterexamples: h.firstCounterexample
             ? [{
-                message: `участок ${h.firstCounterexample.run}, байт ${h.firstCounterexample.offset}`,
+                message: tr('data.fr.cxAt', { run: h.firstCounterexample.run, off: h.firstCounterexample.offset }),
                 status: COUNTER_REASON[h.firstCounterexample.reason].status,
-                note: COUNTER_REASON[h.firstCounterexample.reason].note + (h.firstCounterexample.value != null ? ` (поле = ${h.firstCounterexample.value})` : ''),
+                note: COUNTER_REASON[h.firstCounterexample.reason].note + (h.firstCounterexample.value != null ? tr('data.fr.fieldValue', { v: h.firstCounterexample.value }) : ''),
               }]
             : [],
           note: [
-            `Начала похожи друг на друга: ${pct(h.startCoherencePermille)}; совпадают с началами сегментов TCP: ${pct(h.segmentAlignmentPermille)}.`,
-            h.equivalent.length ? `Те же границы дают: ${h.equivalent.map(e => `${e.type} @${e.at} +${e.adjust}`).join(', ')}.` : '',
+            tr('data.fr.coherence', { a: pct(h.startCoherencePermille), b: pct(h.segmentAlignmentPermille) }),
+            h.equivalent.length ? tr('data.fr.same', { list: h.equivalent.map(e => `${e.type} @${e.at} +${e.adjust}`).join(', ') }) : '',
           ].filter(Boolean).join(' '),
         },
       }))
       return {
-        searchRange: `${hints.truncated ? 'проанализировано ' : ''}${formatCount(hints.sampledBytes)} байт · порог ${hints.minMessages} сообщ.`,
+        searchRange: tr('data.fr.range', { analysed: hints.truncated ? tr('data.fr.analysed') : '', n: formatCount(hints.sampledBytes), min: hints.minMessages }),
         candidates,
         signatures: [
           ...hints.signatures.map(sg => ({ label: sg.bytes.toUpperCase().replace(/(..)(?=.)/g, '$1 '), matched: sg.atStarts, total: sg.startsTotal, ok: sg.atStarts === sg.startsTotal })),
-          ...hints.delimiters.map(d => ({ label: `${d.bytes.toUpperCase()} в конце`, matched: d.atEnds, total: d.endsTotal, ok: false })),
+          ...hints.delimiters.map(d => ({ label: tr('data.fr.atEnd', { b: d.bytes.toUpperCase() }), matched: d.atEnds, total: d.endsTotal, ok: false })),
         ],
         notes: [
-          hints.incomplete ? 'Поиск прерван по времени — список кандидатов неполон.' : '',
-          hints.truncated ? 'Часть данных не вошла в анализ (предел размера).' : '',
-          !candidates.length ? `Кандидатов поля длины нет: нужно хотя бы ${hints.minMessages} подтверждённых сообщений.` : '',
+          hints.incomplete ? tr('data.fr.incomplete') : '',
+          hints.truncated ? tr('data.fr.truncated') : '',
+          !candidates.length ? tr('data.fr.none', { n: hints.minMessages }) : '',
         ].filter(Boolean),
       }
     },
@@ -694,19 +691,19 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       ])
       const columns = variability.columns.slice(0, 16)
       const constant = variability.regions.filter(r => r.kind === 'constant').map(r => `${r.start}–${r.end - 1}`)
-      const counters = variability.counters.map(c => `счётчик @${c.at}`)
+      const counters = variability.counters.map(c => tr('data.var.counter', { at: c.at }))
       const previewTotal = Object.values(preview.counts ?? {}).reduce((n, c) => n + c, 0)
       return {
         messageStarts: preview.items.map(m => m.start),
         variability: columns.map(c => c.entropyMillibits / 1000),
         // Что показано не целиком — говорим прямо: границы по первой странице, столбцов — первые 16.
         variabilityNote: [
-          `Сообщений длины ${variability.length}: ${formatCount(variability.analysed)}${variability.analysed < variability.messages ? ` из ${formatCount(variability.messages)}` : ''}.`,
-          constant.length ? `Постоянны: ${constant.join(', ')}.` : 'Постоянных областей нет.',
+          tr('data.var.sample', { len: variability.length, n: formatCount(variability.analysed), of: variability.analysed < variability.messages ? tr('data.var.of', { n: formatCount(variability.messages) }) : '' }),
+          constant.length ? tr('data.var.constant', { list: constant.join(', ') }) : tr('data.var.noConstant'),
           counters.length ? `${counters.join(', ')}.` : '',
-          variability.columns.length > columns.length ? `На графике первые ${columns.length} смещений из ${variability.columns.length}.` : '',
-          variability.truncated ? 'Изменчивость посчитана по части сообщений (предел).' : '',
-          preview.items.length < previewTotal ? `Границы в потоке отмечены по первым ${formatCount(preview.items.length)} сообщениям из ${formatCount(previewTotal)}.` : '',
+          variability.columns.length > columns.length ? tr('data.var.cols', { n: columns.length, total: variability.columns.length }) : '',
+          variability.truncated ? tr('data.var.truncated') : '',
+          preview.items.length < previewTotal ? tr('data.var.starts', { n: formatCount(preview.items.length), total: formatCount(previewTotal) }) : '',
         ].filter(Boolean).join(' '),
       }
     },
@@ -732,15 +729,15 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       const obs = unwrap(await api.GET('/api/observations')).items
       const observations = obs.map(o => ({
         id: o.id,
-        text: o.comment || 'без комментария',
+        text: o.comment || tr('data.noComment'),
         status: (o.anchorState === 'ok' ? 'rule' : o.anchorState === 'broken' ? 'violation' : 'gap') as KnowledgeStatus,
-        label: o.anchorState === 'ok' ? 'якорь цел' : o.anchorState === 'broken' ? 'байты изменились' : 'байты недоступны',
+        label: o.anchorState === 'ok' ? tr('data.anchor.ok') : o.anchorState === 'broken' ? tr('data.anchor.broken') : tr('data.anchor.gone'),
         anchor: `${shortStream(o.anchor.stream)} [${o.anchor.start}, ${o.anchor.end})`,
       }))
       const log = logs.find(l => l.id === logId) ?? logs[0]
       const logRefs = logs.map(l => ({ id: l.id, name: l.name }))
       const empty = { logs: logRefs, logId: log?.id ?? null, actions: [], action: null, chips: [], requests: [], mask: [], responses: [], correlations: [], observations, observationTotal: obs.length }
-      if (!log) return { ...empty, notes: ['Журнала действий нет — сравнивать не по чему. Импортируйте журнал на экране «Проект».'] }
+      if (!log) return { ...empty, notes: [tr('data.cmp.noLog')] }
 
       // Действия для выбора — со всего журнала, не только с первой страницы.
       const all: S['Action'][] = []
@@ -773,7 +770,7 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
         return list.map(r => ({ label: r.label, bytes: r.bytes, changed: r.bytes.map((_, i) => changed[i] ?? false) }))
       }
       const requests = diffRows(rows.filter(r => r.request).map(r => ({ label: r.label, bytes: r.request!.bytes })))
-      const responses = diffRows(rows.filter(r => r.response).map(r => ({ label: `ответ: ${r.result}`, bytes: r.response!.bytes })))
+      const responses = diffRows(rows.filter(r => r.response).map(r => ({ label: tr('data.cmp.resp', { r: r.result }), bytes: r.response!.bytes })))
       const width = Math.max(0, ...requests.map(r => r.bytes.length))
       const mask = Array.from({ length: width }, (_, i) => requests.some(r => r.changed[i]))
 
@@ -786,13 +783,13 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
         const first = parts[0]
         if (!streams.length) return []
         const cor = unwrap(await api.POST('/api/analysis/correlations', { body: { streams, logId: log.id, ...(chosen ? { action: chosen } : {}) } }))
-        if (cor.truncated) notes.push(`${title}: часть сообщений не вошла в анализ (предел).`)
+        if (cor.truncated) notes.push(tr('data.cmp.truncated', { title }))
         const anchorAt = (at: number, type: string) => (first ? { source: first.source, stream: first.stream, start: first.start + at, end: first.start + at + sizeOf(type) } : undefined)
         return [
           ...cor.values.map(v => ({
             position: `${title} ${v.at}–${v.at + sizeOf(v.type) - 1}`,
             read: `${v.type}${v.scale > 1 ? ` ÷ ${v.scale}` : ''}`,
-            values: v.equivalent.length ? `также ${v.equivalent.join(', ')}` : '—',
+            values: v.equivalent.length ? tr('data.cmp.also', { list: v.equivalent.join(', ') }) : '—',
             relation: `= ${v.param}`,
             share: `${v.matches} / ${v.samples}`,
             anchor: anchorAt(v.at, v.type),
@@ -801,18 +798,18 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
             position: `${title} ${a.at}`,
             read: a.type,
             values: a.codes.map(c => `${c.action} = ${c.value}`).join(' · '),
-            relation: '= код действия',
+            relation: tr('data.cmp.code'),
             share: pct(a.purityPermille),
             anchor: anchorAt(a.at, a.type),
           })),
         ]
       }
       const correlations: CompareView['correlations'] = [
-        ...await correlate('request', 'запрос'),
-        ...await correlate('response', 'ответ'),
+        ...await correlate('request', tr('data.cmp.req')),
+        ...await correlate('response', tr('data.cmp.res')),
       ]
-      if (!rows.some(r => r.request)) notes.push('Для этих действий запросы не найдены в окне времени.')
-      notes.push('Совпадение на примерах — основание для гипотезы, а не вывод: проверьте её тестом.')
+      if (!rows.some(r => r.request)) notes.push(tr('data.cmp.noReq'))
+      notes.push(tr('data.cmp.caution'))
       return {
         logs: logRefs,
         logId: log.id,
@@ -844,12 +841,12 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
         yaml: d.yaml,
         steps: d.steps,
         summary: [
-          { label: 'Потоков', value: formatCount(d.summary.streams) },
-          { label: 'Сообщений', value: formatCount(d.summary.messages || total) },
+          { label: tr('data.draft.streams'), value: formatCount(d.summary.streams) },
+          { label: tr('data.messages'), value: formatCount(d.summary.messages || total) },
           ...Object.entries(d.summary.counts).filter(([, c]) => c > 0).map(([k, c]) => ({ label: CATEGORY[k]?.label ?? k, value: formatCount(c) })),
-          { label: 'Типов сообщений', value: formatCount(d.summary.types) },
-          { label: 'Гипотез с тестами', value: formatCount(d.summary.hypotheses) },
-          { label: 'Неизвестных байтов', value: formatCount(d.summary.unknownBytes) },
+          { label: tr('data.draft.types'), value: formatCount(d.summary.types) },
+          { label: tr('data.draft.hyps'), value: formatCount(d.summary.hypotheses) },
+          { label: tr('data.unknownBytes'), value: formatCount(d.summary.unknownBytes) },
         ],
         incomplete: d.incomplete,
       }
@@ -857,7 +854,7 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
 
     async getFixHints(hypothesis, yaml) {
       const h = unwrap(await api.POST('/api/interpretation/fix-hints', { body: { hypothesis, ...(yaml ? { yaml } : {}) } }))
-      const res = (r: S['FixTestResult']) => `контрпримеров ${r.counterexamples} из ${r.applicable}`
+      const res = (r: S['FixTestResult']) => tr('data.fix.res', { n: r.counterexamples, all: r.applicable })
       return {
         hypothesis: h.hypothesis,
         test: h.test,
@@ -865,7 +862,7 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
         fixes: h.fixes.map(f => ({
           kind: f.kind,
           summary: f.summary,
-          effect: `${res(h.current)} → ${f.result.counterexamples}${f.otherBefore || f.otherAfter ? `; у других гипотез с этим полем ${f.otherBefore} → ${f.otherAfter}` : ''}`,
+          effect: `${res(h.current)} → ${f.result.counterexamples}${f.otherBefore || f.otherAfter ? tr('data.fix.others', { a: f.otherBefore, b: f.otherAfter }) : ''}`,
           after: f.result.counterexamples,
           edit: { hypothesis: h.hypothesis, field: f.field, messages: f.messages, fromType: f.fromType, toType: f.toType, fromAt: f.fromAt, toAt: f.toAt, test: f.test },
         })),
@@ -874,21 +871,21 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
 
     async getCoverage(yaml) {
       const c = unwrap(await api.POST('/api/interpretation/coverage', { body: yaml ? { yaml } : {} }))
-      const LABEL = { rule: 'правило', hypothesis: 'гипотеза', unknown: 'неизвестно', none: 'не описано' } as const
+      const label = (k: 'rule' | 'hypothesis' | 'unknown' | 'none') => (k === 'none' ? tr('data.cov.none') : tr(`status.${k}` as MessageKey))
       const order = ['rule', 'hypothesis', 'unknown', 'none'] as const
       return {
         described: pct(c.describedPermille),
-        totals: order.map(st => ({ status: st, label: LABEL[st], bytes: c.bytes[st] })),
+        totals: order.map(st => ({ status: st, label: label(st), bytes: c.bytes[st] })),
         types: c.types.map(t => ({
-          id: t.messageId ?? 'без типа',
+          id: t.messageId ?? tr('data.untyped'),
           messages: t.messages,
-          length: t.minLen === t.maxLen ? `${t.minLen} байт` : `${t.minLen}–${t.maxLen} байт`,
+          length: t.minLen === t.maxLen ? tr('data.cov.len', { n: t.minLen }) : tr('data.cov.lenRange', { a: t.minLen, b: t.maxLen }),
           totals: { rule: t.bytes.rule, hypothesis: t.bytes.hypothesis, unknown: t.bytes.unknown, none: t.bytes.none },
           regions: t.regions.map(r => ({
             start: r.start,
             end: r.end,
             status: r.status,
-            label: [r.field, r.hypothesis].filter(Boolean).join(' · ') || LABEL[r.status],
+            label: [r.field, r.hypothesis].filter(Boolean).join(' · ') || label(r.status),
             share: r.sharePermille / 1000,
           })),
           truncated: t.mapTruncated,
@@ -908,13 +905,13 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
     async getSuggestions() {
       const page = await collectConnections(contract)
       const streams = page.items.flatMap(c => c.streams.map(s => s.id))
-      if (!streams.length) return { items: [], truncated: false, note: 'В проекте нет потоков.' }
+      if (!streams.length) return { items: [], truncated: false, note: tr('data.sg.noStreams') }
       try {
         const r = unwrap(await api.POST('/api/analysis/suggestions', { body: { streams } }))
-        return { items: r.items, truncated: r.truncated, note: r.items.length ? null : 'Связей байтов с журналом, сошедшихся на 90 % примеров, не нашлось.' }
+        return { items: r.items, truncated: r.truncated, note: r.items.length ? null : tr('data.sg.none') }
       }
       catch (e) {
-        if (e instanceof ApiError && e.status === 409) return { items: [], truncated: false, note: 'Заготовки появятся, когда в проекте есть сохранённое описание и журнал действий.' }
+        if (e instanceof ApiError && e.status === 409) return { items: [], truncated: false, note: tr('data.sg.needs') }
         throw e
       }
     },
@@ -980,7 +977,7 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
 
     async listRuns() {
       const runs = unwrap(await api.GET('/api/runs', { params: { query: { limit: 50 } } }))
-      return runs.items.map(r => ({ id: r.id, label: `rev ${r.revision ?? '—'} · ${r.sources.length} зап.`, stale: r.stale }))
+      return runs.items.map(r => ({ id: r.id, label: `rev ${r.revision ?? '—'} · ${tr('data.caps', { n: r.sources.length })}`, stale: r.stale }))
     },
   }
 }

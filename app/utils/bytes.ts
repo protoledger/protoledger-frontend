@@ -1,3 +1,5 @@
+import { intlLocale, tr } from './i18n'
+
 export function base64ToBytes(b64: string): Uint8Array {
   const bin = atob(b64)
   const out = new Uint8Array(bin.length)
@@ -35,12 +37,12 @@ export function readUint(bytes: Uint8Array, littleEndian: boolean): number {
 }
 
 export function formatCount(n: number): string {
-  return new Intl.NumberFormat('ru-RU').format(n)
+  return new Intl.NumberFormat(intlLocale()).format(n)
 }
 
 export function formatBytesSize(n: number): string {
-  if (n < 1024) return `${n} Б`
-  if (n < 1024 ** 2) return `${(n / 1024).toFixed(1)} КиБ`
-  if (n < 1024 ** 3) return `${(n / 1024 ** 2).toFixed(1)} МиБ`
-  return `${(n / 1024 ** 3).toFixed(1)} ГиБ`
+  if (n < 1024) return tr('common.bytes', { n })
+  if (n < 1024 ** 2) return tr('common.kib', { n: (n / 1024).toFixed(1) })
+  if (n < 1024 ** 3) return tr('common.mib', { n: (n / 1024 ** 2).toFixed(1) })
+  return tr('common.gib', { n: (n / 1024 ** 3).toFixed(1) })
 }

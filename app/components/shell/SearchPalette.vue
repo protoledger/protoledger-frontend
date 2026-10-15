@@ -19,32 +19,32 @@ watch(open, async (v) => {
 })
 
 const GROUPS: { id: SearchEntry['group'], label: string, icon: string }[] = [
-  { id: 'connection', label: 'Соединения', icon: 'i-lucide-arrow-left-right' },
-  { id: 'hypothesis', label: 'Гипотезы', icon: 'i-lucide-flask-conical' },
-  { id: 'run', label: 'Прогоны', icon: 'i-lucide-circle-check-big' },
-  { id: 'observation', label: 'Наблюдения', icon: 'i-lucide-bookmark' },
+  { id: 'connection', get label() { return tr('shell.search.connections') }, icon: 'i-lucide-arrow-left-right' },
+  { id: 'hypothesis', get label() { return tr('shell.search.hypotheses') }, icon: 'i-lucide-flask-conical' },
+  { id: 'run', get label() { return tr('shell.search.runs') }, icon: 'i-lucide-circle-check-big' },
+  { id: 'observation', get label() { return tr('shell.search.observations') }, icon: 'i-lucide-bookmark' },
 ]
 const workspace = useWorkspaceStore()
 
 const groups = computed(() => [
   {
     id: 'layout',
-    label: 'Раскладка',
+    label: tr('shell.search.layout'),
     items: [
-      { label: workspace.inspector.collapsed ? 'Показать «Свойства»' : 'Скрыть «Свойства»', icon: 'i-lucide-panel-right', kbds: ['alt', '0'], onSelect: () => run(() => { workspace.inspector.collapsed = !workspace.inspector.collapsed }) },
-      { label: workspace.bottomOpen ? 'Скрыть нижнее окно' : 'Показать нижнее окно', icon: 'i-lucide-panel-bottom', kbds: ['alt', 'F12'], onSelect: () => run(() => { workspace.bottomOpen = !workspace.bottomOpen }) },
-      { label: 'Режим фокуса', icon: 'i-lucide-maximize-2', kbds: ['meta', 'shift', 'F12'], onSelect: () => run(() => { workspace.focus = true }) },
-      { label: 'Сбросить раскладку панелей', icon: 'i-lucide-layout-dashboard', onSelect: () => run(workspace.resetLayout) },
+      { label: workspace.inspector.collapsed ? tr('shell.search.showProps') : tr('shell.search.hideProps'), icon: 'i-lucide-panel-right', kbds: ['alt', '0'], onSelect: () => run(() => { workspace.inspector.collapsed = !workspace.inspector.collapsed }) },
+      { label: workspace.bottomOpen ? tr('shell.search.hideBottom') : tr('shell.search.showBottom'), icon: 'i-lucide-panel-bottom', kbds: ['alt', 'F12'], onSelect: () => run(() => { workspace.bottomOpen = !workspace.bottomOpen }) },
+      { label: tr('shell.search.focus'), icon: 'i-lucide-maximize-2', kbds: ['meta', 'shift', 'F12'], onSelect: () => run(() => { workspace.focus = true }) },
+      { label: tr('shell.search.resetLayout'), icon: 'i-lucide-layout-dashboard', onSelect: () => run(workspace.resetLayout) },
     ],
   },
   {
     id: 'screens',
-    label: 'Экраны',
+    label: tr('shell.search.screens'),
     items: SCREENS.map((s, i) => ({ label: s.title, icon: s.icon, kbds: ['alt', String(i + 1)], onSelect: () => go(s.path) })),
   },
   {
     id: 'sources',
-    label: 'Записи',
+    label: tr('shell.search.sources'),
     items: project.sources.map(s => ({ label: safeText(s.name, 200), suffix: s.sha256.slice(0, 8), icon: 'i-lucide-file', onSelect: () => go('/project') })),
   },
   ...GROUPS.map(g => ({
@@ -59,7 +59,7 @@ const groups = computed(() => [
   })).filter(g => g.items.length),
   {
     id: 'limit',
-    label: 'Не всё в поиске',
+    label: tr('shell.search.limit'),
     ignoreFilter: true,
     items: index.value.filter(e => e.group === 'limit').map(e => ({ label: safeText(e.label, 200), icon: 'i-lucide-info', onSelect: () => go(e.path) })),
   },
@@ -77,9 +77,9 @@ async function go(path: string, query?: Record<string, string>) {
 </script>
 
 <template>
-  <UModal v-model:open="open" title="Поиск везде" description="Экраны, записи, соединения">
+  <UModal v-model:open="open" :title="tr('shell.search.title')" :description="tr('shell.search.description')">
     <template #content>
-      <UCommandPalette :groups="groups" placeholder="Найти экран или запись…" class="h-80" @update:open="open = $event" />
+      <UCommandPalette :groups="groups" :placeholder="tr('shell.search.placeholder')" class="h-80" @update:open="open = $event" />
     </template>
   </UModal>
 </template>

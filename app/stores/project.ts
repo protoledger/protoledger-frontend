@@ -66,7 +66,7 @@ export const useProjectStore = defineStore('project', () => {
       void refreshNextSteps()
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Не удалось загрузить проект'
+      error.value = e instanceof Error ? e.message : tr('common.loadProjectFailed')
     }
     finally {
       loading.value = false

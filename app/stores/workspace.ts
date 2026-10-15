@@ -53,7 +53,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   }
 
   function log(text: string) {
-    const time = new Date().toLocaleTimeString('ru-RU')
+    const time = new Date().toLocaleTimeString(intlLocale())
     events.value.unshift({ time, text })
     if (events.value.length > 200) events.value.length = 200
   }

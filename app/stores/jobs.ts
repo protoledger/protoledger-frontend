@@ -39,7 +39,7 @@ export const useJobsStore = defineStore('jobs', () => {
   async function load(onDone?: (job: Job) => void) {
     for (const job of await data.listJobs()) {
       upsert(job)
-      if (ACTIVE.includes(job.state)) track(job.id, labels.value[job.id] ?? 'Импорт записи', onDone)
+      if (ACTIVE.includes(job.state)) track(job.id, labels.value[job.id] ?? tr('common.importSource'), onDone)
     }
   }
 
