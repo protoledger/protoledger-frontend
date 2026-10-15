@@ -65,7 +65,9 @@ describe('новые запросы к движку', () => {
   })
 
   it('сохранение описания и «Применить как фрейминг» передают ревизию, от которой правка', async () => {
-    const calls = record(c => (c.method === 'GET' ? json({ rev: 4, digest: 'd', yaml: 'format: protoledger/interpretation@1\nmessages: []\n' }) : json({ rev: 5, digest: 'd', created: true })))
+    const calls = record(c => (c.method !== 'GET'
+      ? json({ rev: 5, digest: 'd', created: true })
+      : c.url.startsWith('/api/interpretation/revisions') ? json({ items: [{ rev: 4, digest: 'd', createdAt: '2026-10-10T14:00:00Z' }] }) : json({ rev: 4, digest: 'd', yaml: 'format: protoledger/interpretation@1\nmessages: []\n' })))
     await live().saveInterpretation('format: protoledger/interpretation@1\n', 3)
     expect(calls[0]).toMatchObject({ method: 'PUT', body: { baseRev: 3 } })
     await live().applyFraming({ kind: 'length_prefixed', length: { at: 2, type: 'u16be', adjust: 8 }, status: 'hypothesis' })

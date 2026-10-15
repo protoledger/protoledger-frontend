@@ -11,7 +11,8 @@ const workspace = useWorkspaceStore()
 const fileInput = ref<HTMLInputElement | null>(null)
 const importError = ref<string | null>(null)
 
-const { data: logs, refresh: refreshLogs } = await useAsyncData('action-logs', () => data.getActionLogs(), { default: () => [] as ActionLog[] })
+// Без открытого проекта движок отвечает 409: журналы спрашиваем, только когда проект есть.
+const { data: logs, refresh: refreshLogs } = await useAsyncData('action-logs', () => (project.project ? data.getActionLogs() : Promise.resolve([] as ActionLog[])), { default: () => [] as ActionLog[] })
 
 // Движок перечитывает журналы при открытии проекта фоновой задачей: обновляем список, когда она кончилась.
 watch([() => project.project?.path, () => jobs.active.length], ([, active], [, before]) => {
