@@ -1,7 +1,6 @@
 // Модели экранов исследования. Живой источник собирает их из ответов движка (live-research.ts),
 // пример данных — mock/research.ts; экраны зависят только от этих моделей.
 import type { FramingSpec, Suggestion } from '~/api/types'
-import type { FixEdit } from '~/utils/interp-fix'
 import type { KnowledgeStatus } from '~/utils/status'
 
 export interface ProjectExtras {
@@ -307,6 +306,18 @@ export interface FixSuggestion {
   /** Сколько контрпримеров остаётся после правки — 0 значит гипотеза снова выдерживает записи. */
   after: number
   edit: FixEdit
+}
+
+/** Правка из подсказки исправления: тип и смещение поля в сообщениях или новый текст проверки. */
+export interface FixEdit {
+  hypothesis: string
+  field?: string
+  messages?: string[]
+  fromType?: string
+  toType?: string
+  fromAt?: number
+  toAt?: number
+  test?: string
 }
 
 export interface FixHintsView {

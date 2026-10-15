@@ -262,6 +262,8 @@ async function checkExampleNew() {
 }
 
 async function check(corpus?: { sources: string[] }) {
+  // Итог новой записи относится только к проверке по ней.
+  if (!corpus) lastNew.value = null
   actionError.value = null
   busy.value = tr('protocol.checking')
   try {

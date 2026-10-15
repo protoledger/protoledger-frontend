@@ -96,7 +96,7 @@ const sub = 'pl-caption m-0 mt-2.5 mb-1'
       <template v-if="info.observations.length || info.hypotheses.length">
         <h4 :class="sub">{{ tr('overview.observationsHypotheses') }}</h4>
         <p v-for="o in info.observations" :key="o.id">{{ o.id }} [{{ o.start }}, {{ o.end }}): {{ safeText(o.comment) }}</p>
-        <NuxtLink v-for="h in info.hypotheses" :key="h.id" :to="{ path: '/hypotheses', query: { h: h.id } }" class="text-pl-wine-text hover:underline">
+        <NuxtLink v-for="h in info.hypotheses" :key="h.id" :to="{ path: '/protocol', query: { fixFor: h.id } }" class="text-pl-wine-text hover:underline">
           {{ h.id }} · {{ RESEARCH[h.status] ?? h.status }}: {{ safeText(h.statement) }}
         </NuxtLink>
       </template>
