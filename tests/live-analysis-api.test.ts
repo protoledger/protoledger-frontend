@@ -57,4 +57,10 @@ describe('новые запросы к движку', () => {
     expect(await live().deleteQuestion('q-2')).toBe(true)
     expect(await live().deleteObservation('obs-3')).toBe(true)
   })
+
+  it('поправка часов — полное значение в теле, ответ — новая запись журнала', async () => {
+    const calls = record(() => json({ id: 'log-0002', sha256: 'a', name: 'j.csv', rows: 1, skipped: 0, errors: [], mapping: {}, firstTime: null, lastTime: null }))
+    expect(await live().applyClockOffset('log-0001', 5000)).toBe('log-0002')
+    expect(calls[0]).toMatchObject({ method: 'POST', url: '/api/action-logs/log-0001/clock-offset', body: { clockOffsetMs: 5000 } })
+  })
 })

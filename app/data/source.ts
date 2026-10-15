@@ -156,6 +156,8 @@ export interface ResearchSource {
   getDeviceConnections(): Promise<DeviceConnections | null>
   /** Оценка сдвига часов журнала относительно записей; null — оценки нет (пример данных). */
   getClockOffset(logId: string): Promise<ClockOffset | null>
+  /** Применить поправку часов целиком (не добавку): новая запись журнала заменяет прежнюю; id новой или null — пример данных. */
+  applyClockOffset(logId: string, clockOffsetMs: number): Promise<string | null>
   /** Подсказки для описания по сохранённым границам сообщений: типы, поведение полей, контрольные суммы, энтропия. */
   getTypeHints(streams: string[]): Promise<TypeHints>
   getFieldBehavior(streams: string[], messageId?: string): Promise<FieldBehaviorHints>

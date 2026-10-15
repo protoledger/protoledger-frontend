@@ -449,6 +449,7 @@ export function createMockResearchSource(): ResearchSource {
       }
     },
     getClockOffset: async () => null,
+    applyClockOffset: async () => null,
     compareCaptures: async () => (await delay(), {
       a: { sources: 1, messages: 32, counts: { matched: 32 } },
       b: { sources: 1, messages: 22, counts: { matched: 21, violated: 1 } },

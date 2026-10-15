@@ -49,7 +49,7 @@ watch(selected, async (id) => {
   }
 }, { immediate: true })
 
-// Сдвиг часов журнала — предложение движка; применяется повторным импортом с поправкой.
+// Сдвиг часов журнала — предложение движка; применяет его исследователь кнопкой.
 const clock = ref<ClockOffset | null>(null)
 watch(() => view.value?.log?.id, async (id) => {
   clock.value = null
@@ -66,6 +66,34 @@ watch(() => view.value?.log?.id, async (id) => {
 function logLabel(l: { id: string, name: string, rows: number, clockOffsetMs: number }) {
   const twin = (view.value?.logs ?? []).filter(x => x.name === l.name).length > 1
   return [safeText(l.name), `${l.rows} строк`, twin ? l.id : '', l.clockOffsetMs ? `часы ${signed(l.clockOffsetMs)}` : ''].filter(Boolean).join(' · ')
+}
+const workspace = useWorkspaceStore()
+const project = useProjectStore()
+const draft = useDraftAction()
+const applyingClock = ref(false)
+const clockNote = ref<{ ok: boolean, text: string } | null>(null)
+async function applyClock() {
+  const log = view.value?.log
+  const c = clock.value
+  if (!log || !c || c.offsetMs === null) return
+  const total = c.currentOffsetMs + c.offsetMs
+  applyingClock.value = true
+  clockNote.value = null
+  try {
+    const id = await data.applyClockOffset(log.id, total)
+    if (!id) return draft('Поправка часов применена')
+    workspace.log(`Журнал ${log.name}: поправка часов ${signed(total)}`)
+    clockNote.value = { ok: true, text: `Поправка ${signed(total)} применена. Прогоны с тестами гипотез, если они были, устарели — проверку нужно запустить заново.` }
+    logId.value = id
+    await refresh()
+    void project.load()
+  }
+  catch (e) {
+    clockNote.value = { ok: false, text: e instanceof Error ? e.message : 'Не удалось применить поправку' }
+  }
+  finally {
+    applyingClock.value = false
+  }
 }
 const signed = (ms: number) => `${ms > 0 ? '+' : ms < 0 ? '−' : ''}${formatCount(Math.abs(ms))} мс`
 
@@ -116,11 +144,17 @@ const EVENT = {
           <b class="font-semibold text-pl-fg-strong">Похоже, часы журнала сдвинуты на {{ signed(clock.offsetMs) }}</b>
         </div>
         <p class="m-0">{{ safeText(clock.reason) }}.</p>
-        <p class="m-0 text-pl-muted">
-          Чтобы применить, импортируйте журнал на «Проекте» с полем «Сдвиг часов, мс» = {{ clock.currentOffsetMs + clock.offsetMs }}<template v-if="clock.currentOffsetMs"> (сейчас {{ clock.currentOffsetMs }})</template>.
-          <NuxtLink to="/project" class="text-pl-wine-text hover:underline">На «Проект»</NuxtLink>
-        </p>
+        <div class="flex flex-wrap items-center gap-2">
+          <button class="pl-btn pl-btn-primary h-7" type="button" :disabled="applyingClock" @click="applyClock">
+            {{ applyingClock ? 'Применяю…' : `Применить поправку ${signed(clock.currentOffsetMs + clock.offsetMs)}` }}
+          </button>
+          <span class="text-xs text-pl-muted">Журнал разберётся заново с поправкой; прежняя запись останется для старых прогонов.</span>
+        </div>
       </div>
+      <p v-if="clockNote" class="mx-3 mt-3 mb-0" :class="clockNote.ok ? 'text-pl-st-rule' : 'text-pl-st-violation'" role="status">
+        {{ clockNote.text }}
+        <NuxtLink v-if="clockNote.ok" to="/verify" class="text-pl-wine-text hover:underline">Запустить проверку</NuxtLink>
+      </p>
       <p v-if="view?.exchangeNote" class="m-0 px-3 pt-3 text-pl-muted">{{ view.exchangeNote }}</p>
       <CommonAsyncState :pending="pending" :error="error?.message" :empty="!rows.length" empty-text="Журнала действий в проекте нет — импортируйте его на экране «Проект»." @retry="refresh()">
         <table
