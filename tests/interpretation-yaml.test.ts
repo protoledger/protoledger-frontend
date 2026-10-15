@@ -40,4 +40,18 @@ describe('YAML интерпретации', () => {
     const yaml = 'format: protoledger/interpretation@1\nmessages:\n  - id: a'
     expect(replaceFramingBlock(yaml, spec).split('\n')).toEqual(['format: protoledger/interpretation@1', line, 'messages:', '  - id: a'])
   })
+
+  it('CRLF сохраняется, ключ в кавычках находится', () => {
+    const yaml = 'format: protoledger/interpretation@1\r\n"framing":\r\n  kind: delimited\r\nmessages: []\r\n'
+    const out = replaceFramingBlock(yaml, spec)
+    expect(out.split('\r\n')).toHaveLength(4)
+    expect(out).not.toContain('delimited')
+    expect(out).toContain('framing: {')
+  })
+
+  it('якорь со ссылками — отказ с понятной причиной, без ссылок — замена', () => {
+    const withRef = 'framing: &f\n  kind: delimited\nother: *f\nmessages: []\n'
+    expect(() => replaceFramingBlock(withRef, spec)).toThrow(/якорем &f/)
+    expect(replaceFramingBlock('framing: &f\n  kind: delimited\nmessages: []\n', spec)).not.toContain('&f')
+  })
 })

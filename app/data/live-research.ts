@@ -513,6 +513,10 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
           path: '/overview',
           query: { conn: c.id, dir: 'ab' },
         })),
+        // Соединений больше предела — честно говорим, что поиск видит не все.
+        ...(conns.total > conns.items.length
+          ? [{ group: 'limit' as const, label: `ещё ${formatCount(conns.total - conns.items.length)} соединений не в поиске — найдите их на «Обзоре» фильтром по записи или порту`, suffix: '', path: '/overview', query: {} }]
+          : []),
         ...hyps.items.map(h => ({ group: 'hypothesis' as const, label: `${h.id} · ${h.statement}`, suffix: HYPOTHESIS_STATUS[h.status], path: '/hypotheses', query: { h: h.id } })),
         ...runs.items.map(r => ({ group: 'run' as const, label: `${r.id} · rev ${r.revision ?? '—'} · ${r.sources.length} зап.`, suffix: r.stale ? 'устарел' : 'актуален', path: '/verify', query: { run: r.id } })),
         ...obs.items.map(o => ({ group: 'observation' as const, label: `${o.id} · ${o.comment || 'без комментария'}`, suffix: shortStream(o.anchor.stream), path: '/overview', query: link(o.anchor.stream, o.anchor.start, o.anchor.end) })),
@@ -691,13 +695,18 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       const columns = variability.columns.slice(0, 16)
       const constant = variability.regions.filter(r => r.kind === 'constant').map(r => `${r.start}–${r.end - 1}`)
       const counters = variability.counters.map(c => `счётчик @${c.at}`)
+      const previewTotal = Object.values(preview.counts ?? {}).reduce((n, c) => n + c, 0)
       return {
         messageStarts: preview.items.map(m => m.start),
         variability: columns.map(c => c.entropyMillibits / 1000),
+        // Что показано не целиком — говорим прямо: границы по первой странице, столбцов — первые 16.
         variabilityNote: [
-          `Длина ${variability.length}, сообщений ${variability.analysed}.`,
+          `Длина ${variability.length}, сообщений ${variability.analysed}${variability.analysed < variability.messages ? ` из ${formatCount(variability.messages)}` : ''}.`,
           constant.length ? `Постоянны: ${constant.join(', ')}.` : 'Постоянных областей нет.',
           counters.length ? `${counters.join(', ')}.` : '',
+          variability.columns.length > columns.length ? `На графике первые ${columns.length} смещений из ${variability.columns.length}.` : '',
+          variability.truncated ? 'Изменчивость посчитана по части сообщений (предел).' : '',
+          preview.items.length < previewTotal ? `Границы в потоке отмечены по первым ${formatCount(preview.items.length)} сообщениям из ${formatCount(previewTotal)}.` : '',
         ].filter(Boolean).join(' '),
       }
     },

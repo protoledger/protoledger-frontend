@@ -499,6 +499,7 @@ const TOKEN: Record<string, string> = {
             <option v-if="!streams.length" :value="stream">{{ result?.preview.stream ?? 'нет потоков' }}</option>
             <option v-for="s in streams" :key="s.id" :value="s.id">{{ s.label }}</option>
           </select>
+          <p v-if="connectionShown < connectionTotal" class="m-0 mt-1 text-xs text-pl-muted">Потоки соединений {{ connectionShown }} из {{ connectionTotal }}: остальные — на «Обзоре» с фильтрами.</p>
         </div>
         <dl v-if="result" class="pl-dl" :class="previewing && 'opacity-60'" aria-live="polite">
           <template v-for="r in result.preview.rows" :key="r.label">

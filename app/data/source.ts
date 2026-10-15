@@ -82,7 +82,8 @@ export interface ContractSource {
   listJobs(): Promise<Job[]>
   cancelJob(id: string): Promise<Job>
   /** Подписка на изменения задачи; возвращает функцию отписки. */
-  watchJob(id: string, onUpdate: (job: Job) => void): () => void
+  /** onLink(false) — связь с движком потеряна, идёт переподключение; onLink(true) — восстановлена. */
+  watchJob(id: string, onUpdate: (job: Job) => void, onLink?: (ok: boolean) => void): () => void
 }
 
 /**
