@@ -94,6 +94,26 @@ const messages = computed(() => {
   })
 })
 const selected = computed(() => messages.value.find(m => m.id === selectedId.value) ?? null)
+
+// Заголовок — поля, одинаковые у всех сообщений: показываем одной свёрнутой группой, а не в каждом.
+const sameField = (a: FieldDef, b: FieldDef) => a.name === b.name && a.at === b.at && a.type === b.type
+const common = computed(() => {
+  const list = messages.value
+  if (list.length < 2) return [] as FieldDef[]
+  return list[0]!.fields.filter(f => list.every(m => m.fields.some(g => sameField(f, g))))
+})
+const headerOpen = ref(false)
+const headerBytes = computed(() => {
+  const ends = common.value.filter(f => typeof f.at === 'number').map(f => (f.at as number) + (SIZES[f.type] ?? (typeof f.len === 'number' ? f.len : 1)) - 1)
+  return ends.length ? `0–${Math.max(...ends)}` : ''
+})
+const rows = computed(() => {
+  const m = selected.value
+  if (!m) return [] as { f: FieldDef, i: number, header: boolean }[]
+  const all = m.fields.map((f, i) => ({ f, i, header: common.value.some(c => sameField(c, f)) }))
+  return [...all.filter(r => r.header && headerOpen.value), ...all.filter(r => !r.header)]
+})
+const headerProblem = computed(() => common.value.some(f => checkOf(f).tone === 'bad'))
 const hypothesisOf = (id?: string) => (id ? doc.value?.structure.hypotheses?.find(h => h.id === id) ?? null : null)
 
 // «Запрос, команда 0x30 · сообщений в данных: 13» → заголовок и число.
@@ -413,7 +433,16 @@ function downloadYaml() {
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(f, i) in selected.fields" :key="`${f.name}-${i}`" :aria-selected="editing?.index === i || fix?.field === f">
+                <tr v-if="common.length" class="cursor-pointer" @click="headerOpen = !headerOpen">
+                  <td colspan="7" class="text-pl-muted">
+                    <button type="button" class="flex items-center gap-2 hover:text-pl-fg-strong" :aria-expanded="headerOpen">
+                      <UIcon :name="headerOpen ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'" class="size-4" aria-hidden="true" />
+                      {{ tr('protocol.header', { bytes: headerBytes, n: common.length }) }}
+                      <UIcon v-if="headerProblem" name="i-lucide-circle-alert" class="size-4 text-pl-st-violation" :aria-label="tr('protocol.problems')" />
+                    </button>
+                  </td>
+                </tr>
+                <tr v-for="{ f, i, header } in rows" :key="`${f.name}-${i}`" :class="header && 'bg-pl-panel'" :aria-selected="editing?.index === i || fix?.field === f">
                   <td class="font-mono whitespace-nowrap">{{ bytesOf(f) }}</td>
                   <td>
                     <span class="font-semibold text-pl-fg-strong">{{ nameLabel(f) }}</span>

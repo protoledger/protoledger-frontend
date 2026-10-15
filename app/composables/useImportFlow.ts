@@ -10,11 +10,22 @@ export function useImportFlow() {
   const workspace = useWorkspaceStore()
   const errors = ref<string[]>([])
 
+  // Движок выполняет не больше двух задач сразу: следующий файл ждёт свободного места.
+  async function waitSlot(limit = 2) {
+    await jobs.load()
+    while (jobs.active.length >= limit) {
+      await new Promise(r => setTimeout(r, 250))
+      await jobs.load()
+    }
+  }
+
   // Файлы уходят по очереди; ошибка движка приходит в задаче, а не в ответе на загрузку.
-  async function importCaptures(files: File[]) {
+  async function importCaptures(files: File[], onProgress?: (done: number) => void) {
     errors.value = []
-    for (const file of files) {
+    for (const [i, file] of files.entries()) {
+      onProgress?.(i)
       try {
+        await waitSlot()
         const jobId = await data.importSource(file)
         const label = tr('common.importNamed', { name: file.name })
         jobs.track(jobId, label, (job) => {

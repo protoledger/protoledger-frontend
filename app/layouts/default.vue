@@ -45,7 +45,7 @@ defineShortcuts({
 </script>
 
 <template>
-  <StartScreen v-if="project.loaded && !project.project && !project.error" class="h-dvh" />
+  <StartScreen v-if="workspace.starting || (project.loaded && !project.project && !project.error)" class="h-dvh" />
   <div
     v-else
     class="grid h-dvh overflow-hidden"

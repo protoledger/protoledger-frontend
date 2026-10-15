@@ -65,5 +65,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     focus.value = false
   }
 
-  return { nextStepsHidden, drawer, interpDraft, bottomOpen, bottomTab, events, panels, inspector, focus, panel, log, resetLayout }
+  // Первая загрузка записей со стартового экрана: он остаётся на месте, пока импорт не закончится.
+  const starting = ref(false)
+  return { starting, nextStepsHidden, drawer, interpDraft, bottomOpen, bottomTab, events, panels, inspector, focus, panel, log, resetLayout }
 })

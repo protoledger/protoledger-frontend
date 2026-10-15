@@ -5,6 +5,7 @@ import { projectFolderName } from '~/composables/useImportFlow'
 const props = defineProps<{ embedded?: boolean }>()
 const emit = defineEmits<{ opened: [] }>()
 const project = useProjectStore()
+const workspace = useWorkspaceStore()
 const flow = useImportFlow()
 const fileInput = ref<HTMLInputElement | null>(null)
 const busy = ref<string | null>(null)
@@ -38,18 +39,21 @@ async function start(files: File[], name: string) {
     return
   }
   error.value = null
+  // Во встроенном виде (диалог «Другие записи») экран и так не пропадёт.
+  if (!props.embedded) workspace.starting = true
   try {
     busy.value = tr('start.creating')
     await createFor(name)
-    busy.value = tr('start.importing', { n: captures.length })
-    await flow.importCaptures(captures)
-    for (const log of logs) {
-      busy.value = tr('start.log')
-      await flow.importLogAuto(log)
-    }
+    await flow.importCaptures(captures, (done) => { busy.value = tr('start.importing', { done: done + 1, n: captures.length }) })
     busy.value = tr('start.reading')
     await flow.settle()
+    for (const log of logs) {
+      busy.value = tr('start.log')
+      if (!await flow.importLogAuto(log)) flow.errors.value.push(tr('start.logManual', { name: log.name }))
+    }
+    await project.load()
     emit('opened')
+    workspace.starting = false
     await navigateTo('/project')
   }
   catch (e) {
@@ -57,6 +61,7 @@ async function start(files: File[], name: string) {
   }
   finally {
     busy.value = null
+    workspace.starting = false
   }
 }
 

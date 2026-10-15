@@ -57,7 +57,9 @@ function skipped(source: Source) {
 
 const importErrors = ref<string[]>([])
 
-// Файлы уходят по очереди; ошибка движка приходит в задаче, а не в ответе на загрузку.
+// Очередь импорта общая со стартовым экраном: движок выполняет не больше двух задач сразу.
+const flow = useImportFlow()
+watch(flow.errors, (list) => { importErrors.value = [...list] }, { deep: true })
 async function onFile(e: Event) {
   const input = e.target as HTMLInputElement
   const files = [...(input.files ?? [])]
@@ -65,22 +67,7 @@ async function onFile(e: Event) {
   if (!files.length) return
   importError.value = null
   importErrors.value = []
-  for (const file of files) {
-    try {
-      const jobId = await data.importSource(file)
-      const label = tr('common.importNamed', { name: file.name })
-      workspace.log(`${label}: ${tr('project.started')}`)
-      jobs.track(jobId, label, (job) => {
-        workspace.log(`${label}: ${job.state === 'succeeded' ? tr('common.done') : job.state === 'cancelled' ? tr('common.cancelled') : tr('common.error')}`)
-        if (job.state === 'failed') importErrors.value.push(`${file.name}: ${job.error?.detail ?? job.error?.title ?? tr('project.importFailed')}`)
-        void project.load()
-      })
-      await project.refreshSources()
-    }
-    catch (err) {
-      importErrors.value.push(`${file.name}: ${err instanceof Error ? err.message : tr('project.importStartFailed')}`)
-    }
-  }
+  await flow.importCaptures(files)
 }
 
 const selectedSha = ref<string | null>(null)

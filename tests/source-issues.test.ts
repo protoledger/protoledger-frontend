@@ -12,7 +12,7 @@ describe('sourceIssues', () => {
   })
 
   it('дефект из диагностики и признак соединения не дублируются', () => {
-    expect(sourceIssues(diag([['truncated_frame', 'warning']]), ['gaps', 'truncated'])).toEqual({ labels: ['усечён', 'дыры'], status: 'gap' })
+    expect(sourceIssues(diag([['truncated_frame', 'warning']]), ['gaps', 'truncated'])).toEqual({ labels: ['усечён', 'пропуски'], status: 'gap' })
   })
 
   it('цвет — по самому тяжёлому замечанию', () => {
