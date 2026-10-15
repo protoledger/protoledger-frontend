@@ -1,6 +1,7 @@
 import createClient, { type Middleware } from 'openapi-fetch'
 import type { paths } from './schema'
 import type { Problem } from './types'
+import { tr } from '~/utils/i18n'
 
 const TOKEN_PLACEHOLDER = '__PROTOLEDGER_TOKEN__'
 
@@ -28,7 +29,7 @@ export class ApiError extends Error {
     readonly status: number,
     readonly problem: Problem | null,
   ) {
-    super(problem?.detail ?? problem?.title ?? `Ошибка API: ${status}`)
+    super(problem?.detail ?? problem?.title ?? tr('common.apiError', { status }))
     this.name = 'ApiError'
   }
 }
@@ -66,11 +67,11 @@ export function engineDownProblem(status: number): Problem | null {
   if (status !== 502 && status !== 504) return null
   return {
     type: 'urn:protoledger:problem:engine-unavailable',
-    title: 'Движок не отвечает',
+    title: tr('common.engineDown'),
     status,
     detail: import.meta.dev
-      ? 'Движок на 127.0.0.1:8080 не отвечает: запустите его (serve --dev) или туннель к общему dev-серверу.'
-      : 'Движок не отвечает. Перезапустите приложение; данные проекта сохранены в его папке.',
+      ? tr('common.engineDownDev')
+      : tr('common.engineDownApp'),
   }
 }
 

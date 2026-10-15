@@ -27,7 +27,7 @@ function close() {
       v-if="rail"
       class="flex h-full w-[30px] shrink-0 flex-col items-center gap-2 border-r border-pl-line bg-pl-chrome pt-2 text-pl-muted hover:bg-pl-raise hover:text-pl-fg"
       type="button"
-      :title="`Развернуть «${title}»`"
+      :title="tr('shell.expandPanel', { title })"
       :aria-expanded="overlay"
       @click="open"
     >
@@ -46,7 +46,7 @@ function close() {
     >
       <CommonPanelHeader :title="title" :subtitle="subtitle">
         <slot name="actions" />
-        <button class="grid size-6 place-items-center rounded text-pl-muted hover:bg-pl-raise hover:text-pl-fg" type="button" :title="`Свернуть «${title}»`" @click="close">
+        <button class="grid size-6 place-items-center rounded text-pl-muted hover:bg-pl-raise hover:text-pl-fg" type="button" :title="tr('shell.collapsePanel', { title })" @click="close">
           <UIcon :name="compact ? 'i-lucide-x' : 'i-lucide-panel-left-close'" class="size-4" aria-hidden="true" />
         </button>
       </CommonPanelHeader>
@@ -61,7 +61,7 @@ function close() {
         :aria-valuenow="state.width"
         :aria-valuemin="min"
         :aria-valuemax="max"
-        :aria-label="`Ширина «${title}»: стрелки влево и вправо`"
+        :aria-label="tr('shell.panelWidth', { title })"
         tabindex="0"
         @pointerdown="onPointerDown"
         @keydown="onKeydown"

@@ -23,12 +23,12 @@ async function exportReport(format: 'md' | 'html') {
   exportError.value = null
   try {
     const r = await data.generateReport(format, runId.value || undefined)
-    if (!r) return draft(format === 'html' ? 'Экспорт HTML' : 'Экспорт Markdown')
+    if (!r) return draft(format === 'html' ? tr('report.exportHtml') : tr('report.exportMd'))
     saveTextFile(r.fileName, r.content, format === 'html' ? 'text/html;charset=utf-8' : 'text/markdown;charset=utf-8')
-    workspace.log(`Отчёт сохранён: ${r.fileName}`)
+    workspace.log(tr('report.log.saved', { name: r.fileName }))
   }
   catch (e) {
-    exportError.value = e instanceof Error ? e.message : 'Не удалось собрать отчёт'
+    exportError.value = e instanceof Error ? e.message : tr('report.buildFailed')
   }
   finally {
     exporting.value = null
@@ -39,13 +39,13 @@ async function exportInterpretation() {
   exportError.value = null
   try {
     const v = await data.getInterpretation()
-    if (!v.rev || !live) return draft('Экспорт интерпретации YAML')
+    if (!v.rev || !live) return draft(tr('report.exportYaml'))
     const name = `interpretation.rev${v.rev}.yaml`
     saveTextFile(name, v.yaml.map(l => l.text).join('\n'), 'application/yaml;charset=utf-8')
-    workspace.log(`Интерпретация сохранена: ${name}`)
+    workspace.log(tr('report.log.yamlSaved', { name }))
   }
   catch (e) {
-    exportError.value = e instanceof Error ? e.message : 'Не удалось получить интерпретацию'
+    exportError.value = e instanceof Error ? e.message : tr('report.yamlFailed')
   }
 }
 
@@ -55,7 +55,7 @@ const tableCls = 'mt-2.5 w-full border-collapse text-[12.5px] [&_td]:border-b [&
 
 <template>
   <div class="flex h-full">
-    <ShellSidePanel id="report-sections" title="Разделы" :width="230">
+    <ShellSidePanel id="report-sections" :title="tr('report.sections')" :width="230">
       <ol v-if="live" class="pl-scroll m-0 flex-1 list-none py-1.5">
         <li v-for="s in sections" :key="s.kind === 'heading' ? s.id : ''">
           <a v-if="s.kind === 'heading'" :href="`#${s.id}`" class="block py-1.5 pr-3 hover:bg-pl-raise" :class="s.level === 3 ? 'pl-9 text-pl-muted' : 'pl-6'">{{ s.text }}</a>
@@ -68,7 +68,7 @@ const tableCls = 'mt-2.5 w-full border-collapse text-[12.5px] [&_td]:border-b [&
 
     <section class="pl-scroll min-w-0 flex-1 px-6 py-[18px]">
       <!-- Отчёт движка: блоки выводятся только интерполяцией текста, HTML в страницу не попадает. -->
-      <CommonAsyncState v-if="live" :pending="pending" :error="error?.message" :empty="!report" empty-text="Отчёта пока нет." @retry="refresh()">
+      <CommonAsyncState v-if="live" :pending="pending" :error="error?.message" :empty="!report" :empty-text="tr('report.empty')" @retry="refresh()">
         <article v-if="report" class="light mx-auto max-w-[820px] border-t-4 border-pl-wine bg-pl-card px-5 py-6 sm:px-11 sm:py-10 text-sm leading-relaxed text-pl-card-fg">
           <template v-for="(b, i) in blocks" :key="i">
             <h1 v-if="b.kind === 'heading' && b.level === 1" :id="b.id" class="mt-0 mb-4 font-display text-2xl font-semibold">{{ b.text }}</h1>
@@ -115,21 +115,21 @@ const tableCls = 'mt-2.5 w-full border-collapse text-[12.5px] [&_td]:border-b [&
       </CommonAsyncState>
     </section>
 
-    <ShellInspectorContent title="Экспорт">
+    <ShellInspectorContent :title="tr('report.export')">
       <div class="flex flex-col gap-1.5 p-3">
-        <label for="report-run" class="pl-caption">Прогон в отчёте</label>
+        <label for="report-run" class="pl-caption">{{ tr('report.runLabel') }}</label>
         <select id="report-run" v-model="runId" class="h-7 rounded border border-pl-line bg-pl-raise px-2 text-pl-fg">
-          <option value="">последний</option>
-          <option v-for="r in runs" :key="r.id" :value="r.id">{{ r.id }} · {{ safeText(r.label) }}{{ r.stale ? ' · устарел' : '' }}</option>
+          <option value="">{{ tr('report.lastRun') }}</option>
+          <option v-for="r in runs" :key="r.id" :value="r.id">{{ r.id }} · {{ safeText(r.label) }}{{ r.stale ? ` · ${tr('report.stale')}` : '' }}</option>
         </select>
-        <p class="m-0 text-pl-muted">Устаревший прогон помечается в тексте отчёта.</p>
+        <p class="m-0 text-pl-muted">{{ tr('report.staleNote') }}</p>
       </div>
       <div class="flex flex-col gap-2 border-t border-pl-line p-3">
-        <button class="pl-btn pl-btn-primary justify-center" type="button" :disabled="!!exporting" @click="exportReport('html')">{{ exporting === 'html' ? 'Собираю…' : 'Скачать HTML' }}</button>
-        <button class="pl-btn justify-center" type="button" :disabled="!!exporting" @click="exportReport('md')">{{ exporting === 'md' ? 'Собираю…' : 'Скачать Markdown' }}</button>
-        <button class="pl-btn justify-center" type="button" @click="exportInterpretation">Интерпретация YAML</button>
+        <button class="pl-btn pl-btn-primary justify-center" type="button" :disabled="!!exporting" @click="exportReport('html')">{{ exporting === 'html' ? tr('report.building') : tr('report.downloadHtml') }}</button>
+        <button class="pl-btn justify-center" type="button" :disabled="!!exporting" @click="exportReport('md')">{{ exporting === 'md' ? tr('report.building') : tr('report.downloadMd') }}</button>
+        <button class="pl-btn justify-center" type="button" @click="exportInterpretation">{{ tr('report.interpYaml') }}</button>
         <p v-if="exportError" class="m-0 text-pl-st-violation" role="alert">{{ exportError }}</p>
-        <p class="m-0 text-pl-muted">HTML-отчёт самодостаточен: экранирован, без скриптов и внешних ресурсов — открывается как файл.</p>
+        <p class="m-0 text-pl-muted">{{ tr('report.htmlNote') }}</p>
       </div>
     </ShellInspectorContent>
   </div>

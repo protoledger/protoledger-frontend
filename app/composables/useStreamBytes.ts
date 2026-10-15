@@ -58,7 +58,7 @@ export function useStreamBytes(stream: Ref<StreamSummary | null>) {
       blocks.value = next
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Не удалось загрузить байты потока'
+      error.value = e instanceof Error ? e.message : tr('common.loadBytesFailed')
     }
     finally {
       loading.delete(b)

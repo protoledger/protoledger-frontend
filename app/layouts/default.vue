@@ -19,8 +19,8 @@ function toggleInspector() {
 }
 
 function onJobDone(job: Job) {
-  const label = jobs.labels[job.id] ?? 'Импорт'
-  workspace.log(job.state === 'succeeded' ? `${label}: готово` : `${label}: ${job.state === 'cancelled' ? 'отменён' : 'ошибка'}`)
+  const label = jobs.labels[job.id] ?? tr('common.import')
+  workspace.log(`${label}: ${tr(job.state === 'succeeded' ? 'common.done' : job.state === 'cancelled' ? 'common.cancelled' : 'common.error')}`)
   void project.load()
 }
 
@@ -30,7 +30,7 @@ onMounted(async () => {
   await project.load()
   const importing = project.sources.find(s => s.status === 'importing')
   await jobs.load(onJobDone)
-  for (const j of jobs.active) jobs.labels[j.id] = importing ? `Импорт ${importing.name}` : 'Импорт записи'
+  for (const j of jobs.active) jobs.labels[j.id] = importing ? tr('common.importNamed', { name: importing.name }) : tr('common.importSource')
 })
 
 defineShortcuts({
@@ -70,7 +70,7 @@ onBeforeUnmount(() => window.removeEventListener('keyup', onKeyup))
         <main class="min-h-0 min-w-0 flex-1 overflow-hidden">
           <div v-if="project.error" class="p-4" role="alert">
             {{ project.error }}
-            <button class="pl-btn ml-3" type="button" @click="project.load()">Повторить</button>
+            <button class="pl-btn ml-3" type="button" @click="project.load()">{{ tr('common.retry') }}</button>
           </div>
           <slot v-else />
         </main>
@@ -87,7 +87,7 @@ onBeforeUnmount(() => window.removeEventListener('keyup', onKeyup))
       type="button"
       @click="workspace.focus = false"
     >
-      <UIcon name="i-lucide-minimize-2" class="size-4" aria-hidden="true" /> Режим фокуса · Esc — выйти
+      <UIcon name="i-lucide-minimize-2" class="size-4" aria-hidden="true" /> {{ tr('shell.focusExit') }}
     </button>
   </div>
 </template>

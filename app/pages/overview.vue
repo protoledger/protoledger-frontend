@@ -72,7 +72,7 @@ const roleLabel = computed(() => {
   const c = connection.value
   if (!c) return { ab: 'a → b', ba: 'b → a' }
   return c.rolesKnown
-    ? { ab: 'клиент → сервер', ba: 'сервер → клиент' }
+    ? { ab: tr('overview.clientToServer'), ba: tr('overview.serverToClient') }
     : { ab: `${c.a.port} → ${c.b.port}`, ba: `${c.b.port} → ${c.a.port}` }
 })
 
@@ -94,20 +94,20 @@ async function jumpToMessage(id: string, start: number, end: number) {
 
 <template>
   <div class="flex h-full">
-    <ShellSidePanel id="overview-connections" title="Соединения" :width="420" :min="300">
+    <ShellSidePanel id="overview-connections" :title="tr('overview.connections')" :width="420" :min="300">
       <OverviewConnectionList :selected-id="connection?.id ?? null" :auto-select="!initial.conn" @select="select" />
     </ShellSidePanel>
 
     <section class="flex min-w-0 flex-1 flex-col">
       <CommonPanelHeader
-        :title="connection ? `Поток ${connection.id.split(':')[1]}${project.sources.length > 1 ? ` · ${safeText(project.sourceName(connection.source))}` : ''}` : 'Поток'"
-        :subtitle="stream ? `собран по seq · ${formatCount(stream.length)} байт${stream.startAvailable ? '' : ' · начало не захвачено'}` : ''"
+        :title="connection ? `${tr('overview.streamNamed', { id: connection.id.split(':')[1] ?? '' })}${project.sources.length > 1 ? ` · ${safeText(project.sourceName(connection.source))}` : ''}` : tr('overview.stream')"
+        :subtitle="stream ? `${tr('overview.streamSubtitle', { n: formatCount(stream.length) })}${stream.startAvailable ? '' : ` · ${tr('overview.noStart')}`}` : ''"
       >
-        <div v-if="connection" class="pl-seg" role="radiogroup" aria-label="Вид">
-          <button type="button" role="radio" :aria-checked="mode === 'bytes'" @click="mode = 'bytes'">Байты</button>
-          <button type="button" role="radio" :aria-checked="mode === 'exchanges'" @click="mode = 'exchanges'">Обмены</button>
+        <div v-if="connection" class="pl-seg" role="radiogroup" :aria-label="tr('overview.view')">
+          <button type="button" role="radio" :aria-checked="mode === 'bytes'" @click="mode = 'bytes'">{{ tr('overview.modeBytes') }}</button>
+          <button type="button" role="radio" :aria-checked="mode === 'exchanges'" @click="mode = 'exchanges'">{{ tr('overview.modeExchanges') }}</button>
         </div>
-        <div v-if="connection && mode === 'bytes'" class="pl-seg" role="radiogroup" aria-label="Направление">
+        <div v-if="connection && mode === 'bytes'" class="pl-seg" role="radiogroup" :aria-label="tr('overview.direction')">
           <button v-for="d in (['ab', 'ba'] as const)" :key="d" type="button" role="radio" :aria-checked="dir === d" @click="dir = d">{{ roleLabel[d] }}</button>
         </div>
       </CommonPanelHeader>
@@ -119,11 +119,11 @@ async function jumpToMessage(id: string, start: number, end: number) {
           <OverviewHexView ref="hex" v-model:range="range" :stream="stream" :at="at" :ensure="ensure" />
         </div>
       </template>
-      <p v-else-if="notFound" class="p-4 text-pl-st-violation" role="alert">Соединение {{ safeText(notFound) }} не найдено в проекте.</p>
-      <p v-else class="p-4 text-pl-muted">Выберите соединение слева.</p>
+      <p v-else-if="notFound" class="p-4 text-pl-st-violation" role="alert">{{ tr('overview.notFound', { id: safeText(notFound) }) }}</p>
+      <p v-else class="p-4 text-pl-muted">{{ tr('overview.pickConnection') }}</p>
     </section>
 
-    <ShellInspectorContent :title="range ? `Выделение · ${range.end - range.start} байт` : 'Выделение'">
+    <ShellInspectorContent :title="range ? tr('overview.selectionBytes', { n: range.end - range.start }) : tr('overview.selection')">
       <OverviewSelectionPanel :range="range" :at="at" />
     </ShellInspectorContent>
   </div>

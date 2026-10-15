@@ -9,7 +9,7 @@ const parts = computed(() => props.segments.map((s, i) => ({
   width: Math.max(0.15, ((s.end - s.start) / props.stream.length) * 100),
   cls: s.status === 'gap' ? 'bg-hatch-gap' : s.status === 'ambiguous' ? 'bg-pl-st-ambiguous' : s.frames.some(f => f.duplicate) ? 'bg-pl-st-hypothesis' : i % 2 ? 'bg-pl-st-rule/35' : 'bg-pl-st-rule/50',
   start: s.start,
-  title: `${s.start}–${s.end - 1}: ${s.status === 'gap' ? 'дыра' : s.status === 'ambiguous' ? 'неоднозначно' : `кадр ${s.frames[0]?.frameNo ?? '?'}`}`,
+  title: `${s.start}–${s.end - 1}: ${s.status === 'gap' ? tr('status.gap') : s.status === 'ambiguous' ? tr('status.ambiguous') : tr('overview.frameN', { n: s.frames[0]?.frameNo ?? '?' })}`,
 })))
 
 const key = 'inline-block h-2 w-2.5 align-middle'
@@ -17,14 +17,14 @@ const key = 'inline-block h-2 w-2.5 align-middle'
 
 <template>
   <div class="border-b border-pl-line px-3 pt-2 pb-1.5">
-    <div class="relative h-3 bg-pl-panel" role="img" :aria-label="`Карта потока: ${stream.gapBytes} байт в дырах, ${stream.ambiguousBytes} неоднозначных`">
+    <div class="relative h-3 bg-pl-panel" role="img" :aria-label="tr('overview.mapAria', { gap: stream.gapBytes, ambiguous: stream.ambiguousBytes })">
       <button v-for="p in parts" :key="p.start" class="absolute inset-y-0" :class="p.cls" :style="{ left: `${p.left}%`, width: `${p.width}%` }" :title="p.title" type="button" tabindex="-1" @click="emit('jump', p.start)" />
     </div>
     <div class="mt-1 flex justify-between text-[11px] text-pl-muted">
       <span>0</span>
       <span>
-        сегменты TCP · <i :class="key" class="bg-hatch-gap" /> дыра · <i :class="key" class="bg-pl-st-ambiguous" /> неоднозначно ·
-        <i :class="key" class="bg-pl-st-hypothesis" /> повтор · загружено по мере прокрутки
+        {{ tr('overview.tcpSegments') }} · <i :class="key" class="bg-hatch-gap" /> {{ tr('status.gap') }} · <i :class="key" class="bg-pl-st-ambiguous" /> {{ tr('status.ambiguous') }} ·
+        <i :class="key" class="bg-pl-st-hypothesis" /> {{ tr('overview.retransmission') }} · {{ tr('overview.loadedOnScroll') }}
       </span>
       <span>{{ stream.length }}</span>
     </div>

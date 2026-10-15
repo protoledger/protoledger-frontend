@@ -1,4 +1,5 @@
 import type { FramingSpec } from '~/api/types'
+import { tr } from './i18n'
 
 const FORMAT = 'protoledger/interpretation@1'
 
@@ -33,7 +34,7 @@ export function replaceFramingBlock(yaml: string, spec: FramingSpec): string {
   }
   const anchor = /:\s*&([\w-]+)/.exec(lines[start]!)?.[1]
   if (anchor && new RegExp(`\\*${anchor}\\b`).test(yaml)) {
-    throw new Error(`Блок framing помечен якорем &${anchor}, и на него есть ссылки — замените фрейминг в редакторе вручную`)
+    throw new Error(tr('common.framingAnchor', { anchor }))
   }
   let end = start + 1
   while (end < lines.length && (/^\s/.test(lines[end]!) || lines[end] === '' || lines[end]!.startsWith('#'))) end++

@@ -15,7 +15,7 @@ async function load() {
   }
   catch (e) {
     state.value = 'error'
-    error.value = e instanceof Error ? e.message : 'Карта покрытия недоступна'
+    error.value = e instanceof Error ? e.message : tr('verify.coverage.unavailable')
   }
 }
 onMounted(load)
@@ -42,25 +42,25 @@ function regionLength(t: CoverageView['types'][number]) {
 </script>
 
 <template>
-  <section aria-label="Покрытие описанием">
-    <h3 class="pl-caption mt-5 mb-2">Покрытие байтов описанием</h3>
-    <p v-if="state === 'loading'" class="text-pl-muted" aria-live="polite">Считаю покрытие…</p>
+  <section :aria-label="tr('verify.coverage.section')">
+    <h3 class="pl-caption mt-5 mb-2">{{ tr('verify.coverage.title') }}</h3>
+    <p v-if="state === 'loading'" class="text-pl-muted" aria-live="polite">{{ tr('verify.coverage.loading') }}</p>
     <p v-else-if="state === 'error'" class="text-pl-muted">{{ safeText(error) }}</p>
     <template v-else-if="view">
       <p class="mt-0 mb-2">
-        Описано <b class="text-pl-fg-strong">{{ view.described }}</b> байтов сообщений.
-        <span class="text-pl-muted">«Не описано» и «неизвестно» — что ещё предстоит понять.</span>
+        {{ tr('verify.coverage.described') }} <b class="text-pl-fg-strong">{{ view.described }}</b> {{ tr('verify.coverage.messageBytes') }}.
+        <span class="text-pl-muted">{{ tr('verify.coverage.hint') }}</span>
       </p>
-      <div class="flex h-4 gap-px" role="img" :aria-label="view.totals.map(t => `${t.label}: ${t.bytes} байт`).join(', ')">
-        <span v-for="t in view.totals.filter(x => x.bytes)" :key="t.status" :class="FILL[t.status]" :style="{ width: width(t.bytes, view.totals.reduce((n, x) => n + x.bytes, 0)) }" :title="`${t.label}: ${t.bytes} байт`" />
+      <div class="flex h-4 gap-px" role="img" :aria-label="view.totals.map(t => `${t.label}: ${tr('verify.coverage.bytes', { n: t.bytes })}`).join(', ')">
+        <span v-for="t in view.totals.filter(x => x.bytes)" :key="t.status" :class="FILL[t.status]" :style="{ width: width(t.bytes, view.totals.reduce((n, x) => n + x.bytes, 0)) }" :title="`${t.label}: ${tr('verify.coverage.bytes', { n: t.bytes })}`" />
       </div>
       <div class="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-pl-muted">
         <span v-for="t in view.totals" :key="t.status" class="flex items-center gap-1.5"><i class="size-2.5" :class="FILL[t.status]" /> {{ t.label }} · {{ t.bytes }}</span>
       </div>
-      <p v-if="view.incomplete" class="text-pl-st-hypothesis">Разбор прерван по времени — посчитана часть записей.</p>
+      <p v-if="view.incomplete" class="text-pl-st-hypothesis">{{ tr('verify.coverage.incomplete') }}</p>
 
       <table class="pl-table mt-3">
-        <thead><tr><th>Тип</th><th class="text-right">Сообщ.</th><th>Длина</th><th class="w-1/2">Раскладка байтов</th></tr></thead>
+        <thead><tr><th>{{ tr('verify.col.type') }}</th><th class="text-right">{{ tr('verify.col.messages') }}</th><th>{{ tr('verify.col.length') }}</th><th class="w-1/2">{{ tr('verify.col.layout') }}</th></tr></thead>
         <tbody>
           <tr v-for="t in view.types" :key="t.id">
             <td class="font-mono">{{ safeText(t.id) }}</td>
@@ -74,11 +74,11 @@ function regionLength(t: CoverageView['types'][number]) {
                   class="absolute inset-y-0 border-r border-pl-bg"
                   :class="FILL[r.status]"
                   :style="{ left: width(r.start, regionLength(t)), width: width(r.end - r.start, regionLength(t)), opacity: 0.35 + 0.65 * r.share }"
-                  :title="`байты ${r.start}–${r.end - 1}: ${safeText(r.label)}${r.share < 1 ? ` · в ${Math.round(r.share * 100)}% сообщений` : ''}`"
+                  :title="`${tr('verify.coverage.region', { from: r.start, to: r.end - 1, label: safeText(r.label) })}${r.share < 1 ? ` · ${tr('verify.coverage.share', { n: Math.round(r.share * 100) })}` : ''}`"
                 />
               </div>
               <span class="text-[11px] text-pl-muted">
-                описано {{ Math.round(((t.totals.rule + t.totals.hypothesis) / Math.max(1, typeTotal(t))) * 100) }}%<template v-if="t.truncated"> · показаны первые 256 байт</template>
+                {{ tr('verify.coverage.describedPct', { n: Math.round(((t.totals.rule + t.totals.hypothesis) / Math.max(1, typeTotal(t))) * 100) }) }}<template v-if="t.truncated"> · {{ tr('verify.coverage.truncated') }}</template>
               </span>
             </td>
           </tr>

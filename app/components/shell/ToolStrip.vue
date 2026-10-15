@@ -27,7 +27,7 @@ const on = 'bg-pl-wine text-white hover:bg-pl-wine hover:text-white'
   <nav
     class="flex gap-0.5 bg-pl-chrome"
     :class="horizontal ? 'pl-scroll items-stretch overflow-x-auto overflow-y-hidden border-t border-pl-line px-1 py-1 [&>*]:min-w-[56px] [&>*]:shrink-0' : 'w-[52px] flex-col border-r border-pl-line px-1 py-1.5'"
-    aria-label="Окна инструментов"
+    :aria-label="tr('shell.tools')"
   >
     <NuxtLink
       v-for="(s, i) in SCREENS"
@@ -39,16 +39,16 @@ const on = 'bg-pl-wine text-white hover:bg-pl-wine hover:text-white'
     >
       <UIcon :name="s.icon" class="size-[18px]" aria-hidden="true" />
       <span>{{ s.short }}</span>
-      <i v-if="s.path === '/verify' && hasErrors" class="absolute top-1 right-[9px] size-1.5 rounded-full bg-pl-st-violation" aria-label="есть замечания" />
+      <i v-if="s.path === '/verify' && hasErrors" class="absolute top-1 right-[9px] size-1.5 rounded-full bg-pl-st-violation" :aria-label="tr('shell.hasIssues')" />
     </NuxtLink>
     <div class="flex-1" :class="horizontal && 'min-w-2'" />
-    <button :class="[btn, workspace.bottomOpen && workspace.bottomTab === 'diagnostics' && on]" type="button" title="Диагностика" @click="openBottom('diagnostics')">
+    <button :class="[btn, workspace.bottomOpen && workspace.bottomTab === 'diagnostics' && on]" type="button" :title="tr('shell.diagnostics')" @click="openBottom('diagnostics')">
       <UIcon name="i-lucide-triangle-alert" class="size-[18px]" aria-hidden="true" />
-      <span>Диагн.</span>
+      <span>{{ tr('shell.diagnostics.short') }}</span>
     </button>
-    <button :class="[btn, workspace.bottomOpen && workspace.bottomTab === 'jobs' && on]" type="button" title="Задачи" @click="openBottom('jobs')">
+    <button :class="[btn, workspace.bottomOpen && workspace.bottomTab === 'jobs' && on]" type="button" :title="tr('shell.jobs')" @click="openBottom('jobs')">
       <UIcon name="i-lucide-activity" class="size-[18px]" aria-hidden="true" />
-      <span>Задачи</span>
+      <span>{{ tr('shell.jobs') }}</span>
     </button>
   </nav>
 </template>

@@ -21,7 +21,7 @@ async function load(more = false) {
   }
   catch (e) {
     page.value = null
-    error.value = e instanceof Error ? e.message : 'Не удалось сопоставить запросы и ответы'
+    error.value = e instanceof Error ? e.message : tr('overview.exchangesFailed')
   }
   finally {
     pending.value = false
@@ -30,35 +30,35 @@ async function load(more = false) {
 watch(() => props.connection, () => load(), { immediate: true })
 
 const CERTAINTY: Record<string, { status: KnowledgeStatus, label: string, title: string }> = {
-  certain: { status: 'rule', label: 'однозначно', title: 'Один запрос и один ответ' },
-  ordered: { status: 'hypothesis', label: 'по порядку', title: 'Запросов и ответов поровну, сопоставлены по порядку — это допущение' },
-  ambiguous: { status: 'ambiguous', label: 'неоднозначно', title: 'Число запросов и ответов разное — чей ответ, неизвестно' },
-  unanswered: { status: 'unknown', label: 'без ответа', title: 'Запрос без ответа' },
-  unsolicited: { status: 'unknown', label: 'без запроса', title: 'Ответ без запроса' },
+  certain: { status: 'rule', get label() { return tr('overview.certain') }, get title() { return tr('overview.certainTitle') } },
+  ordered: { status: 'hypothesis', get label() { return tr('overview.ordered') }, get title() { return tr('overview.orderedTitle') } },
+  ambiguous: { status: 'ambiguous', get label() { return tr('status.ambiguous') }, get title() { return tr('overview.ambiguousTitle') } },
+  unanswered: { status: 'unknown', get label() { return tr('overview.unanswered') }, get title() { return tr('overview.unansweredTitle') } },
+  unsolicited: { status: 'unknown', get label() { return tr('overview.unsolicited') }, get title() { return tr('overview.unsolicitedTitle') } },
 }
 
 function ms(ns: number | null | undefined) {
   if (ns === null || ns === undefined) return '—'
-  return `${(ns / 1e6).toLocaleString('ru-RU', { maximumFractionDigits: ns < 1e7 ? 2 : 0 })} мс`
+  return tr('common.ms', { n: (ns / 1e6).toLocaleString(intlLocale(), { maximumFractionDigits: ns < 1e7 ? 2 : 0 }) })
 }
 
 function time(ns: number) {
   const d = new Date(Math.floor(ns / 1e6))
-  return `${d.toLocaleTimeString('ru-RU', { timeZone: 'UTC' })}.${String(d.getUTCMilliseconds()).padStart(3, '0')}`
+  return `${d.toLocaleTimeString(intlLocale(), { timeZone: 'UTC' })}.${String(d.getUTCMilliseconds()).padStart(3, '0')}`
 }
 
 const stats = computed(() => {
   const s = page.value?.stats
   if (!s) return []
   return [
-    ['обменов', formatCount(s.exchanges)],
-    ['однозначно', formatCount(s.certain)],
-    ['по порядку', formatCount(s.ordered)],
-    ['неоднозначно', formatCount(s.ambiguous)],
-    ['без ответа', formatCount(s.unanswered)],
-    ['без запроса', formatCount(s.unsolicited)],
-    ['задержка, медиана', ms(s.medianDelayNs)],
-    ['мин – макс', `${ms(s.minDelayNs)} – ${ms(s.maxDelayNs)}`],
+    [tr('overview.exchanges'), formatCount(s.exchanges)],
+    [tr('overview.certain'), formatCount(s.certain)],
+    [tr('overview.ordered'), formatCount(s.ordered)],
+    [tr('status.ambiguous'), formatCount(s.ambiguous)],
+    [tr('overview.unanswered'), formatCount(s.unanswered)],
+    [tr('overview.unsolicited'), formatCount(s.unsolicited)],
+    [tr('overview.latencyMedian'), ms(s.medianDelayNs)],
+    [tr('overview.minMax'), `${ms(s.minDelayNs)} – ${ms(s.maxDelayNs)}`],
   ]
 })
 </script>
@@ -66,15 +66,15 @@ const stats = computed(() => {
 <template>
   <div class="pl-scroll flex min-h-0 flex-1 flex-col">
     <p v-if="error" class="m-3 text-pl-muted" role="alert">{{ safeText(error) }}</p>
-    <p v-else-if="pending && !page" class="m-3 text-pl-muted" aria-live="polite">Сопоставляю запросы и ответы…</p>
+    <p v-else-if="pending && !page" class="m-3 text-pl-muted" aria-live="polite">{{ tr('overview.matching') }}</p>
     <template v-if="page">
       <dl class="m-0 flex flex-wrap gap-x-5 gap-y-1 border-b border-pl-line px-3 py-2.5 [&_dd]:m-0 [&_dd]:font-semibold [&_dd]:text-pl-fg-strong [&_dt]:text-pl-muted">
         <div v-for="[k, v] in stats" :key="k" class="flex gap-1.5"><dt>{{ k }}</dt><dd>{{ v }}</dd></div>
       </dl>
-      <p class="m-0 px-3 pt-2 text-xs text-pl-muted">Задержка — по меткам времени захвата: от последнего кадра запроса до первого кадра ответа.</p>
-      <p v-if="!page.items.length" class="m-3 text-pl-muted">В соединении нет сообщений для сопоставления.</p>
+      <p class="m-0 px-3 pt-2 text-xs text-pl-muted">{{ tr('overview.latencyNote') }}</p>
+      <p v-if="!page.items.length" class="m-3 text-pl-muted">{{ tr('overview.noMessages') }}</p>
       <table v-else class="pl-table">
-        <thead><tr><th>Время</th><th>Запрос</th><th>Ответ</th><th class="text-right" title="По меткам времени захвата: от последнего кадра запроса до первого кадра ответа">Задержка</th><th>Пара</th></tr></thead>
+        <thead><tr><th>{{ tr('overview.time') }}</th><th>{{ tr('overview.request') }}</th><th>{{ tr('overview.response') }}</th><th class="text-right" :title="tr('overview.latencyTitle')">{{ tr('overview.latency') }}</th><th>{{ tr('overview.pair') }}</th></tr></thead>
         <tbody>
           <tr v-for="(p, i) in page.items" :key="i">
             <td class="whitespace-nowrap">{{ time((p.requests[0] ?? p.responses[0])!.firstTsNs) }}</td>
@@ -92,7 +92,7 @@ const stats = computed(() => {
         </tbody>
       </table>
       <button v-if="page.items.length < page.total" class="pl-btn pl-btn-ghost m-3 self-start" type="button" :disabled="pending" @click="load(true)">
-        Показать ещё ({{ formatCount(page.total - page.items.length) }})
+        {{ tr('common.showMore', { n: formatCount(page.total - page.items.length) }) }}
       </button>
     </template>
   </div>

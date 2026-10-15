@@ -19,8 +19,10 @@ const { data: streams } = await useAsyncData('interp-streams', async () => {
   const page = await collectConnections(data)
   connectionTotal.value = page.total
   connectionShown.value = page.items.length
-  return page.items.flatMap(c => c.streams.filter(s => s.dataBytes > 0).map(s => ({ id: s.id, label: `${c.id} ${s.direction === 'a_to_b' ? 'a→b' : 'b→a'} · ${s.dataBytes} байт` })))
-}, { default: () => [] as { id: string, label: string }[] })
+  return page.items.flatMap(c => c.streams.filter(s => s.dataBytes > 0).map(s => ({ id: s.id, label: `${c.id} ${s.direction === 'a_to_b' ? 'a→b' : 'b→a'}`, bytes: s.dataBytes })))
+}, { default: () => [] as { id: string, label: string, bytes: number }[] })
+// Подпись собирается при отрисовке, чтобы язык переключался на лету.
+const streamLabel = (s: { label: string, bytes: number }) => `${s.label} · ${tr('interp.stream.bytes', { n: s.bytes })}`
 const { data: revisions, refresh: refreshRevisions } = await useAsyncData('interp-revisions', () => data.getInterpretationRevisions(), { default: () => [] as number[] })
 
 const TEMPLATE = `format: protoledger/interpretation@1
@@ -90,7 +92,7 @@ const lineIssues = computed(() => {
       for (const f of m.fields) {
         const n = name(f.attrs.name)
         const hit = v.kind === 'hypothesis' ? name(f.attrs.hypothesis) === v.field : n === v.field || v.field.endsWith(`.${n}`)
-        if (hit) put(f.line, `${v.detail}${v.count > 1 ? ` · в ${v.count} сообщ.` : ''}`)
+        if (hit) put(f.line, `${v.detail}${v.count > 1 ? ` · ${tr('interp.issues.messages', { n: v.count })}` : ''}`)
       }
     }
   }
@@ -142,7 +144,7 @@ function applyHint() {
       if (`${f.group ? `${f.group}.` : ''}${unq(f.attrs.name)}` === h.field && unq(f.attrs.type) === h.currentType) t = setFieldAttr(t, f.line, 'type', h.suggested)
     }
   }
-  workspace.log(`Быстрое исправление: ${h.field} ${h.currentType} → ${h.suggested} (${h.messages.join(', ')})`)
+  workspace.log(tr('interp.hint.logged', { field: h.field, from: h.currentType, to: h.suggested, messages: h.messages.join(', ') }))
   text.value = t
 }
 
@@ -184,7 +186,7 @@ async function runPreview() {
   }
   catch (e) {
     if (my !== previewSeq) return
-    problem.value = e instanceof Error ? e.message : 'Не удалось применить интерпретацию'
+    problem.value = e instanceof Error ? e.message : tr('interp.preview.failed')
   }
   finally {
     if (my === previewSeq) previewing.value = false
@@ -210,19 +212,19 @@ async function save() {
     const res = await data.saveInterpretation(text.value, editBase.value)
     problem.value = null
     if (res.created) {
-      workspace.log(`Сохранена ревизия интерпретации rev ${res.rev}`)
+      workspace.log(tr('interp.save.logged', { rev: res.rev }))
       await Promise.all([refresh(), refreshRevisions(), project.load()])
-      notice.value = `Сохранена ревизия ${res.rev}`
+      notice.value = tr('interp.save.saved', { rev: res.rev })
     }
     else {
       original.value = text.value
-      notice.value = `Смысл не изменился — остаётся ревизия ${res.rev}`
+      notice.value = tr('interp.save.unchanged', { rev: res.rev })
     }
   }
   catch (e) {
     // 409 — после ревизии, от которой правка, сохранили другую: это не ошибка в тексте.
     conflict.value = e instanceof ApiError && e.status === 409
-    problem.value = e instanceof Error ? e.message : 'Не удалось сохранить интерпретацию'
+    problem.value = e instanceof Error ? e.message : tr('interp.save.failed')
   }
   finally {
     saving.value = false
@@ -235,7 +237,7 @@ async function loadRevision(rev: number) {
     basedOn.value = rev
   }
   catch (e) {
-    problem.value = e instanceof Error ? e.message : 'Не удалось открыть ревизию'
+    problem.value = e instanceof Error ? e.message : tr('interp.revision.openFailed')
   }
 }
 
@@ -263,9 +265,9 @@ function caretLine(e: Event) {
 }
 
 const subtitle = computed(() => {
-  if (!view.value?.rev) return dirty.value || text.value ? 'новая · ещё не сохранена' : 'ещё не создана'
-  if (dirty.value) return basedOn.value && basedOn.value !== view.value.rev ? `изменено на основе rev ${basedOn.value}` : 'изменено · не сохранено в ревизию'
-  return `ревизия ${view.value.rev}`
+  if (!view.value?.rev) return dirty.value || text.value ? tr('interp.subtitle.unsaved') : tr('interp.subtitle.none')
+  if (dirty.value) return basedOn.value && basedOn.value !== view.value.rev ? tr('interp.subtitle.basedOn', { rev: basedOn.value }) : tr('interp.subtitle.modified')
+  return tr('interp.subtitle.rev', { rev: view.value.rev })
 })
 
 // Черновик описания: движок собирает текст из подсказок, в редактор он попадает несохранённым.
@@ -283,7 +285,7 @@ async function makeDraft() {
   if (draftState.value === 'loading') return
   if (!draftStreams.value.length) {
     draftState.value = 'error'
-    draftError.value = 'Выберите хотя бы один поток.'
+    draftError.value = tr('interp.draft.noStreams')
     return
   }
   draftState.value = 'loading'
@@ -292,11 +294,11 @@ async function makeDraft() {
   try {
     draftView.value = await data.getDraft(draftStreams.value)
     draftState.value = 'idle'
-    workspace.log(`Черновик описания по ${draftStreams.value.length} потокам`)
+    workspace.log(tr('interp.draft.logged', { n: draftStreams.value.length }))
   }
   catch (e) {
     draftState.value = 'error'
-    draftError.value = e instanceof Error ? e.message : 'Не удалось собрать черновик'
+    draftError.value = e instanceof Error ? e.message : tr('interp.draft.failed')
   }
 }
 
@@ -313,7 +315,7 @@ function useDraft() {
   basedOn.value = null
   mode.value = 'yaml'
   confirmReplace.value = false
-  notice.value = 'Черновик в редакторе: проверьте предпросмотр и сохраните ревизию.'
+  notice.value = tr('interp.draft.inEditor')
 }
 
 onMounted(() => {
@@ -336,7 +338,7 @@ async function loadFixes(hypothesis: string) {
   }
   catch (e) {
     fixState.value = 'error'
-    fixError.value = e instanceof Error ? e.message : 'Подсказка исправления недоступна'
+    fixError.value = e instanceof Error ? e.message : tr('interp.fix.failed')
   }
 }
 
@@ -345,13 +347,13 @@ function applySuggestedFix(index: number) {
   if (!fix) return
   const res = applyFixEdit(text.value, fix.edit)
   if (!res.changed) {
-    problem.value = `Не нашла в тексте место для правки «${fix.summary}».`
+    problem.value = tr('interp.fix.notFound', { summary: fix.summary })
     return
   }
   text.value = res.text
   mode.value = 'yaml'
-  workspace.log(`Исправление ${fixes.value!.hypothesis}: ${fix.summary}`)
-  notice.value = `Внесено: ${fix.summary}. Проверьте предпросмотр, сохраните ревизию и перепроверьте.`
+  workspace.log(tr('interp.fix.logged', { hypothesis: fixes.value!.hypothesis, summary: fix.summary }))
+  notice.value = tr('interp.fix.applied', { summary: fix.summary })
 }
 
 const cap = 'pl-caption m-0 px-3 pt-3.5 pb-2'
@@ -369,11 +371,11 @@ const TOKEN: Record<string, string> = {
 
 <template>
   <div class="flex h-full">
-    <ShellSidePanel id="interp-tree" title="Структура" :subtitle="view?.rev ? `rev ${view.rev}` : ''" :width="260">
+    <ShellSidePanel id="interp-tree" :title="tr('interp.tree.title')" :subtitle="view?.rev ? `rev ${view.rev}` : ''" :width="260">
       <ul v-if="result" class="pl-scroll m-0 flex-1 list-none px-0 py-2">
         <InterpTreeNode v-for="(n, k) in result.tree" :key="k" :node="n" :depth="0" />
       </ul>
-      <p v-else class="m-0 p-3 text-pl-muted">Структура появится после первого разбора.</p>
+      <p v-else class="m-0 p-3 text-pl-muted">{{ tr('interp.tree.empty') }}</p>
     </ShellSidePanel>
 
     <section class="flex min-w-0 flex-1 flex-col">
@@ -381,23 +383,23 @@ const TOKEN: Record<string, string> = {
         <select
           v-if="revisions.length"
           class="h-7 rounded border border-pl-line bg-pl-raise px-2 text-pl-fg"
-          aria-label="Открыть ревизию"
+          :aria-label="tr('interp.revision.aria')"
           :value="''"
           @change="loadRevision(Number(($event.target as HTMLSelectElement).value))"
         >
-          <option value="" disabled>ревизии…</option>
-          <option v-for="r in revisions" :key="r" :value="r">rev {{ r }}{{ r === view?.rev ? ' · текущая' : '' }}</option>
+          <option value="" disabled>{{ tr('interp.revision.pick') }}</option>
+          <option v-for="r in revisions" :key="r" :value="r">rev {{ r }}{{ r === view?.rev ? ` · ${tr('interp.revision.current')}` : '' }}</option>
         </select>
-        <button class="pl-btn h-7" type="button" :disabled="draftState === 'loading'" title="Собрать описание из подсказок движка: границы, типы, поля, связи с журналом" @click="makeDraft">
+        <button class="pl-btn h-7" type="button" :disabled="draftState === 'loading'" :title="tr('interp.draft.hint')" @click="makeDraft">
           <UIcon name="i-lucide-wand-sparkles" class="size-4" aria-hidden="true" />
-          {{ draftState === 'loading' ? 'Собираю черновик…' : 'Черновик описания' }}
+          {{ draftState === 'loading' ? tr('interp.draft.building') : tr('interp.draft.title') }}
         </button>
-        <div class="pl-seg" role="radiogroup" aria-label="Вид">
+        <div class="pl-seg" role="radiogroup" :aria-label="tr('interp.mode.aria')">
           <button type="button" role="radio" :aria-checked="mode === 'yaml'" @click="mode = 'yaml'">YAML</button>
-          <button type="button" role="radio" :aria-checked="mode === 'form'" @click="mode = 'form'">Форма</button>
+          <button type="button" role="radio" :aria-checked="mode === 'form'" @click="mode = 'form'">{{ tr('interp.mode.form') }}</button>
         </div>
-        <button class="pl-btn pl-btn-primary h-7" type="button" :disabled="saving || (!dirty && !!view?.rev)" title="Сохранить ревизией (Ctrl+S)" @click="save">
-          {{ saving ? 'Сохраняю…' : `Сохранить rev ${nextRev}` }}
+        <button class="pl-btn pl-btn-primary h-7" type="button" :disabled="saving || (!dirty && !!view?.rev)" :title="tr('interp.save.title')" @click="save">
+          {{ saving ? tr('interp.save.saving') : tr('interp.save.button', { rev: nextRev }) }}
         </button>
       </CommonPanelHeader>
       <CommonAsyncState :pending="pending" :error="error?.message" :empty="!view" @retry="refresh()">
@@ -422,7 +424,7 @@ const TOKEN: Record<string, string> = {
                 wrap="off"
                 spellcheck="false"
                 autocomplete="off"
-                aria-label="Текст интерпретации, YAML"
+                :aria-label="tr('interp.editor.aria')"
                 @keydown="onKey"
                 @click="caretLine"
                 @keyup="caretLine"
@@ -434,50 +436,50 @@ const TOKEN: Record<string, string> = {
       </CommonAsyncState>
     </section>
 
-    <ShellInspectorContent :title="selectedLine ? `Строка ${selectedLine}` : 'Предпросмотр'">
+    <ShellInspectorContent :title="selectedLine ? tr('interp.inspector.line', { n: selectedLine }) : tr('interp.preview.title')">
       <div v-if="view" class="pl-scroll flex-1">
         <div v-if="problem" class="m-3 border border-pl-st-violation/60 p-2.5" role="alert">
-          <CommonStatusBadge :status="conflict ? 'stale' : 'violation'" :label="conflict ? 'описание изменилось' : 'ошибка в тексте'" />
+          <CommonStatusBadge :status="conflict ? 'stale' : 'violation'" :label="conflict ? tr('interp.problem.changed') : tr('interp.problem.text')" />
           <pre class="mt-2 mb-0 font-mono text-[11.5px] whitespace-pre-wrap text-pl-fg">{{ problem }}</pre>
         </div>
         <p v-if="notice" class="m-3 text-pl-st-rule" aria-live="polite">{{ notice }}</p>
 
         <template v-if="fixState !== 'idle' || fixes">
-          <h3 :class="cap">Как исправить {{ fixes?.hypothesis ?? route.query.fixFor }}</h3>
+          <h3 :class="cap">{{ tr('interp.fix.title') }} {{ fixes?.hypothesis ?? route.query.fixFor }}</h3>
           <div class="flex flex-col gap-2 px-3 pb-2">
-            <p v-if="fixState === 'loading'" class="m-0 text-pl-muted" aria-live="polite">Перебираю знак, порядок байтов, ширину поля и масштаб…</p>
+            <p v-if="fixState === 'loading'" class="m-0 text-pl-muted" aria-live="polite">{{ tr('interp.fix.loading') }}</p>
             <p v-else-if="fixState === 'error'" class="m-0 text-pl-muted">{{ safeText(fixError) }}</p>
             <template v-else-if="fixes">
               <p class="m-0 font-mono text-xs break-all text-pl-muted">{{ safeText(fixes.test) }}</p>
-              <p class="m-0 text-pl-muted">Сейчас: {{ fixes.before }}.</p>
-              <p v-if="!fixes.fixes.length" class="m-0 text-pl-muted">Правка знака, порядка байтов, ширины или масштаба контрпримеры не убирает — дело в другом.</p>
+              <p class="m-0 text-pl-muted">{{ tr('interp.fix.now') }}: {{ fixes.before }}.</p>
+              <p v-if="!fixes.fixes.length" class="m-0 text-pl-muted">{{ tr('interp.fix.none') }}</p>
               <div v-for="(f, i) in fixes.fixes" :key="i" class="border border-pl-line p-2.5">
                 <div class="flex items-start justify-between gap-2">
                   <b class="font-semibold text-pl-fg-strong">{{ safeText(f.summary) }}</b>
-                  <CommonStatusBadge :status="f.after === 0 ? 'rule' : 'hypothesis'" :label="f.after === 0 ? 'контрпримеров нет' : `осталось ${f.after}`" />
+                  <CommonStatusBadge :status="f.after === 0 ? 'rule' : 'hypothesis'" :label="f.after === 0 ? tr('interp.counterexample.none') : tr('interp.counterexample.left', { n: f.after })" />
                 </div>
                 <p class="mt-1 mb-2 text-pl-muted">{{ safeText(f.effect) }}</p>
-                <button class="pl-btn" type="button" @click="applySuggestedFix(i)">Применить</button>
+                <button class="pl-btn" type="button" @click="applySuggestedFix(i)">{{ tr('common.apply') }}</button>
               </div>
             </template>
           </div>
         </template>
 
         <template v-if="draftState !== 'idle' || draftView">
-          <h3 :class="cap">Черновик описания</h3>
+          <h3 :class="cap">{{ tr('interp.draft.title') }}</h3>
           <div class="flex flex-col gap-2 px-3 pb-2">
             <details class="text-pl-muted">
-              <summary class="cursor-pointer">Потоки: {{ draftStreams.length }} из {{ streams.length }}<template v-if="connectionShown < connectionTotal"> · показаны соединения {{ connectionShown }} из {{ connectionTotal }}</template></summary>
+              <summary class="cursor-pointer">{{ tr('interp.streams.summary', { selected: draftStreams.length, total: streams.length }) }}<template v-if="connectionShown < connectionTotal"> · {{ tr('interp.streams.partial', { shown: connectionShown, total: connectionTotal }) }}</template></summary>
               <div class="mt-1 flex gap-3">
-                <button class="text-pl-wine-text hover:underline" type="button" @click="draftStreams = streams.map(s => s.id)">все</button>
-                <button class="text-pl-wine-text hover:underline" type="button" @click="draftStreams = []">снять все</button>
+                <button class="text-pl-wine-text hover:underline" type="button" @click="draftStreams = streams.map(s => s.id)">{{ tr('interp.streams.all') }}</button>
+                <button class="text-pl-wine-text hover:underline" type="button" @click="draftStreams = []">{{ tr('interp.streams.clear') }}</button>
               </div>
               <label v-for="s in streams" :key="s.id" class="flex items-center gap-2 py-0.5 text-pl-fg">
                 <input v-model="draftStreams" type="checkbox" :value="s.id">
-                {{ safeText(s.label) }}
+                {{ safeText(streamLabel(s)) }}
               </label>
             </details>
-            <p v-if="draftState === 'loading'" class="m-0 text-pl-muted" aria-live="polite">Движок ищет границы, типы, поля, связи с журналом и контрольную сумму…</p>
+            <p v-if="draftState === 'loading'" class="m-0 text-pl-muted" aria-live="polite">{{ tr('interp.draft.working') }}</p>
             <p v-else-if="draftState === 'error'" class="m-0 text-pl-st-violation" role="alert">{{ draftError }}</p>
             <template v-if="draftView && draftState !== 'loading'">
               <dl class="pl-dl p-0">
@@ -485,40 +487,40 @@ const TOKEN: Record<string, string> = {
                   <dt>{{ r.label }}</dt><dd>{{ r.value }}</dd>
                 </template>
               </dl>
-              <p v-if="draftView.incomplete" class="m-0 text-pl-st-hypothesis">Часть шагов не успела выполниться — черновик неполный.</p>
+              <p v-if="draftView.incomplete" class="m-0 text-pl-st-hypothesis">{{ tr('interp.draft.incomplete') }}</p>
               <ol class="m-0 flex list-decimal flex-col gap-1 pl-5">
                 <li v-for="(st, i) in draftView.steps" :key="i">
                   <b class="font-semibold text-pl-fg-strong">{{ safeText(st.title) }}</b>
                   <span class="text-pl-muted"> — {{ safeText(st.detail) }}</span>
                 </li>
               </ol>
-              <p class="m-0 text-pl-muted">Каждое поле черновика — гипотеза с основанием. Это подсказки по данным: проверка и сохранение — за вами.</p>
+              <p class="m-0 text-pl-muted">{{ tr('interp.draft.note') }}</p>
               <div class="flex flex-wrap gap-2">
-                <button class="pl-btn pl-btn-primary" type="button" @click="useDraft">{{ confirmReplace ? 'Заменить текст в редакторе' : 'Подставить в редактор' }}</button>
-                <button class="pl-btn" type="button" @click="makeDraft">Пересобрать</button>
+                <button class="pl-btn pl-btn-primary" type="button" @click="useDraft">{{ confirmReplace ? tr('interp.draft.replace') : tr('interp.draft.insert') }}</button>
+                <button class="pl-btn" type="button" @click="makeDraft">{{ tr('interp.draft.rebuild') }}</button>
               </div>
-              <p v-if="confirmReplace" class="m-0 text-pl-st-hypothesis" role="alert">В редакторе несохранённые правки — они заменятся черновиком.</p>
+              <p v-if="confirmReplace" class="m-0 text-pl-st-hypothesis" role="alert">{{ tr('interp.draft.confirm') }}</p>
             </template>
           </div>
         </template>
 
-        <h3 :class="cap">Предпросмотр</h3>
+        <h3 :class="cap">{{ tr('interp.preview.title') }}</h3>
         <div class="px-3">
-          <select v-model="stream" class="h-7 w-full rounded border border-pl-line bg-pl-raise px-2 text-pl-fg" aria-label="Поток для предпросмотра">
-            <option v-if="!streams.length" :value="stream">{{ result?.preview.stream ?? 'нет потоков' }}</option>
-            <option v-for="s in streams" :key="s.id" :value="s.id">{{ s.label }}</option>
+          <select v-model="stream" class="h-7 w-full rounded border border-pl-line bg-pl-raise px-2 text-pl-fg" :aria-label="tr('interp.preview.stream')">
+            <option v-if="!streams.length" :value="stream">{{ result?.preview.stream ?? tr('interp.preview.noStreams') }}</option>
+            <option v-for="s in streams" :key="s.id" :value="s.id">{{ streamLabel(s) }}</option>
           </select>
-          <p v-if="connectionShown < connectionTotal" class="m-0 mt-1 text-xs text-pl-muted">Потоки соединений {{ connectionShown }} из {{ connectionTotal }}: остальные — на «Обзоре» с фильтрами.</p>
+          <p v-if="connectionShown < connectionTotal" class="m-0 mt-1 text-xs text-pl-muted">{{ tr('interp.preview.partial', { shown: connectionShown, total: connectionTotal }) }}</p>
         </div>
         <dl v-if="result" class="pl-dl" :class="previewing && 'opacity-60'" aria-live="polite">
           <template v-for="r in result.preview.rows" :key="r.label">
             <dt>{{ r.label }}</dt><dd>{{ r.value }}</dd>
           </template>
         </dl>
-        <p v-else class="m-0 px-3 py-2 text-pl-muted">Начните с шаблона слева: разбор обновляется при правке.</p>
+        <p v-else class="m-0 px-3 py-2 text-pl-muted">{{ tr('interp.preview.hint') }}</p>
 
         <template v-if="selectedLine && lineIssues.get(selectedLine)">
-          <h3 :class="cap">Поле в строке {{ selectedLine }}</h3>
+          <h3 :class="cap">{{ tr('interp.field.inLine', { n: selectedLine }) }}</h3>
           <ul class="m-0 flex list-none flex-col gap-1.5 px-3 pb-2">
             <li v-for="(msg, i) in lineIssues.get(selectedLine)" :key="i" class="flex items-start gap-1.5">
               <UIcon :name="STATUS.violation.icon" class="mt-1 size-3 flex-none" :style="{ color: STATUS.violation.color }" aria-hidden="true" />
@@ -527,27 +529,27 @@ const TOKEN: Record<string, string> = {
           </ul>
         </template>
         <template v-if="hintState !== 'idle' || hint">
-          <h3 :class="cap">Быстрое исправление</h3>
+          <h3 :class="cap">{{ tr('interp.quickFix.title') }}</h3>
           <div class="flex flex-col gap-2 px-3 pb-2">
-            <p v-if="hintState === 'loading'" class="m-0 text-pl-muted" aria-live="polite">Подбираю тип по значениям в записях…</p>
-            <p v-else-if="hintState === 'error'" class="m-0 text-pl-muted">Подсказка для этого поля недоступна.</p>
+            <p v-if="hintState === 'loading'" class="m-0 text-pl-muted" aria-live="polite">{{ tr('interp.hint.loading') }}</p>
+            <p v-else-if="hintState === 'error'" class="m-0 text-pl-muted">{{ tr('interp.hint.failed') }}</p>
             <template v-else-if="hint && hint.suggested && hintCurrent && hintBest">
-              <button class="pl-btn pl-btn-primary self-start" type="button" @click="applyHint">Тип {{ hint.currentType }} → {{ hint.suggested }}</button>
+              <button class="pl-btn pl-btn-primary self-start" type="button" @click="applyHint">{{ tr('interp.hint.apply', { from: hint.currentType, to: hint.suggested }) }}</button>
               <p class="m-0 text-pl-muted">
-                Контрпримеров {{ hintCurrent.counterexamples }} → {{ hintBest.counterexamples }}; значения от {{ hintBest.min }} до {{ hintBest.max }}<template v-if="hintBest.negative">, отрицательных {{ hintBest.negative }}</template>.
-                Меняется в: {{ hint.messages.join(', ') }}. Это подсказка по данным — решение и сохранение ревизии за вами.
+                {{ tr('interp.hint.stats', { from: hintCurrent.counterexamples, to: hintBest.counterexamples, min: hintBest.min ?? '', max: hintBest.max ?? '' }) }}<template v-if="hintBest.negative">{{ tr('interp.hint.negative', { n: hintBest.negative }) }}</template>.
+                {{ tr('interp.hint.changes', { messages: hint.messages.join(', ') }) }}
               </p>
             </template>
-            <p v-else-if="hint" class="m-0 text-pl-muted">Тип той же ширины противоречий не убирает — дело не в знаке или порядке байтов.</p>
+            <p v-else-if="hint" class="m-0 text-pl-muted">{{ tr('interp.hint.sameWidth') }}</p>
           </div>
         </template>
 
         <template v-if="issueList.length">
-          <h3 :class="cap">Нарушения · {{ issueList.length }} {{ issueList.length === 1 ? 'строка' : 'строк' }}</h3>
+          <h3 :class="cap">{{ tr('interp.issues.title', { n: issueList.length }) }}</h3>
           <ul class="m-0 list-none p-0">
             <li v-for="[line, msgs] in issueList" :key="line">
               <button class="flex w-full items-start gap-2 px-3 py-1 text-left hover:bg-pl-raise" type="button" :aria-current="line === selectedLine" @click="goToLine(line)">
-                <span class="w-12 flex-none font-mono text-pl-muted">стр. {{ line }}</span>
+                <span class="w-12 flex-none font-mono text-pl-muted">{{ tr('interp.issues.line', { n: line }) }}</span>
                 <span class="min-w-0 truncate" :title="safeText(msgs.join('; '))">{{ safeText(msgs[0]) }}{{ msgs.length > 1 ? ` (+${msgs.length - 1})` : '' }}</span>
               </button>
             </li>
@@ -555,27 +557,27 @@ const TOKEN: Record<string, string> = {
         </template>
 
         <template v-if="view.rev">
-          <h3 :class="cap">Подсказки движка</h3>
+          <h3 :class="cap">{{ tr('interp.engineHints.title') }}</h3>
           <InterpAnalysisHints :streams="draftStreams" :message-ids="savedTypes" />
         </template>
 
-        <h3 :class="cap">Выражения в when, check и тестах</h3>
+        <h3 :class="cap">{{ tr('interp.expr.title') }}</h3>
         <dl class="pl-dl pt-0 [&_dt]:font-mono [&_dt]:text-pl-fg-strong">
-          <dt>action.params.x</dt><dd>параметр действия из журнала; вложенные — через точку</dd>
-          <dt>response.x</dt><dd>поле парного ответа</dd>
-          <dt>dec(x, n)</dt><dd>число с n знаками после запятой как целое: <span class="font-mono">dec(action.params.threshold_c, 2) == -250</span></dd>
+          <dt>action.params.x</dt><dd>{{ tr('interp.expr.actionParams') }}</dd>
+          <dt>response.x</dt><dd>{{ tr('interp.expr.response') }}</dd>
+          <dt>dec(x, n)</dt><dd>{{ tr('interp.expr.dec') }}: <span class="font-mono">dec(action.params.threshold_c, 2) == -250</span></dd>
         </dl>
 
         <template v-if="view.field">
-          <h3 :class="cap">Поле в строке {{ view.field.line }}</h3>
+          <h3 :class="cap">{{ tr('interp.field.inLine', { n: view.field.line }) }}</h3>
           <dl class="pl-dl">
-            <dt>Статус</dt><dd><CommonStatusBadge :status="view.field.status" /> → {{ view.field.ref }}</dd>
-            <dt>Проверка</dt><dd><CommonStatusBadge status="violation" :label="`${view.field.counterexamples} контрпример`" /></dd>
-            <dt>Где</dt><dd>{{ view.field.where }}</dd>
+            <dt>{{ tr('interp.field.status') }}</dt><dd><CommonStatusBadge :status="view.field.status" /> → {{ view.field.ref }}</dd>
+            <dt>{{ tr('interp.field.check') }}</dt><dd><CommonStatusBadge status="violation" :label="tr('interp.counterexample.count', { n: view.field.counterexamples })" /></dd>
+            <dt>{{ tr('interp.field.where') }}</dt><dd>{{ view.field.where }}</dd>
           </dl>
         </template>
         <template v-if="view.quickFix">
-          <h3 :class="cap">Быстрое исправление</h3>
+          <h3 :class="cap">{{ tr('interp.quickFix.title') }}</h3>
           <div class="px-3">
             <button class="pl-btn" type="button" @click="applyFix">{{ view.quickFix.label }}</button>
             <p class="mt-2 text-pl-muted">{{ view.quickFix.note }}</p>

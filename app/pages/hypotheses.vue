@@ -39,7 +39,7 @@ const busy = ref(false)
 
 async function createHypothesis() {
   if (!form.statement.trim()) {
-    formError.value = 'Сформулируйте утверждение'
+    formError.value = tr('hypotheses.err.statementRequired')
     return
   }
   busy.value = true
@@ -48,16 +48,16 @@ async function createHypothesis() {
     const id = await data.createHypothesis({ statement: form.statement.trim(), test: form.test.trim(), basis: form.basis })
     if (!id) {
       creating.value = false
-      return draft('Гипотеза добавлена')
+      return draft(tr('hypotheses.toast.added'))
     }
-    workspace.log(`Гипотеза ${id}: ${form.statement.trim()}`)
+    workspace.log(tr('hypotheses.log.created', { id, statement: form.statement.trim() }))
     Object.assign(form, { statement: '', test: '', basis: [] })
     creating.value = false
     await refresh()
     selected.value = id
   }
   catch (e) {
-    formError.value = e instanceof Error ? e.message : 'Не удалось создать гипотезу'
+    formError.value = e instanceof Error ? e.message : tr('hypotheses.err.create')
   }
   finally {
     busy.value = false
@@ -71,20 +71,20 @@ async function onSuggestionsAccepted(ids: string[]) {
 }
 
 // Статус — решение исследователя; тест его не меняет.
-const MARKS = [['supported', 'поддержана'], ['refuted', 'опровергнута'], ['untested', 'не проверена'], ['superseded', 'заменена']] as const
+const MARKS = [['supported', 'hypotheses.mark.supported'], ['refuted', 'hypotheses.mark.refuted'], ['untested', 'hypotheses.mark.untested'], ['superseded', 'hypotheses.mark.superseded']] as const
 const markError = ref<string | null>(null)
 async function mark(status: Hypothesis['status']) {
   if (!detail.value || detail.value.marked === status) return
   markError.value = null
   try {
     const saved = await data.setHypothesisStatus(detail.value.id, status)
-    if (!saved) return draft('Статус гипотезы изменён')
-    workspace.log(`Гипотеза ${detail.value.id}: статус «${MARKS.find(m => m[0] === status)?.[1]}»`)
+    if (!saved) return draft(tr('hypotheses.toast.statusChanged'))
+    workspace.log(tr('hypotheses.log.status', { id: detail.value.id, status: tr(MARKS.find(m => m[0] === status)![1]) }))
     await refresh()
     await loadDetail(detail.value.id)
   }
   catch (e) {
-    markError.value = e instanceof Error ? e.message : 'Не удалось изменить статус'
+    markError.value = e instanceof Error ? e.message : tr('hypotheses.err.status')
   }
 }
 
@@ -96,13 +96,13 @@ async function addQuestion() {
   if (!text) return
   questionError.value = null
   try {
-    if (!await data.createQuestion(text)) return draft('Вопрос добавлен')
-    workspace.log(`Вопрос: ${text}`)
+    if (!await data.createQuestion(text)) return draft(tr('hypotheses.toast.questionAdded'))
+    workspace.log(tr('hypotheses.log.question', { text }))
     question.value = ''
     await refresh()
   }
   catch (e) {
-    questionError.value = e instanceof Error ? e.message : 'Не удалось добавить вопрос'
+    questionError.value = e instanceof Error ? e.message : tr('hypotheses.err.addQuestion')
   }
 }
 
@@ -113,14 +113,14 @@ const confirmDelete = ref<string | null>(null)
 async function closeQuestion(id: string) {
   questionError.value = null
   try {
-    if (!await data.updateQuestion(id, { status: 'closed', ...(answer.value.trim() ? { answer: answer.value.trim() } : {}) })) return draft('Вопрос закрыт')
-    workspace.log(`Вопрос ${id} закрыт${answer.value.trim() ? `: ${answer.value.trim()}` : ''}`)
+    if (!await data.updateQuestion(id, { status: 'closed', ...(answer.value.trim() ? { answer: answer.value.trim() } : {}) })) return draft(tr('hypotheses.toast.questionClosed'))
+    workspace.log(answer.value.trim() ? tr('hypotheses.log.questionClosedAnswer', { id, answer: answer.value.trim() }) : tr('hypotheses.log.questionClosed', { id }))
     answering.value = null
     answer.value = ''
     await refresh()
   }
   catch (e) {
-    questionError.value = e instanceof Error ? e.message : 'Не удалось закрыть вопрос'
+    questionError.value = e instanceof Error ? e.message : tr('hypotheses.err.closeQuestion')
   }
 }
 async function deleteQuestion(id: string) {
@@ -131,12 +131,12 @@ async function deleteQuestion(id: string) {
   confirmDelete.value = null
   questionError.value = null
   try {
-    if (!await data.deleteQuestion(id)) return draft('Вопрос удалён')
-    workspace.log(`Вопрос ${id} удалён`)
+    if (!await data.deleteQuestion(id)) return draft(tr('hypotheses.toast.questionDeleted'))
+    workspace.log(tr('hypotheses.log.questionDeleted', { id }))
     await refresh()
   }
   catch (e) {
-    questionError.value = e instanceof Error ? e.message : 'Не удалось удалить вопрос'
+    questionError.value = e instanceof Error ? e.message : tr('hypotheses.err.deleteQuestion')
   }
 }
 
@@ -147,13 +147,13 @@ const obsError = ref<string | null>(null)
 async function saveObservation(id: string) {
   obsError.value = null
   try {
-    if (!await data.updateObservation(id, obsComment.value.trim())) return draft('Наблюдение изменено')
-    workspace.log(`Наблюдение ${id} изменено`)
+    if (!await data.updateObservation(id, obsComment.value.trim())) return draft(tr('hypotheses.toast.observationChanged'))
+    workspace.log(tr('hypotheses.log.observationChanged', { id }))
     editingObs.value = null
     await refreshObservations()
   }
   catch (e) {
-    obsError.value = e instanceof Error ? e.message : 'Не удалось изменить наблюдение'
+    obsError.value = e instanceof Error ? e.message : tr('hypotheses.err.observationSave')
   }
 }
 async function deleteObservation(id: string) {
@@ -164,12 +164,12 @@ async function deleteObservation(id: string) {
   confirmDelete.value = null
   obsError.value = null
   try {
-    if (!await data.deleteObservation(id)) return draft('Наблюдение удалено')
-    workspace.log(`Наблюдение ${id} удалено`)
+    if (!await data.deleteObservation(id)) return draft(tr('hypotheses.toast.observationDeleted'))
+    workspace.log(tr('hypotheses.log.observationDeleted', { id }))
     await refreshObservations()
   }
   catch (e) {
-    obsError.value = e instanceof Error ? e.message : 'Не удалось удалить наблюдение'
+    obsError.value = e instanceof Error ? e.message : tr('hypotheses.err.observationDelete')
   }
 }
 
@@ -181,26 +181,26 @@ function openAnchor(a: AnchorRef | undefined) {
 
 // «Поддержана на N примерах», а не «подтверждена»: гипотеза не становится фактом.
 const BADGE: Record<Hypothesis['status'], { status: KnowledgeStatus, label: (h: Hypothesis) => string }> = {
-  supported: { status: 'hypothesis', label: h => (h.support ? `поддержана ${h.support}` : 'поддержана') },
-  refuted: { status: 'violation', label: h => (h.support ? `опровергнута · ${h.support}` : 'опровергнута') },
-  untested: { status: 'unknown', label: () => 'не проверена' },
-  superseded: { status: 'stale', label: () => 'заменена' },
+  supported: { status: 'hypothesis', label: h => (h.support ? tr('hypotheses.badge.supportedN', { n: h.support }) : tr('hypotheses.badge.supported')) },
+  refuted: { status: 'violation', label: h => (h.support ? tr('hypotheses.badge.refutedN', { n: h.support }) : tr('hypotheses.badge.refuted')) },
+  untested: { status: 'unknown', label: () => tr('hypotheses.badge.untested') },
+  superseded: { status: 'stale', label: () => tr('hypotheses.badge.superseded') },
 }
 </script>
 
 <template>
   <div class="flex h-full">
     <section class="pl-scroll min-w-0 flex-1">
-      <CommonPanelHeader title="Гипотезы" :subtitle="view ? String(view.items.length) : ''">
-        <button class="pl-btn pl-btn-ghost h-7" type="button" title="Наблюдения и гипотезы из байтов, совпавших со значениями журнала действий" @click="suggesting = true">Заготовки из журнала</button>
-        <button class="pl-btn pl-btn-ghost h-7" type="button" @click="creating = true">+ гипотеза</button>
+      <CommonPanelHeader :title="tr('hypotheses.title')" :subtitle="view ? String(view.items.length) : ''">
+        <button class="pl-btn pl-btn-ghost h-7" type="button" :title="tr('hypotheses.suggestionsHint')" @click="suggesting = true">{{ tr('hypotheses.suggestions') }}</button>
+        <button class="pl-btn pl-btn-ghost h-7" type="button" @click="creating = true">{{ tr('hypotheses.add') }}</button>
       </CommonPanelHeader>
       <CommonAsyncState :pending="pending" :error="error?.message" :empty="!view" @retry="refresh()">
         <template v-if="view">
           <table
             class="pl-table"
             :tabindex="view.items.length ? 0 : undefined"
-            aria-label="Гипотезы: стрелки вверх и вниз выбирают гипотезу"
+            :aria-label="tr('hypotheses.tableLabel')"
             @keydown="(e: KeyboardEvent) => { const i = stepIndex(e, view!.items.findIndex(h => h.id === selected), view!.items.length); if (i !== null) { selected = view!.items[i]!.id; revealSelected(e) } }"
           >
             <tbody>
@@ -210,25 +210,25 @@ const BADGE: Record<Hypothesis['status'], { status: KnowledgeStatus, label: (h: 
                   <div>{{ safeText(h.text) }}</div>
                   <div class="mt-1 flex flex-wrap items-center gap-1.5">
                     <CommonStatusBadge :status="BADGE[h.status].status" :label="BADGE[h.status].label(h)" />
-                    <CommonStatusBadge v-if="h.run" :status="h.run.status" :label="h.run.label" title="Итог теста в последнем прогоне проверки" />
+                    <CommonStatusBadge v-if="h.run" :status="h.run.status" :label="h.run.label" :title="tr('hypotheses.runHint')" />
                   </div>
                 </td>
               </tr>
             </tbody>
           </table>
-          <p v-if="!view.items.length" class="p-3 text-pl-muted">Гипотез пока нет.</p>
-          <h3 class="pl-caption m-0 px-3 pt-3.5 pb-2">Открытые вопросы</h3>
-          <p v-if="!view.questions.length" class="px-3 text-pl-muted">Открытых вопросов нет.</p>
+          <p v-if="!view.items.length" class="p-3 text-pl-muted">{{ tr('hypotheses.none') }}</p>
+          <h3 class="pl-caption m-0 px-3 pt-3.5 pb-2">{{ tr('hypotheses.openQuestions') }}</h3>
+          <p v-if="!view.questions.length" class="px-3 text-pl-muted">{{ tr('hypotheses.noQuestions') }}</p>
           <ul class="mx-3 mb-2 list-none p-0">
             <li v-for="q in view.questions" :key="q.id" class="flex flex-col gap-1 border-b border-pl-line py-1.5">
               <div class="flex items-start gap-2">
                 <span class="min-w-0 flex-1">{{ safeText(q.text) }}</span>
-                <button class="pl-btn pl-btn-ghost h-6 flex-none" type="button" :aria-expanded="answering === q.id" @click="answering = answering === q.id ? null : q.id; answer = ''">ответить</button>
-                <button class="pl-btn pl-btn-ghost h-6 flex-none" type="button" @click="deleteQuestion(q.id)">{{ confirmDelete === q.id ? 'точно удалить?' : 'удалить' }}</button>
+                <button class="pl-btn pl-btn-ghost h-6 flex-none" type="button" :aria-expanded="answering === q.id" @click="answering = answering === q.id ? null : q.id; answer = ''">{{ tr('hypotheses.answer') }}</button>
+                <button class="pl-btn pl-btn-ghost h-6 flex-none" type="button" @click="deleteQuestion(q.id)">{{ confirmDelete === q.id ? tr('common.confirmDelete') : tr('common.delete') }}</button>
               </div>
               <form v-if="answering === q.id" class="flex gap-2" @submit.prevent="closeQuestion(q.id)">
-                <input v-model="answer" class="h-7 min-w-0 flex-1 rounded border border-pl-line bg-pl-raise px-2 text-pl-fg-strong focus:border-pl-wine-text" placeholder="Ответ (необязательно)" :aria-label="`Ответ на вопрос: ${q.text}`">
-                <button class="pl-btn h-7" type="submit">Закрыть вопрос</button>
+                <input v-model="answer" class="h-7 min-w-0 flex-1 rounded border border-pl-line bg-pl-raise px-2 text-pl-fg-strong focus:border-pl-wine-text" :placeholder="tr('hypotheses.answerOptional')" :aria-label="tr('hypotheses.answerTo', { text: q.text })">
+                <button class="pl-btn h-7" type="submit">{{ tr('hypotheses.closeQuestion') }}</button>
               </form>
             </li>
           </ul>
@@ -238,26 +238,26 @@ const BADGE: Record<Hypothesis['status'], { status: KnowledgeStatus, label: (h: 
               ref="questionInput"
               v-model="question"
               class="h-7 min-w-0 flex-1 rounded border border-pl-line bg-pl-raise px-2 text-pl-fg-strong focus:border-pl-wine-text"
-              placeholder="Новый открытый вопрос…"
-              aria-label="Новый открытый вопрос"
+              :placeholder="tr('hypotheses.newQuestionHint')"
+              :aria-label="tr('hypotheses.newQuestion')"
             >
-            <button class="pl-btn h-7" type="submit" :disabled="!question.trim()">Добавить</button>
+            <button class="pl-btn h-7" type="submit" :disabled="!question.trim()">{{ tr('hypotheses.addQuestionBtn') }}</button>
           </form>
           <p v-if="questionError" class="mx-3 text-pl-st-violation" role="alert">{{ questionError }}</p>
-          <h3 class="pl-caption m-0 px-3 pt-3.5 pb-2">Наблюдения · {{ observations.length }}</h3>
-          <p v-if="!observations.length" class="px-3 text-pl-muted">Наблюдений пока нет — их создают из выделения байтов в «Обзоре» и «Сравнении».</p>
+          <h3 class="pl-caption m-0 px-3 pt-3.5 pb-2">{{ tr('hypotheses.observations', { n: observations.length }) }}</h3>
+          <p v-if="!observations.length" class="px-3 text-pl-muted">{{ tr('hypotheses.noObservations') }}</p>
           <ul class="mx-3 mb-4 list-none p-0">
             <li v-for="o in observations" :key="o.id" class="flex flex-col gap-1 border-b border-pl-line py-1.5">
               <div v-if="editingObs !== o.id" class="flex items-start gap-2">
                 <b class="flex-none font-semibold">{{ o.id }}</b>
                 <span class="min-w-0 flex-1">{{ safeText(o.text) }}</span>
-                <button class="pl-btn pl-btn-ghost h-6 flex-none" type="button" @click="editingObs = o.id; obsComment = o.text">изменить</button>
-                <button class="pl-btn pl-btn-ghost h-6 flex-none" type="button" @click="deleteObservation(o.id)">{{ confirmDelete === o.id ? 'точно удалить?' : 'удалить' }}</button>
+                <button class="pl-btn pl-btn-ghost h-6 flex-none" type="button" @click="editingObs = o.id; obsComment = o.text">{{ tr('common.edit') }}</button>
+                <button class="pl-btn pl-btn-ghost h-6 flex-none" type="button" @click="deleteObservation(o.id)">{{ confirmDelete === o.id ? tr('common.confirmDelete') : tr('common.delete') }}</button>
               </div>
               <form v-else class="flex gap-2" @submit.prevent="saveObservation(o.id)">
-                <input v-model="obsComment" class="h-7 min-w-0 flex-1 rounded border border-pl-line bg-pl-raise px-2 text-pl-fg-strong focus:border-pl-wine-text" :aria-label="`Комментарий наблюдения ${o.id}`">
-                <button class="pl-btn h-7" type="submit">Сохранить</button>
-                <button class="pl-btn pl-btn-ghost h-7" type="button" @click="editingObs = null">Отмена</button>
+                <input v-model="obsComment" class="h-7 min-w-0 flex-1 rounded border border-pl-line bg-pl-raise px-2 text-pl-fg-strong focus:border-pl-wine-text" :aria-label="tr('hypotheses.observationComment', { id: o.id })">
+                <button class="pl-btn h-7" type="submit">{{ tr('common.save') }}</button>
+                <button class="pl-btn pl-btn-ghost h-7" type="button" @click="editingObs = null">{{ tr('common.cancel') }}</button>
               </form>
             </li>
           </ul>
@@ -266,42 +266,42 @@ const BADGE: Record<Hypothesis['status'], { status: KnowledgeStatus, label: (h: 
       </CommonAsyncState>
     </section>
 
-    <ShellInspectorContent :title="detail ? `${detail.id} · ${detail.title}` : 'Гипотеза'">
-      <p v-if="detailState === 'loading'" class="p-3 text-pl-muted" aria-live="polite">Проверяю гипотезу на записях…</p>
-      <p v-else-if="detailState === 'error'" class="p-3 text-pl-st-violation" role="alert">Не удалось загрузить гипотезу.</p>
-      <p v-else-if="!detail" class="p-3 text-pl-muted">{{ !view?.items.length ? 'Гипотез пока нет.' : data.kind === 'mock' ? 'В примере данных подробно описана только H4.' : 'Выберите гипотезу.' }}</p>
+    <ShellInspectorContent :title="detail ? `${detail.id} · ${detail.title}` : tr('hypotheses.inspector')">
+      <p v-if="detailState === 'loading'" class="p-3 text-pl-muted" aria-live="polite">{{ tr('hypotheses.checking') }}</p>
+      <p v-else-if="detailState === 'error'" class="p-3 text-pl-st-violation" role="alert">{{ tr('hypotheses.loadFailed') }}</p>
+      <p v-else-if="!detail" class="p-3 text-pl-muted">{{ !view?.items.length ? tr('hypotheses.none') : data.kind === 'mock' ? tr('hypotheses.sampleOnlyH4') : tr('hypotheses.selectOne') }}</p>
       <div v-else class="pl-scroll flex-1">
         <div class="px-3 pt-3"><CommonStatusBadge :status="BADGE[detail.status].status" :label="BADGE[detail.status].label({ id: detail.id, text: detail.title, status: detail.status, support: detail.support, run: null })" /></div>
         <div class="flex flex-col gap-1.5 px-3 pt-3">
-          <span class="pl-caption">Статус, по вашему решению</span>
-          <div class="flex flex-wrap gap-1.5" role="group" aria-label="Статус гипотезы">
-            <button v-for="[v, l] in MARKS" :key="v" type="button" class="pl-chip" :aria-pressed="detail.marked === v" @click="mark(v)">{{ l }}</button>
+          <span class="pl-caption">{{ tr('hypotheses.statusDecision') }}</span>
+          <div class="flex flex-wrap gap-1.5" role="group" :aria-label="tr('hypotheses.statusGroup')">
+            <button v-for="[v, l] in MARKS" :key="v" type="button" class="pl-chip" :aria-pressed="detail.marked === v" @click="mark(v)">{{ tr(l) }}</button>
           </div>
           <span v-if="markError" class="text-pl-st-violation" role="alert">{{ markError }}</span>
         </div>
         <dl class="pl-dl">
-          <dt>Утверждение</dt><dd>{{ safeText(detail.claim) }}</dd>
-          <dt>Тест</dt><dd class="font-mono">{{ safeText(detail.test) }}</dd>
-          <dt>Область</dt><dd>{{ safeText(detail.scope) }}</dd>
-          <dt>Основания</dt><dd>{{ safeText(detail.basis) }}</dd>
+          <dt>{{ tr('hypotheses.claim') }}</dt><dd>{{ safeText(detail.claim) }}</dd>
+          <dt>{{ tr('hypotheses.test') }}</dt><dd class="font-mono">{{ safeText(detail.test) }}</dd>
+          <dt>{{ tr('hypotheses.scope') }}</dt><dd>{{ safeText(detail.scope) }}</dd>
+          <dt>{{ tr('hypotheses.basis') }}</dt><dd>{{ safeText(detail.basis) }}</dd>
         </dl>
-        <h3 class="pl-caption m-0 px-3 pt-3.5 pb-2">Контрпримеры</h3>
-        <p v-if="!detail.counterexamples.length" class="px-3 text-pl-muted">Контрпримеров нет.</p>
+        <h3 class="pl-caption m-0 px-3 pt-3.5 pb-2">{{ tr('hypotheses.counterexamples') }}</h3>
+        <p v-if="!detail.counterexamples.length" class="px-3 text-pl-muted">{{ tr('hypotheses.noCounterexamples') }}</p>
         <ul v-else class="m-0 list-none p-0">
           <li v-for="c in detail.counterexamples" :key="c.where" class="border-b border-pl-line px-3 py-2.5">
             <div class="flex items-start justify-between gap-2">
               <span class="min-w-0 break-words text-pl-fg-strong">{{ safeText(c.where) }}</span>
-              <button class="pl-btn pl-btn-ghost h-6 flex-none" type="button" @click="openAnchor(c.anchor)">в поток</button>
+              <button class="pl-btn pl-btn-ghost h-6 flex-none" type="button" @click="openAnchor(c.anchor)">{{ tr('hypotheses.toStream') }}</button>
             </div>
             <dl class="m-0 mt-1.5 grid grid-cols-[86px_minmax(0,1fr)] gap-x-2 gap-y-1 [&_dd]:m-0 [&_dd]:font-mono [&_dd]:break-words [&_dt]:text-pl-muted">
-              <dt>Ожидалось</dt><dd>{{ safeText(c.expected) }}</dd>
-              <dt>Получено</dt><dd>{{ safeText(c.got) }}</dd>
+              <dt>{{ tr('hypotheses.expected') }}</dt><dd>{{ safeText(c.expected) }}</dd>
+              <dt>{{ tr('hypotheses.got') }}</dt><dd>{{ safeText(c.got) }}</dd>
             </dl>
           </li>
         </ul>
         <p v-if="detail.note" class="mt-2 px-3 text-pl-muted">{{ safeText(detail.note) }}</p>
         <template v-if="detail.history.length">
-          <h3 class="pl-caption m-0 px-3 pt-3.5 pb-2">История статуса</h3>
+          <h3 class="pl-caption m-0 px-3 pt-3.5 pb-2">{{ tr('hypotheses.history') }}</h3>
           <table class="pl-table">
             <tbody>
               <tr v-for="r in detail.history" :key="r.run">
@@ -313,29 +313,29 @@ const BADGE: Record<Hypothesis['status'], { status: KnowledgeStatus, label: (h: 
           </table>
         </template>
         <div class="flex flex-wrap gap-2 p-3">
-          <NuxtLink to="/interpretation" class="pl-btn pl-btn-primary">Исправить в интерпретации</NuxtLink>
-          <button class="pl-btn" type="button" @click="questionInput?.focus()">Добавить вопрос</button>
+          <NuxtLink to="/interpretation" class="pl-btn pl-btn-primary">{{ tr('hypotheses.fixInInterp') }}</NuxtLink>
+          <button class="pl-btn" type="button" @click="questionInput?.focus()">{{ tr('hypotheses.addQuestion') }}</button>
         </div>
       </div>
     </ShellInspectorContent>
 
     <HypothesesSuggestions v-model:open="suggesting" :existing="view?.items.map(h => h.text) ?? []" @accepted="onSuggestionsAccepted" />
 
-    <UModal v-model:open="creating" title="Новая гипотеза" description="Утверждение, тест и наблюдения, на которых оно основано">
+    <UModal v-model:open="creating" :title="tr('hypotheses.newTitle')" :description="tr('hypotheses.newDescription')">
       <template #body>
         <form id="hypothesis-form" class="flex flex-col gap-3" @submit.prevent="createHypothesis">
           <label class="flex flex-col gap-1">
-            <span class="pl-caption">Утверждение *</span>
-            <textarea id="hyp-statement" v-model="form.statement" rows="2" class="rounded border border-pl-line bg-pl-raise px-2 py-1.5 text-pl-fg-strong focus:border-pl-wine-text" placeholder="value в запросе равно параметру действия" />
+            <span class="pl-caption">{{ tr('hypotheses.statementLabel') }}</span>
+            <textarea id="hyp-statement" v-model="form.statement" rows="2" class="rounded border border-pl-line bg-pl-raise px-2 py-1.5 text-pl-fg-strong focus:border-pl-wine-text" :placeholder="tr('hypotheses.statementHint')" />
           </label>
           <label class="flex flex-col gap-1">
-            <span class="pl-caption">Тест</span>
+            <span class="pl-caption">{{ tr('hypotheses.test') }}</span>
             <input id="hyp-test" v-model="form.test" class="h-[30px] rounded border border-pl-line bg-pl-raise px-2 font-mono text-pl-fg-strong focus:border-pl-wine-text" placeholder="value == action.params.value" spellcheck="false">
-            <span class="text-xs text-pl-muted">Поля сообщения, <code class="font-mono">response.*</code>, <code class="font-mono">action.params.*</code>, <code class="font-mono">action.result.*</code>. Без теста гипотеза остаётся «не проверена».</span>
+            <span class="text-xs text-pl-muted">{{ tr('hypotheses.testFields') }} <code class="font-mono">response.*</code>, <code class="font-mono">action.params.*</code>, <code class="font-mono">action.result.*</code>. {{ tr('hypotheses.testNote') }}</span>
           </label>
           <fieldset class="m-0 flex flex-col gap-1 border-0 p-0">
-            <legend class="pl-caption mb-1">Основания</legend>
-            <p v-if="!observations.length" class="m-0 text-pl-muted">Наблюдений пока нет — их создают из выделения байтов в «Обзоре» и «Сравнении».</p>
+            <legend class="pl-caption mb-1">{{ tr('hypotheses.basis') }}</legend>
+            <p v-if="!observations.length" class="m-0 text-pl-muted">{{ tr('hypotheses.noObservations') }}</p>
             <label v-for="o in observations" :key="o.id" class="flex items-start gap-1.5">
               <input v-model="form.basis" type="checkbox" :value="o.id" class="mt-0.5"> <b class="font-semibold">{{ o.id }}</b> {{ safeText(o.text) }}
             </label>
@@ -345,8 +345,8 @@ const BADGE: Record<Hypothesis['status'], { status: KnowledgeStatus, label: (h: 
       </template>
       <template #footer>
         <div class="flex w-full justify-end gap-2.5">
-          <button class="pl-btn" type="button" @click="creating = false">Отмена</button>
-          <button class="pl-btn pl-btn-primary" type="submit" form="hypothesis-form" :disabled="busy">{{ busy ? 'Создаю…' : 'Создать' }}</button>
+          <button class="pl-btn" type="button" @click="creating = false">{{ tr('common.cancel') }}</button>
+          <button class="pl-btn pl-btn-primary" type="submit" form="hypothesis-form" :disabled="busy">{{ busy ? tr('hypotheses.creating') : tr('hypotheses.create') }}</button>
         </div>
       </template>
     </UModal>
