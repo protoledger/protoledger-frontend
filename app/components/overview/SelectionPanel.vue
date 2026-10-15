@@ -163,7 +163,7 @@ function time(iso: string) {
               </dd>
             </template>
             <template v-if="frame.payload">
-              <dt>Payload</dt><dd>{{ tr('overview.payloadRange', { offset: frame.payload.offset, length: frame.payload.length }) }}</dd>
+              <dt :title="tr('overview.payloadTitle')">{{ tr('overview.payload') }}</dt><dd>{{ tr('overview.payloadRange', { offset: frame.payload.offset, length: frame.payload.length }) }}</dd>
             </template>
           </dl>
         </div>
