@@ -155,7 +155,7 @@ const field = 'h-[30px] w-full rounded border border-pl-line bg-pl-raise px-2 te
     </template>
     <template #footer>
       <div class="flex w-full justify-end gap-2.5">
-        <button class="pl-btn" type="button" @click="open = false">{{ done ? tr('common.close') : tr('common.cancel') }}</button>
+        <button class="pl-btn" type="button" @click="open = false">{{ done ? tr('project.importDone') : tr('common.cancel') }}</button>
         <button v-if="!done" class="pl-btn pl-btn-primary" type="submit" form="action-log-form" :disabled="busy || !columns.length">{{ busy ? tr('project.importing') : tr('project.importAction') }}</button>
       </div>
     </template>
