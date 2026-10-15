@@ -92,6 +92,8 @@ export default defineMessages({
   'project.importing': 'Импортирую…',
   'project.importAction': 'Импортировать',
   'project.manualChoice': 'выбрано вручную',
+  // Крестик диалога уже называется «Закрыть»: у нижней кнопки другое имя, чтобы их различали.
+  'project.importDone': 'Готово',
 }, {
   'project.tree': 'Project structure',
   'project.captures': 'Captures',
@@ -184,4 +186,5 @@ export default defineMessages({
   'project.importing': 'Importing…',
   'project.importAction': 'Import',
   'project.manualChoice': 'chosen manually',
+  'project.importDone': 'Done',
 })
