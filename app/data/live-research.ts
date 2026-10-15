@@ -277,7 +277,7 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
 
     async getActionLogs() {
       const { items } = unwrap(await api.GET('/api/action-logs'))
-      return items.map(l => ({
+      return items.filter(l => !l.replacedBy).map(l => ({
         name: l.name,
         rows: l.rows,
         mapping: [
@@ -292,7 +292,8 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
 
     async getActions(logId, offset = 0) {
       const { items } = unwrap(await api.GET('/api/action-logs'))
-      const logs = items.map(l => ({ id: l.id, name: l.name, rows: l.rows, clockOffsetMs: l.mapping.clockOffsetMs ?? 0 }))
+      // Заменённые записи (повторный импорт, поправка часов) в анализе не участвуют — в выбор их не даём.
+      const logs = items.filter(l => !l.replacedBy).map(l => ({ id: l.id, name: l.name, rows: l.rows, clockOffsetMs: l.mapping.clockOffsetMs ?? 0 }))
       const log = logs.find(l => l.id === logId) ?? logs[0] ?? null
       if (!log) return { logs, log: null, rows: [], total: 0, offset: 0, exchanges: null, exchangeNote: null }
       const page = unwrap(await api.GET('/api/action-logs/{id}/actions', { params: { path: { id: log.id }, query: { limit: ACTIONS_PAGE, offset } } }))
@@ -714,7 +715,7 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
     },
 
     async getCompare(action, logId) {
-      const logs = unwrap(await api.GET('/api/action-logs')).items
+      const logs = unwrap(await api.GET('/api/action-logs')).items.filter(l => !l.replacedBy)
       const obs = unwrap(await api.GET('/api/observations')).items
       const observations = obs.map(o => ({
         id: o.id,
@@ -937,6 +938,11 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
 
     async compareCaptures(a, b) {
       return unwrap(await api.POST('/api/interpretation/compare', { body: { a, b } }))
+    },
+
+    async applyClockOffset(logId, clockOffsetMs) {
+      const r = unwrap(await api.POST('/api/action-logs/{id}/clock-offset', { params: { path: { id: logId } }, body: { clockOffsetMs } }))
+      return r.id
     },
 
     async getClockOffset(logId) {
