@@ -119,6 +119,7 @@ const changedTypes = computed(() => result.value?.types.filter(t => t.change !==
 
       <template v-if="result.timing.length">
         <h3 class="pl-caption m-0">Время ответа</h3>
+        <p class="m-0 text-xs text-pl-muted">По меткам времени захвата: от последнего кадра запроса до первого кадра ответа.</p>
         <table class="pl-table">
           <thead><tr><th>Запрос</th><th class="text-right">Медиана A</th><th class="text-right">Медиана B</th><th class="text-right">B / A</th></tr></thead>
           <tbody>

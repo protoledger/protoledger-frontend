@@ -2,7 +2,7 @@ import type { ConnectionFlag, SourceDiagnostics } from '~/api/types'
 import { DIAGNOSTIC_STATUS, FLAG_STATUS, type KnowledgeStatus } from './status'
 
 /** Признаки соединений, которые говорят о дефекте записи; «порты повторно» — свойство обмена, не дефект. */
-export const ISSUE_FLAGS: ConnectionFlag[] = ['gaps', 'ambiguous', 'retransmissions', 'no_syn', 'bad_checksum', 'truncated']
+export const ISSUE_FLAGS: ConnectionFlag[] = ['gaps', 'ambiguous', 'retransmissions', 'no_syn', 'bad_checksum', 'truncated', 'out_of_window']
 
 // Тот же дефект, что уже назван диагностикой записи, — второй раз не показываем.
 const SAME_AS_DIAGNOSTIC: Partial<Record<ConnectionFlag, string>> = { truncated: 'truncated_frame', bad_checksum: 'bad_checksum' }

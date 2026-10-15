@@ -33,6 +33,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   const focus = ref(false)
   // На узком экране панель открывается поверх рабочей области; одновременно — одна (id панели или 'inspector').
   const drawer = ref<string | null>(null)
+  // Несохранённый текст описания живёт дольше экрана редактора: переход на другой экран его не теряет.
+  const interpDraft = ref<{ rev: number | null, text: string } | null>(null)
   // Скрытая плашка «что дальше» возвращается при следующем открытии приложения.
   const nextStepsHidden = ref(false)
 
@@ -63,5 +65,5 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     focus.value = false
   }
 
-  return { nextStepsHidden, drawer, bottomOpen, bottomTab, events, panels, inspector, focus, panel, log, resetLayout }
+  return { nextStepsHidden, drawer, interpDraft, bottomOpen, bottomTab, events, panels, inspector, focus, panel, log, resetLayout }
 })

@@ -242,6 +242,8 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
               { label: 'Сообщений', value: formatCount(total) },
               ...Object.entries(counts).filter(([, c]) => c > 0).map(([k, c]) => ({ label: CATEGORY[k]?.label ?? k, value: formatCount(c) })),
               { label: 'Неизвестных байтов', value: formatCount(preview.unknownBytes ?? 0) },
+              // Структура и нарушения собираются по первой странице сообщений — говорим, если она не вся.
+              ...(preview.items.length < total ? [{ label: 'Структура и нарушения', value: `по первым ${formatCount(preview.items.length)} из ${formatCount(total)}` }] : []),
             ],
       },
     }
@@ -666,7 +668,7 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
         },
       }))
       return {
-        searchRange: `${formatCount(hints.sampledBytes)} байт · порог ${hints.minMessages} сообщ.`,
+        searchRange: `${hints.truncated ? 'проанализировано ' : ''}${formatCount(hints.sampledBytes)} байт · порог ${hints.minMessages} сообщ.`,
         candidates,
         signatures: [
           ...hints.signatures.map(sg => ({ label: sg.bytes.toUpperCase().replace(/(..)(?=.)/g, '$1 '), matched: sg.atStarts, total: sg.startsTotal, ok: sg.atStarts === sg.startsTotal })),

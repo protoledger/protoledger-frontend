@@ -71,9 +71,10 @@ const stats = computed(() => {
       <dl class="m-0 flex flex-wrap gap-x-5 gap-y-1 border-b border-pl-line px-3 py-2.5 [&_dd]:m-0 [&_dd]:font-semibold [&_dd]:text-pl-fg-strong [&_dt]:text-pl-muted">
         <div v-for="[k, v] in stats" :key="k" class="flex gap-1.5"><dt>{{ k }}</dt><dd>{{ v }}</dd></div>
       </dl>
+      <p class="m-0 px-3 pt-2 text-xs text-pl-muted">Задержка — по меткам времени захвата: от последнего кадра запроса до первого кадра ответа.</p>
       <p v-if="!page.items.length" class="m-3 text-pl-muted">В соединении нет сообщений для сопоставления.</p>
       <table v-else class="pl-table">
-        <thead><tr><th>Время</th><th>Запрос</th><th>Ответ</th><th class="text-right">Задержка</th><th>Пара</th></tr></thead>
+        <thead><tr><th>Время</th><th>Запрос</th><th>Ответ</th><th class="text-right" title="По меткам времени захвата: от последнего кадра запроса до первого кадра ответа">Задержка</th><th>Пара</th></tr></thead>
         <tbody>
           <tr v-for="(p, i) in page.items" :key="i">
             <td class="whitespace-nowrap">{{ time((p.requests[0] ?? p.responses[0])!.firstTsNs) }}</td>

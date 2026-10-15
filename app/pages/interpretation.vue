@@ -47,14 +47,21 @@ const selectedLine = ref<number | null>(null)
 watch(view, (v) => {
   if (!v) return
   original.value = v.yaml.map(l => l.text).join('\n')
-  text.value = v.rev ? original.value : TEMPLATE
-  basedOn.value = v.rev
+  // Вернулись в редактор с несохранённой правкой — продолжаем её; если ревизия с тех пор сменилась,
+  // подзаголовок скажет, на какой ревизии правка основана.
+  const kept = workspace.interpDraft
+  text.value = kept ? kept.text : v.rev ? original.value : TEMPLATE
+  basedOn.value = kept ? kept.rev : v.rev
   stream.value = v.stream
   result.value = v.rev ? { tree: v.tree, preview: v.preview, violations: v.violations } : null
   selectedLine.value = v.selectedLine || null
 }, { immediate: true })
 
 const dirty = computed(() => !!view.value && text.value !== original.value)
+watch([text, dirty], () => {
+  const untouchedTemplate = !view.value?.rev && text.value === TEMPLATE
+  workspace.interpDraft = dirty.value && !untouchedTemplate ? { rev: basedOn.value, text: text.value } : null
+})
 const nextRev = computed(() => (revisions.value[0] ?? view.value?.rev ?? 0) + 1)
 
 // Строка ошибки из ответа движка («line 3 column 5: …») — подсвечиваем её в редакторе.

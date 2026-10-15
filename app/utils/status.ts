@@ -38,6 +38,7 @@ export const FLAG_STATUS: Record<string, { label: string, status: KnowledgeStatu
   bad_checksum: { label: 'checksum', status: 'violation' },
   truncated: { label: 'усечены', status: 'gap' },
   reused_ports: { label: 'порты повторно', status: 'unknown' },
+  out_of_window: { label: 'вне окна TCP', status: 'gap' },
 }
 
 export const DIAGNOSTIC_STATUS: Record<string, { label: string, status: KnowledgeStatus }> = {

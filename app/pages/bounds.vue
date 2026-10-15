@@ -53,9 +53,17 @@ watch([candidate, stream], async ([c, s]) => {
   }
 }, { immediate: true })
 
+// В редакторе несохранённая правка: фрейминг сохранится в ревизию без неё — сначала предупреждаем.
+const confirmApply = ref(false)
+watch(candidate, () => { confirmApply.value = false })
 async function applyFraming() {
   const c = candidate.value
   if (!c) return
+  if (workspace.interpDraft && !confirmApply.value) {
+    confirmApply.value = true
+    return
+  }
+  confirmApply.value = false
   applying.value = true
   try {
     const rev = await data.applyFraming(c.spec)
@@ -156,9 +164,10 @@ const cap = 'pl-caption m-0 px-3 pt-3.5 pb-2'
       <p v-else class="p-3 text-pl-muted">Кандидатов нет.</p>
       <footer class="flex flex-col items-start gap-2 border-t border-pl-line px-3 py-2.5">
         <div class="flex flex-wrap gap-2">
-          <button class="pl-btn pl-btn-primary" type="button" :disabled="!candidate || applying" @click="applyFraming">Применить как фрейминг</button>
+          <button class="pl-btn pl-btn-primary" type="button" :disabled="!candidate || applying" @click="applyFraming">{{ confirmApply ? 'Всё равно применить' : 'Применить как фрейминг' }}</button>
           <NuxtLink to="/interpretation?draft=1" class="pl-btn" title="Границы, типы, поля и связи с журналом одним запросом">Черновик описания</NuxtLink>
         </div>
+        <span v-if="confirmApply" class="text-pl-st-hypothesis" role="alert">В редакторе есть несохранённая правка описания. Фрейминг сохранится новой ревизией без неё, а правка останется в редакторе, основанная на прежней ревизии.</span>
         <span v-if="applied" aria-live="polite">{{ applied }}</span>
       </footer>
     </ShellInspectorContent>

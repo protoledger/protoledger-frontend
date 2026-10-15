@@ -186,6 +186,7 @@ const EVENT = {
           <div class="mt-1.5 flex flex-wrap gap-x-3.5 gap-y-1 text-pl-muted">
             <span v-for="(ev, k) in EVENT" :key="k"><i class="inline-block size-2 rounded-full align-middle" :style="{ background: ev.color }" /> {{ ev.label }}</span>
           </div>
+          <p class="m-0 mt-1 text-xs text-pl-muted">«+N мс» — от времени действия в журнале до метки захвата кадра.</p>
         </div>
         <template v-for="side in [exchange.request, exchange.response]" :key="side?.title">
           <div v-if="side" class="px-3">

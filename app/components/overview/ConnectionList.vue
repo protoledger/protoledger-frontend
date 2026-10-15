@@ -39,11 +39,14 @@ async function load(reset: boolean) {
 }
 
 watch([source, port, flag], () => load(true), { immediate: true })
+// Импорт закончился (запись стала «готово») — в списке появились её соединения.
+const sourcesKey = computed(() => project.sources.map(s => `${s.sha256}:${s.status}`).join())
+watch(sourcesKey, (now, before) => { if (before !== undefined) void load(true) })
 
 // Соединения устройства — вывод движка по журналу действий, а не факт: значок с причиной в подсказке.
 const devices = ref<Map<string, string>>(new Map())
 const deviceSummary = ref<string | null>(null)
-watch(() => project.project?.path, async () => {
+watch([() => project.project?.path, sourcesKey], async () => {
   try {
     const r = await data.getDeviceConnections()
     devices.value = new Map((r?.items ?? []).filter(i => i.role === 'device').map(i => [i.connection, i.reason]))
