@@ -23,7 +23,7 @@ export default defineMessages({
   'compare.observations.count': 'Заметки · {n}',
   'compare.observations.empty': 'Заметок пока нет: выберите связь слева и сохраните её как заметку.',
   'compare.selected': 'Выбрано: байты {pos} {rel}',
-  'compare.toObservation': 'Записать заметку к выделенным байтам',
+  'compare.toObservation': 'Записать заметку',
   'compare.observation.created': 'Заметка создана',
   'compare.observation.logged': 'Заметка: {comment}',
   'compare.observation.saved': 'Заметка сохранена.',
