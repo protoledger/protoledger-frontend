@@ -110,10 +110,7 @@ export interface paths {
          * Сохранить интерпретацию новой ревизией
          * @description Текст проверяется по схеме `protoledger/interpretation@1`: ошибка — `422` с описанием места и причины,
          *     ревизия не создаётся. Если каноническая форма (digest) не отличается от последней ревизии, новая ревизия
-         *     не создаётся (`created: false`). Старые ревизии не изменяются. `baseRev` — ревизия, от которой сделана
-         *     правка (`0` — интерпретации ещё не было): если после неё сохранена другая ревизия с другим смыслом, —
-         *     `409`, ничего не сохраняется (правка из второй вкладки или от устаревшего текста не затирает чужую).
-         *     Без `baseRev` — сохранение как раньше.
+         *     не создаётся (`created: false`). Старые ревизии не изменяются.
          */
         put: operations["saveInterpretation"];
         post?: never;
@@ -1318,8 +1315,6 @@ export interface components {
         };
         SaveInterpretationRequest: {
             yaml: string;
-            /** @description Ревизия, от которой сделана правка; 0 — интерпретации ещё не было. Устарела — 409 */
-            baseRev?: number;
         };
         SaveInterpretationResult: {
             rev: number;
@@ -3524,23 +3519,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            /** @description Проект не открыт или правка сделана от устаревшей ревизии (`baseRev`) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "urn:protoledger:problem:conflict",
-                     *       "title": "Конфликт состояния",
-                     *       "status": 409,
-                     *       "detail": "Описание изменилось: правка сделана от ревизии 3, а после неё сохранена ревизия 4. Откройте ревизию 4 и перенесите правку."
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
+            409: components["responses"]["NoProject"];
             413: components["responses"]["TooLarge"];
             415: components["responses"]["UnsupportedMedia"];
             422: components["responses"]["Unprocessable"];
