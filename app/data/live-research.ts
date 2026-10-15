@@ -701,7 +701,7 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
         variability: columns.map(c => c.entropyMillibits / 1000),
         // Что показано не целиком — говорим прямо: границы по первой странице, столбцов — первые 16.
         variabilityNote: [
-          `Длина ${variability.length}, сообщений ${variability.analysed}${variability.analysed < variability.messages ? ` из ${formatCount(variability.messages)}` : ''}.`,
+          `Сообщений длины ${variability.length}: ${formatCount(variability.analysed)}${variability.analysed < variability.messages ? ` из ${formatCount(variability.messages)}` : ''}.`,
           constant.length ? `Постоянны: ${constant.join(', ')}.` : 'Постоянных областей нет.',
           counters.length ? `${counters.join(', ')}.` : '',
           variability.columns.length > columns.length ? `На графике первые ${columns.length} смещений из ${variability.columns.length}.` : '',
