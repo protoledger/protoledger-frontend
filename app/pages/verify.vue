@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { apiClient } from '~/api/client'
 import type { CorpusFilter } from '~/api/types'
 import type { ResultCategory, StreamLink } from '~/data/views'
 
@@ -12,6 +13,13 @@ const router = useRouter()
 
 const runId = computed(() => (typeof route.query.run === 'string' ? route.query.run : undefined))
 const { data: view, error, refresh, pending } = await useAsyncData('verification', () => data.getVerification(runId.value), { watch: [runId] })
+// Смысл предположений — из описания протокола: в таблице показываем его, а не только выражение проверки.
+const { data: statements } = await useAsyncData('verify-statements', async () => {
+  const res = await apiClient().GET('/api/interpretation')
+  if (!res.data) return {} as Record<string, string>
+  const s = res.data.structure as unknown as { hypotheses?: { id: string, statement: string }[] }
+  return Object.fromEntries((s.hypotheses ?? []).map(h => [h.id, h.statement])) as Record<string, string>
+}, { default: () => ({}) as Record<string, string> })
 const runError = ref<string | null>(null)
 
 // Корпус нового прогона: какие записи, направление, порт. Пусто — всё.
@@ -107,7 +115,7 @@ const total = computed(() => view.value?.categories.reduce((n, c) => n + c.count
 <template>
   <div class="flex h-full">
     <section class="pl-scroll min-w-0 flex-1">
-      <CommonPanelHeader :title="view?.run ? tr('verify.runTitle', { id: view.run.id }) : tr('verify.title')" :subtitle="view?.run ? [`rev ${view.run.rev ?? '—'}`, view.run.scope, view.run.time].filter(Boolean).join(' · ') : ''">
+      <CommonPanelHeader :title="view?.run ? tr('verify.runTitle', { id: view.run.id }) : tr('verify.title')" :subtitle="view?.run ? [tr('shell.top.version', { n: view.run.rev ?? '—' }), view.run.scope, view.run.time].filter(Boolean).join(' · ') : ''">
         <CommonStatusBadge v-if="view?.run?.stale" status="stale" :label="tr('verify.stale', { value: view.run.stale })" />
         <span v-if="corpusNote && !showCorpus" class="text-pl-st-hypothesis">{{ corpusNote }}</span>
         <button class="pl-btn h-7" type="button" :aria-expanded="showCorpus" @click="showCorpus = !showCorpus">{{ tr('verify.corpusToggle') }}</button>
@@ -192,11 +200,14 @@ const total = computed(() => view.value?.categories.reduce((n, c) => n + c.count
               <tbody>
                 <tr v-for="h in view.hypotheses" :key="h.id">
                   <td class="font-semibold">{{ h.id }}</td>
-                  <td class="font-mono text-xs break-all">{{ safeText(h.test) }}</td>
+                  <td>
+                    <span v-if="statements[h.id]" class="block text-pl-fg-strong">{{ safeText(statements[h.id]!) }}</span>
+                    <span class="block font-mono text-xs break-all text-pl-muted">{{ safeText(h.test) }}</span>
+                  </td>
                   <td>
                     <div class="flex flex-wrap items-center gap-2">
                       <CommonStatusBadge :status="h.status" :label="h.label" />
-                      <NuxtLink v-if="h.status === 'violation'" :to="{ path: '/interpretation', query: { fixFor: h.id } }" class="text-pl-wine-text hover:underline">{{ tr('verify.howToFix') }}</NuxtLink>
+                      <NuxtLink v-if="h.status === 'violation'" :to="{ path: '/protocol', query: { fixFor: h.id } }" class="text-pl-wine-text hover:underline">{{ tr('verify.howToFix') }}</NuxtLink>
                     </div>
                   </td>
                 </tr>

@@ -179,7 +179,7 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
       const status: Hypothesis['status'] = h.verdict === 'refuted' ? 'refuted' : h.verdict === 'no_counterexample' ? 'supported' : 'untested'
       return [{
         run: d.id,
-        time: `rev ${d.revision ?? '—'}`,
+        time: tr('shell.top.version', { n: d.revision ?? '—' }),
         status,
         label: h.verdict === 'refuted' ? tr('data.h.refuted', { n: formatCount(h.counterexamples) }) : h.verdict === 'no_counterexample' ? tr('data.h.supported', { held: formatCount(h.held), all: formatCount(h.applicable) }) : tr('data.v.untested'),
         scope: tr('data.caps', { n: d.sources.length }),
@@ -540,7 +540,7 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
           ? [{ group: 'limit' as const, label: tr('data.search.more', { n: formatCount(conns.total - conns.items.length) }), suffix: '', path: '/overview', query: {} }]
           : []),
         ...hyps.items.map(h => ({ group: 'hypothesis' as const, label: `${h.id} · ${h.statement}`, suffix: HYPOTHESIS_STATUS[h.status], path: '/hypotheses', query: { h: h.id } })),
-        ...runs.items.map(r => ({ group: 'run' as const, label: `${r.id} · rev ${r.revision ?? '—'} · ${tr('data.caps', { n: r.sources.length })}`, suffix: r.stale ? tr('data.stale') : tr('data.current'), path: '/verify', query: { run: r.id } })),
+        ...runs.items.map(r => ({ group: 'run' as const, label: `${r.id} · ${tr('shell.top.version', { n: r.revision ?? '—' })} · ${tr('data.caps', { n: r.sources.length })}`, suffix: r.stale ? tr('data.stale') : tr('data.current'), path: '/verify', query: { run: r.id } })),
         ...obs.items.map(o => ({ group: 'observation' as const, label: `${o.id} · ${o.comment || tr('data.noComment')}`, suffix: shortStream(o.anchor.stream), path: '/overview', query: link(o.anchor.stream, o.anchor.start, o.anchor.end) })),
       ]
     },
@@ -663,7 +663,7 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
               { label: tr('data.diff.unchanged'), value: formatCount(diff.totals.unchanged), tone: 'neutral' },
             ]
           : [],
-        runs: runs.items.map(r => ({ id: r.id, label: `rev ${r.revision ?? '—'} · ${tr('data.caps', { n: r.sources.length })}`, current: !r.stale, stale: staleText(r) })),
+        runs: runs.items.map(r => ({ id: r.id, label: `${tr('shell.top.version', { n: r.revision ?? '—' })} · ${tr('data.caps', { n: r.sources.length })}`, current: !r.stale, stale: staleText(r) })),
         runsNote: tr('data.runsNote'),
       }
     },
@@ -1001,7 +1001,7 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
 
     async listRuns() {
       const runs = unwrap(await api.GET('/api/runs', { params: { query: { limit: 50 } } }))
-      return runs.items.map(r => ({ id: r.id, label: `rev ${r.revision ?? '—'} · ${tr('data.caps', { n: r.sources.length })}`, stale: r.stale }))
+      return runs.items.map(r => ({ id: r.id, label: `${tr('shell.top.version', { n: r.revision ?? '—' })} · ${tr('data.caps', { n: r.sources.length })}`, stale: r.stale }))
     },
   }
 }

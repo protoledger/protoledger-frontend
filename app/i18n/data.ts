@@ -1,4 +1,4 @@
-import { defineMessages } from './types'
+import { defineMessages, plural } from './types'
 
 // Подписи моделей экранов, которые собирает слой данных из ответов движка; тексты самого движка не переводятся.
 export default defineMessages({
@@ -29,7 +29,7 @@ export default defineMessages({
   'data.run.untested': '{run}: не проверена',
   'data.h.refuted': 'есть расхождения · {n}',
   'data.h.supported': 'совпало в {held} из {all}',
-  'data.caps': '{n} зап.',
+  'data.caps': (p) => `${p.n} ${plural(Number(p.n), 'запись', 'записи', 'записей')}`,
   'data.tree.types': 'Типы сообщений',
   'data.untyped': 'без типа',
   'data.pv.stream': 'Поток',

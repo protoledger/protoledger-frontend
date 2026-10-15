@@ -78,7 +78,22 @@ async function load() {
     loading.value = false
   }
 }
-onMounted(load)
+const route = useRoute()
+onMounted(async () => {
+  await load()
+  // Переход «Как исправить» с экрана «Проверка»: открываем поле этого предположения.
+  const want = typeof route.query.fixFor === 'string' ? route.query.fixFor : null
+  if (!want) return
+  for (const m of messages.value) {
+    const f = m.fields.find(x => x.hypothesis === want)
+    if (f) {
+      selectedId.value = m.id
+      if (common.value.some(c => sameField(c, f))) headerOpen.value = true
+      void openFix(f)
+      return
+    }
+  }
+})
 watch(() => project.project?.path, () => { void load() })
 
 // Пары по коду команды: запрос, затем ответ; остальные — в конце, как в описании.
