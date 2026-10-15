@@ -2,6 +2,7 @@ import { ApiError, apiClient, unwrap } from '~/api/client'
 import type { components } from '~/api/schema'
 import { base64ToBytes, formatCount, hexByte } from '~/utils/bytes'
 import type { KnowledgeStatus } from '~/utils/status'
+import { collectConnections } from './connections'
 import type { ContractSource, ResearchSource } from './source'
 import { framingOnlyYaml, replaceFramingBlock } from '~/utils/interpretation-yaml'
 import type { CompareRow, CompareView, ExchangeSide, ExchangeView, FieldViolation, FramingCandidate, Hypothesis, InterpretationTreeNode, ResultCategory, StreamLink, VerificationView } from './views'
@@ -182,7 +183,7 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
 
   // Для предпросмотра по умолчанию — самый длинный поток: в нём больше всего сообщений.
   async function defaultStream(): Promise<string | null> {
-    const page = await contract.listConnections({ limit: 200 })
+    const page = await collectConnections(contract)
     let best: { id: string, len: number } | null = null
     for (const c of page.items) {
       for (const st of c.streams) {
@@ -241,6 +242,8 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
               { label: 'Сообщений', value: formatCount(total) },
               ...Object.entries(counts).filter(([, c]) => c > 0).map(([k, c]) => ({ label: CATEGORY[k]?.label ?? k, value: formatCount(c) })),
               { label: 'Неизвестных байтов', value: formatCount(preview.unknownBytes ?? 0) },
+              // Структура и нарушения собираются по первой странице сообщений — говорим, если она не вся.
+              ...(preview.items.length < total ? [{ label: 'Структура и нарушения', value: `по первым ${formatCount(preview.items.length)} из ${formatCount(total)}` }] : []),
             ],
       },
     }
@@ -491,7 +494,7 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
 
     async getSearchIndex() {
       const [conns, hyps, runs, obs, names] = await Promise.all([
-        contract.listConnections({ limit: 200 }),
+        collectConnections(contract),
         api.GET('/api/hypotheses').then(unwrap),
         api.GET('/api/runs', { params: { query: { limit: 50 } } }).then(unwrap),
         api.GET('/api/observations').then(unwrap),
@@ -665,7 +668,7 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
         },
       }))
       return {
-        searchRange: `${formatCount(hints.sampledBytes)} байт · порог ${hints.minMessages} сообщ.`,
+        searchRange: `${hints.truncated ? 'проанализировано ' : ''}${formatCount(hints.sampledBytes)} байт · порог ${hints.minMessages} сообщ.`,
         candidates,
         signatures: [
           ...hints.signatures.map(sg => ({ label: sg.bytes.toUpperCase().replace(/(..)(?=.)/g, '$1 '), matched: sg.atStarts, total: sg.startsTotal, ok: sg.atStarts === sg.startsTotal })),
@@ -889,7 +892,7 @@ export function createLiveResearchSource(contract: ContractSource, sample: Resea
     },
 
     async getSuggestions() {
-      const page = await contract.listConnections({ limit: 500 })
+      const page = await collectConnections(contract)
       const streams = page.items.flatMap(c => c.streams.map(s => s.id))
       if (!streams.length) return { items: [], truncated: false, note: 'В проекте нет потоков.' }
       try {

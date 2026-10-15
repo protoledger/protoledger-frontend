@@ -71,7 +71,7 @@ const icon = 'grid size-[30px] place-items-center rounded text-pl-fg hover:bg-pl
     <NuxtLink v-if="project.extras" to="/interpretation" :class="[item, 'max-sm:hidden']">
       <span class="text-pl-muted">интерпретация</span>
       <b>{{ project.extras.interpretationRev ? `rev ${project.extras.interpretationRev}` : 'нет' }}</b>
-      <span v-if="project.extras.interpretationDirty" class="rounded-[3px] border border-pl-st-hypothesis px-1.5 text-[11px] font-semibold text-pl-st-hypothesis">изменена</span>
+      <span v-if="project.extras.interpretationDirty || workspace.interpDraft" title="В редакторе несохранённая правка" class="rounded-[3px] border border-pl-st-hypothesis px-1.5 text-[11px] font-semibold text-pl-st-hypothesis">изменена</span>
     </NuxtLink>
 
     <div class="flex-1" />

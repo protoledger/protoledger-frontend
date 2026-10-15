@@ -7,5 +7,6 @@ export function saveTextFile(fileName: string, content: string, type: string) {
   document.body.append(a)
   a.click()
   a.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 0)
+  // WebView окна приложения начинает читать blob не сразу после клика — освобождаем ссылку позже.
+  setTimeout(() => URL.revokeObjectURL(url), 2000)
 }

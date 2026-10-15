@@ -107,6 +107,7 @@ const text = 'fill: var(--pl-fg-strong); font: 12px var(--font-mono, monospace)'
         </template>
       </div>
       <p v-if="graph.truncated" class="m-0 mt-1 text-xs text-pl-muted">Рёбер больше 200 — показаны самые частые.</p>
+      <p v-if="graph.incomplete" class="m-0 mt-1 text-xs text-pl-st-hypothesis">Разбор прерван по времени — граф построен по части соединений.</p>
     </template>
   </div>
 </template>

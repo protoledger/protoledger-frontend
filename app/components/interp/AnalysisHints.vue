@@ -69,6 +69,17 @@ function streamLink(stream: string, start: number, end: number) {
   return { path: '/overview', query: { conn: stream.slice(0, cut), dir: stream.slice(cut + 1), from: String(start), to: String(end) } }
 }
 
+// Движок мог разобрать не всё: предел числа сообщений или времени — говорим об этом рядом с результатом.
+const partial = computed(() => {
+  const r = tab.value === 'types' ? types.value : tab.value === 'fields' ? fields.value : tab.value === 'checksums' ? sums.value : null
+  const notes: string[] = []
+  if (r?.truncated) notes.push('взята часть сообщений (предел)')
+  if (r?.incomplete) notes.push('поиск прерван по времени — список может быть неполон')
+  if (tab.value === 'checksums' && sums.value?.skippedLong) notes.push(`пропущено длинных сообщений: ${sums.value.skippedLong}`)
+  if (tab.value === 'entropy' && entropy.value?.streams.some(s => s.truncated)) notes.push('часть потоков просмотрена не целиком (предел)')
+  return notes
+})
+
 const empty = 'm-0 text-pl-muted'
 const card = 'flex flex-col gap-1 border border-pl-line p-2.5'
 </script>
@@ -87,6 +98,7 @@ const card = 'flex flex-col gap-1 border border-pl-line p-2.5'
     </div>
     <p class="m-0 text-xs text-pl-muted">По потокам черновика ({{ streams.length }}) и границам сохранённого описания. Это подсказки по данным, не выводы.</p>
     <p v-if="error" class="m-0 text-pl-st-violation" role="alert">{{ safeText(error) }}</p>
+    <p v-if="partial.length && !pending" class="m-0 text-pl-st-hypothesis">Неполно: {{ partial.join('; ') }}.</p>
 
     <template v-if="tab === 'types' && types && !pending">
       <p v-if="!types.types.length" :class="empty">На типы сообщения не делятся — различителя не нашлось.</p>

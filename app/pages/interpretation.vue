@@ -2,6 +2,7 @@
 import type { DraftView, FixHintsView, InterpretationView } from '~/data/views'
 import { STATUS } from '~/utils/status'
 import type { FieldHints } from '~/api/types'
+import { collectConnections } from '~/data/connections'
 import { parseForm, setFieldAttr } from '~/utils/interp-form'
 import { applyFixEdit } from '~/utils/interp-fix'
 import { tokenizeYamlLine } from '~/utils/yaml-tokens'
@@ -10,8 +11,13 @@ const data = useData()
 const workspace = useWorkspaceStore()
 const project = useProjectStore()
 const { data: view, error, refresh, pending } = await useAsyncData('interpretation', () => data.getInterpretation())
+// Потоки для предпросмотра и черновика — не больше 2000 соединений; сколько не показано, пишем.
+const connectionTotal = ref(0)
+const connectionShown = ref(0)
 const { data: streams } = await useAsyncData('interp-streams', async () => {
-  const page = await data.listConnections({ limit: 200 })
+  const page = await collectConnections(data)
+  connectionTotal.value = page.total
+  connectionShown.value = page.items.length
   return page.items.flatMap(c => c.streams.filter(s => s.dataBytes > 0).map(s => ({ id: s.id, label: `${c.id} ${s.direction === 'a_to_b' ? 'a→b' : 'b→a'} · ${s.dataBytes} байт` })))
 }, { default: () => [] as { id: string, label: string }[] })
 const { data: revisions, refresh: refreshRevisions } = await useAsyncData('interp-revisions', () => data.getInterpretationRevisions(), { default: () => [] as number[] })
@@ -41,14 +47,21 @@ const selectedLine = ref<number | null>(null)
 watch(view, (v) => {
   if (!v) return
   original.value = v.yaml.map(l => l.text).join('\n')
-  text.value = v.rev ? original.value : TEMPLATE
-  basedOn.value = v.rev
+  // Вернулись в редактор с несохранённой правкой — продолжаем её; если ревизия с тех пор сменилась,
+  // подзаголовок скажет, на какой ревизии правка основана.
+  const kept = workspace.interpDraft
+  text.value = kept ? kept.text : v.rev ? original.value : TEMPLATE
+  basedOn.value = kept ? kept.rev : v.rev
   stream.value = v.stream
   result.value = v.rev ? { tree: v.tree, preview: v.preview, violations: v.violations } : null
   selectedLine.value = v.selectedLine || null
 }, { immediate: true })
 
 const dirty = computed(() => !!view.value && text.value !== original.value)
+watch([text, dirty], () => {
+  const untouchedTemplate = !view.value?.rev && text.value === TEMPLATE
+  workspace.interpDraft = dirty.value && !untouchedTemplate ? { rev: basedOn.value, text: text.value } : null
+})
 const nextRev = computed(() => (revisions.value[0] ?? view.value?.rev ?? 0) + 1)
 
 // Строка ошибки из ответа движка («line 3 column 5: …») — подсвечиваем её в редакторе.
@@ -150,18 +163,24 @@ function schedulePreview() {
   timer = setTimeout(runPreview, 700)
 }
 
+// Ответы предпросмотра приходят не по порядку: показываем только ответ на последний запрос.
+let previewSeq = 0
 async function runPreview() {
   if (!stream.value) return
+  const my = ++previewSeq
   previewing.value = true
   try {
-    result.value = await data.previewInterpretation(stream.value, dirty.value || !view.value?.rev ? text.value : undefined)
+    const r = await data.previewInterpretation(stream.value, dirty.value || !view.value?.rev ? text.value : undefined)
+    if (my !== previewSeq) return
+    result.value = r
     problem.value = null
   }
   catch (e) {
+    if (my !== previewSeq) return
     problem.value = e instanceof Error ? e.message : 'Не удалось применить интерпретацию'
   }
   finally {
-    previewing.value = false
+    if (my === previewSeq) previewing.value = false
   }
 }
 
@@ -439,7 +458,7 @@ const TOKEN: Record<string, string> = {
           <h3 :class="cap">Черновик описания</h3>
           <div class="flex flex-col gap-2 px-3 pb-2">
             <details class="text-pl-muted">
-              <summary class="cursor-pointer">Потоки: {{ draftStreams.length }} из {{ streams.length }}</summary>
+              <summary class="cursor-pointer">Потоки: {{ draftStreams.length }} из {{ streams.length }}<template v-if="connectionShown < connectionTotal"> · показаны соединения {{ connectionShown }} из {{ connectionTotal }}</template></summary>
               <div class="mt-1 flex gap-3">
                 <button class="text-pl-wine-text hover:underline" type="button" @click="draftStreams = streams.map(s => s.id)">все</button>
                 <button class="text-pl-wine-text hover:underline" type="button" @click="draftStreams = []">снять все</button>

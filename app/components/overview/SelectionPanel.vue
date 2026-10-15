@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onWatcherCleanup } from 'vue'
 import type { Frame } from '~/api/types'
 import type { ByteInfo } from '~/composables/useStreamBytes'
 import { base64ToBytes, formatCount, hexByte, readUint } from '~/utils/bytes'
@@ -35,15 +36,19 @@ const length = computed(() => (props.range ? props.range.end - props.range.start
 const primaryFrame = computed(() => first.value?.segment.frames.find(f => !f.duplicate) ?? first.value?.segment.frames[0] ?? null)
 const duplicates = computed(() => first.value?.segment.frames.filter(f => f.duplicate) ?? [])
 
+// Выделение меняется быстрее ответа — кадр показываем только для последнего.
 watch(primaryFrame, async (ref) => {
+  let stale = false
+  onWatcherCleanup(() => { stale = true })
   frame.value = null
   frameError.value = null
   if (!ref) return
   try {
-    frame.value = await data.getFrame(ref.source, ref.frameNo)
+    const f = await data.getFrame(ref.source, ref.frameNo)
+    if (!stale) frame.value = f
   }
   catch (e) {
-    frameError.value = e instanceof Error ? e.message : 'Кадр не загрузился'
+    if (!stale) frameError.value = e instanceof Error ? e.message : 'Кадр не загрузился'
   }
 }, { immediate: true })
 

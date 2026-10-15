@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onWatcherCleanup } from 'vue'
 import type { FramingDetail, FramingView } from '~/data/views'
 
 const data = useData()
@@ -16,37 +17,53 @@ const detailError = ref<string | null>(null)
 const applying = ref(false)
 const applied = ref<string | null>(null)
 
+// Поток или кандидат сменились раньше ответа — старый ответ не показываем.
 watch(stream, async (s) => {
+  let stale = false
+  onWatcherCleanup(() => { stale = true })
   if (!s) return
   view.value = null
   error.value = null
   try {
-    view.value = await data.getFraming(s.id)
+    const v = await data.getFraming(s.id)
+    if (stale) return
+    view.value = v
     selected.value = 0
   }
   catch (e) {
-    error.value = e instanceof Error ? e.message : 'Не удалось найти кандидатов'
+    if (!stale) error.value = e instanceof Error ? e.message : 'Не удалось найти кандидатов'
   }
 }, { immediate: true })
 
 const candidate = computed(() => view.value?.candidates[selected.value] ?? null)
 
 watch([candidate, stream], async ([c, s]) => {
+  let stale = false
+  onWatcherCleanup(() => { stale = true })
   detail.value = null
   detailError.value = null
   applied.value = null
   if (!c || !s) return
   try {
-    detail.value = await data.getFramingDetail(s.id, c.spec)
+    const d = await data.getFramingDetail(s.id, c.spec)
+    if (!stale) detail.value = d
   }
   catch (e) {
-    detailError.value = e instanceof Error ? e.message : 'Не удалось применить кандидата к потоку'
+    if (!stale) detailError.value = e instanceof Error ? e.message : 'Не удалось применить кандидата к потоку'
   }
 }, { immediate: true })
 
+// В редакторе несохранённая правка: фрейминг сохранится в ревизию без неё — сначала предупреждаем.
+const confirmApply = ref(false)
+watch(candidate, () => { confirmApply.value = false })
 async function applyFraming() {
   const c = candidate.value
   if (!c) return
+  if (workspace.interpDraft && !confirmApply.value) {
+    confirmApply.value = true
+    return
+  }
+  confirmApply.value = false
   applying.value = true
   try {
     const rev = await data.applyFraming(c.spec)
@@ -147,9 +164,10 @@ const cap = 'pl-caption m-0 px-3 pt-3.5 pb-2'
       <p v-else class="p-3 text-pl-muted">Кандидатов нет.</p>
       <footer class="flex flex-col items-start gap-2 border-t border-pl-line px-3 py-2.5">
         <div class="flex flex-wrap gap-2">
-          <button class="pl-btn pl-btn-primary" type="button" :disabled="!candidate || applying" @click="applyFraming">Применить как фрейминг</button>
+          <button class="pl-btn pl-btn-primary" type="button" :disabled="!candidate || applying" @click="applyFraming">{{ confirmApply ? 'Всё равно применить' : 'Применить как фрейминг' }}</button>
           <NuxtLink to="/interpretation?draft=1" class="pl-btn" title="Границы, типы, поля и связи с журналом одним запросом">Черновик описания</NuxtLink>
         </div>
+        <span v-if="confirmApply" class="text-pl-st-hypothesis" role="alert">В редакторе есть несохранённая правка описания. Фрейминг сохранится новой ревизией без неё, а правка останется в редакторе, основанная на прежней ревизии.</span>
         <span v-if="applied" aria-live="polite">{{ applied }}</span>
       </footer>
     </ShellInspectorContent>

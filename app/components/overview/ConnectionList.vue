@@ -3,7 +3,8 @@ import type { Connection, ConnectionFlag } from '~/api/types'
 import { formatCount } from '~/utils/bytes'
 import { FLAG_STATUS } from '~/utils/status'
 
-const props = defineProps<{ selectedId: string | null }>()
+// autoSelect: false — экран открыт по ссылке на соединение, первое из списка не подставляем.
+const props = withDefaults(defineProps<{ selectedId: string | null, autoSelect?: boolean }>(), { autoSelect: true })
 const emit = defineEmits<{ select: [connection: Connection] }>()
 
 const data = useData()
@@ -28,7 +29,7 @@ async function load(reset: boolean) {
     items.value = reset ? page.items : [...items.value, ...page.items]
     total.value = page.total
     if (reset && !source.value && !port.value && !flag.value) topPorts.value = frequentPorts(page.items)
-    if (reset && !props.selectedId && page.items[0]) emit('select', page.items.find(c => c.flags.includes('gaps')) ?? page.items[0])
+    if (reset && props.autoSelect && !props.selectedId && page.items[0]) emit('select', page.items.find(c => c.flags.includes('gaps')) ?? page.items[0])
   }
   catch (e) {
     error.value = e instanceof Error ? e.message : 'Не удалось загрузить соединения'
@@ -39,11 +40,14 @@ async function load(reset: boolean) {
 }
 
 watch([source, port, flag], () => load(true), { immediate: true })
+// Импорт закончился (запись стала «готово») — в списке появились её соединения.
+const sourcesKey = computed(() => project.sources.map(s => `${s.sha256}:${s.status}`).join())
+watch(sourcesKey, (now, before) => { if (before !== undefined) void load(true) })
 
 // Соединения устройства — вывод движка по журналу действий, а не факт: значок с причиной в подсказке.
 const devices = ref<Map<string, string>>(new Map())
 const deviceSummary = ref<string | null>(null)
-watch(() => project.project?.path, async () => {
+watch([() => project.project?.path, sourcesKey], async () => {
   try {
     const r = await data.getDeviceConnections()
     devices.value = new Map((r?.items ?? []).filter(i => i.role === 'device').map(i => [i.connection, i.reason]))
