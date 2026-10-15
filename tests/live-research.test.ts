@@ -104,7 +104,7 @@ describe('живые модели экранов', () => {
       '/api/runs/run-3': { ...head('run-3', { sources: [SHA] }), streams: [], counterexamples: [], hypotheses: refuted(2) },
     })
     const v = await createLiveResearchSource(contractWithBytes(), createMockResearchSource()).getInterpretation()
-    expect(v.runIssues).toEqual([{ id: 'H6', label: 'опровергнута в run-2 · контрпримеров 4', runId: 'run-2' }])
+    expect(v.runIssues).toEqual([{ id: 'H6', label: 'есть расхождения в run-2 · расхождений 4', runId: 'run-2' }])
   })
 
   it('соединения устройства: без журнала — null, а не ошибка', async () => {
@@ -236,7 +236,7 @@ describe('гипотезы в сравнении прогонов', () => {
       h('H6', 'fixed', 'refuted', [2, 0], [34, 40]),
     ])
     expect(out.map(c => c.id)).toEqual(['H6', 'H2', 'H10'])
-    expect(out[0]).toMatchObject({ tone: 'good', text: 'опровергнута → контрпримеров нет, контрпримеров 2 → 0, проверок 34 → 40' })
+    expect(out[0]).toMatchObject({ tone: 'good', text: 'есть расхождения → расхождений нет, расхождений 2 → 0, проверок 34 → 40' })
     expect(out[1]!.text).toBe('проверок 34 → 40')
   })
 })

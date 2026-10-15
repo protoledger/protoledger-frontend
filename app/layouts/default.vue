@@ -42,20 +42,12 @@ defineShortcuts({
   ...Object.fromEntries(SCREENS.map((s, i) => [`alt_${i + 1}`, () => navigateTo(s.path)])),
 })
 
-// Двойной Shift — «поиск везде», как в IDE JetBrains.
-let lastShift = 0
-function onKeyup(e: KeyboardEvent) {
-  if (e.key !== 'Shift') return
-  const now = Date.now()
-  if (now - lastShift < 350) searchOpen.value = true
-  lastShift = now
-}
-onMounted(() => window.addEventListener('keyup', onKeyup))
-onBeforeUnmount(() => window.removeEventListener('keyup', onKeyup))
 </script>
 
 <template>
+  <StartScreen v-if="workspace.starting || (project.loaded && !project.project && !project.error)" class="h-dvh" />
   <div
+    v-else
     class="grid h-dvh overflow-hidden"
     :class="[
       phone ? 'grid-rows-[44px_minmax(0,1fr)_56px]' : 'grid-rows-[44px_minmax(0,1fr)_26px]',
@@ -74,7 +66,7 @@ onBeforeUnmount(() => window.removeEventListener('keyup', onKeyup))
           </div>
           <slot v-else />
         </main>
-        <ShellInspector />
+        <ShellInspector v-if="route.meta.inspector !== false" />
       </div>
       <ShellBottomPanel v-if="!workspace.focus" />
     </div>

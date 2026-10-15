@@ -1309,6 +1309,10 @@ export interface components {
             digest: components["schemas"]["Sha256"];
             /** @description Текст интерпретации, формат protoledger/interpretation@1 */
             yaml: string;
+            /** @description То же описание разобранным (format, scope, framing, messages, hypotheses, checks); интерфейс показывает и правит его без YAML */
+            structure: {
+                [key: string]: unknown;
+            };
         };
         InterpretationRevision: {
             rev: number;
@@ -1317,8 +1321,13 @@ export interface components {
         InterpretationRevisionList: {
             items: components["schemas"]["InterpretationRevision"][];
         };
+        /** @description Ровно одно из `yaml` и `structure` */
         SaveInterpretationRequest: {
-            yaml: string;
+            yaml?: string;
+            /** @description Описание структурой, как `structure` в ответе GET; сохраняется как YAML */
+            structure?: {
+                [key: string]: unknown;
+            };
             /** @description Ревизия, от которой сделана правка; 0 — интерпретации ещё не было. Устарела — 409 */
             baseRev?: number;
         };
@@ -2351,6 +2360,10 @@ export interface components {
         Draft: {
             /** @description Текст интерпретации */
             yaml: string;
+            /** @description То же описание структурой */
+            structure: {
+                [key: string]: unknown;
+            };
             steps: {
                 title: string;
                 detail: string;
@@ -3476,7 +3489,19 @@ export interface operations {
                      * @example {
                      *       "rev": 2,
                      *       "digest": "7d2c1e9b0a4f3d6c8b5a1e0f9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a39281706",
-                     *       "yaml": "format: protoledger/interpretation@1\nframing: { kind: length_prefixed, length: { at: 4, type: u16le, adjust: 7 } }\n"
+                     *       "yaml": "format: protoledger/interpretation@1\nframing: { kind: length_prefixed, length: { at: 4, type: u16le, adjust: 7 } }\n",
+                     *       "structure": {
+                     *         "format": "protoledger/interpretation@1",
+                     *         "framing": {
+                     *           "kind": "length_prefixed",
+                     *           "length": {
+                     *             "at": 4,
+                     *             "type": "u16le",
+                     *             "adjust": 7
+                     *           }
+                     *         },
+                     *         "messages": []
+                     *       }
                      *     }
                      */
                     "application/json": components["schemas"]["InterpretationDoc"];
@@ -3605,7 +3630,19 @@ export interface operations {
                      * @example {
                      *       "rev": 2,
                      *       "digest": "7d2c1e9b0a4f3d6c8b5a1e0f9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a39281706",
-                     *       "yaml": "format: protoledger/interpretation@1\nframing: { kind: length_prefixed, length: { at: 4, type: u16le, adjust: 7 } }\n"
+                     *       "yaml": "format: protoledger/interpretation@1\nframing: { kind: length_prefixed, length: { at: 4, type: u16le, adjust: 7 } }\n",
+                     *       "structure": {
+                     *         "format": "protoledger/interpretation@1",
+                     *         "framing": {
+                     *           "kind": "length_prefixed",
+                     *           "length": {
+                     *             "at": 4,
+                     *             "type": "u16le",
+                     *             "adjust": 7
+                     *           }
+                     *         },
+                     *         "messages": []
+                     *       }
                      *     }
                      */
                     "application/json": components["schemas"]["InterpretationDoc"];
@@ -7041,6 +7078,38 @@ export interface operations {
                     /**
                      * @example {
                      *       "yaml": "format: protoledger/interpretation@1\nframing: {\"kind\":\"length_prefixed\",\"length\":{\"at\":4,\"type\":\"u16le\",\"adjust\":7},\"status\":\"hypothesis\"}\nmessages:\n  - id: message\n    fields:\n      - { name: length, at: 4, type: u16le, status: hypothesis, hypothesis: H1 }\nhypotheses:\n  - { id: H1, statement: \"length — длина\" }\n",
+                     *       "structure": {
+                     *         "format": "protoledger/interpretation@1",
+                     *         "framing": {
+                     *           "kind": "length_prefixed",
+                     *           "length": {
+                     *             "at": 4,
+                     *             "type": "u16le",
+                     *             "adjust": 7
+                     *           },
+                     *           "status": "hypothesis"
+                     *         },
+                     *         "messages": [
+                     *           {
+                     *             "id": "message",
+                     *             "fields": [
+                     *               {
+                     *                 "name": "length",
+                     *                 "at": 4,
+                     *                 "type": "u16le",
+                     *                 "status": "hypothesis",
+                     *                 "hypothesis": "H1"
+                     *               }
+                     *             ]
+                     *           }
+                     *         ],
+                     *         "hypotheses": [
+                     *           {
+                     *             "id": "H1",
+                     *             "statement": "length — длина"
+                     *           }
+                     *         ]
+                     *       },
                      *       "steps": [
                      *         {
                      *           "title": "Границы сообщений",

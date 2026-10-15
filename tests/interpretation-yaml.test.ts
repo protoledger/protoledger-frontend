@@ -51,7 +51,7 @@ describe('YAML интерпретации', () => {
 
   it('якорь со ссылками — отказ с понятной причиной, без ссылок — замена', () => {
     const withRef = 'framing: &f\n  kind: delimited\nother: *f\nmessages: []\n'
-    expect(() => replaceFramingBlock(withRef, spec)).toThrow(/якорем &f/)
+    expect(() => replaceFramingBlock(withRef, spec)).toThrow(/&f/)
     expect(replaceFramingBlock('framing: &f\n  kind: delimited\nmessages: []\n', spec)).not.toContain('&f')
   })
 })

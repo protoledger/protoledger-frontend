@@ -9,10 +9,10 @@ const SCREEN: Record<NextStepScreen, { path: string, label: string }> = {
   sources: { path: '/project', get label() { return tr('screen.project') } },
   actions: { path: '/actions', get label() { return tr('screen.actions') } },
   framing: { path: '/bounds', get label() { return tr('screen.bounds') } },
-  interpretation: { path: '/interpretation', get label() { return tr('screen.interpretation') } },
-  hypotheses: { path: '/hypotheses', get label() { return tr('screen.hypotheses.short') } },
+  interpretation: { path: '/protocol', get label() { return tr('screen.protocol') } },
+  hypotheses: { path: '/protocol', get label() { return tr('screen.protocol') } },
   verification: { path: '/verify', get label() { return tr('screen.verify') } },
-  questions: { path: '/hypotheses', get label() { return tr('screen.questions') } },
+  questions: { path: '/report', get label() { return tr('screen.report') } },
   report: { path: '/report', get label() { return tr('screen.report') } },
 }
 
